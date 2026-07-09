@@ -1,0 +1,21 @@
+{
+  "name": "huaweicloud-obs-metamcp-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Huawei Cloud OBS MCP server and Codex/OpenCode MetaMCP plugin wrapper.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @huaweicloud/obs-mcp-server",
+    "start:metamcp": "npm run build -w @huaweicloud/obs-mcp-server && node packages/obs-mcp-server/dist/metamcp-wrapper.js",
+    "test": "npm run test -w @huaweicloud/obs-mcp-server",
+    "lint": "npm run lint -w @huaweicloud/obs-mcp-server"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.14",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

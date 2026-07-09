@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "huaweicloud-obs": {
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "obs-plugin\\scripts\\start-huaweicloud-obs-server.ps1"
+      ]
+    }
+  }
+}

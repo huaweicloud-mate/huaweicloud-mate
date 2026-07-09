@@ -1,0 +1,34 @@
+{
+  "name": "huaweicloud-obs",
+  "version": "0.1.0",
+  "description": "Huawei Cloud OBS tools exposed through MetaMCP for Codex.",
+  "author": {
+    "name": "AI-Plugin Workspace"
+  },
+  "license": "MIT",
+  "keywords": [
+    "huaweicloud",
+    "obs",
+    "mcp",
+    "metamcp"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Huawei Cloud OBS",
+    "shortDescription": "Operate Huawei Cloud OBS through MetaMCP.",
+    "longDescription": "Provides a Codex wrapper for a shared Huawei Cloud OBS MCP server. The child MCP server exposes 94 OBS API tools, while MetaMCP keeps the Codex tool surface compact.",
+    "developerName": "AI-Plugin Workspace",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "List my OBS buckets.",
+      "Inspect an OBS object safely.",
+      "Upload a file to OBS with confirmation."
+    ],
+    "brandColor": "#C7000B"
+  }
+}
