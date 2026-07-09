@@ -1,0 +1,47 @@
+{
+  "name": "iam-plugin",
+  "version": "0.1.0",
+  "description": "IAM Plugin — 华为云 IAM Meta-Tool MCP Gateway，10 个 IAM Tool → 3 个 Meta-Tool",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "skills/",
+    "README.md"
+  ],
+  "bin": {
+    "iam-gateway": "dist/src/index.js",
+    "iam-server": "dist/servers/huawei-iam-server.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "npx tsx src/index.ts",
+    "dev:iam": "npx tsx servers/huawei-iam-server.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@opencode-ai/plugin": "^1.17.16",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "huawei-cloud",
+    "iam",
+    "opencode",
+    "plugin",
+    "gateway"
+  ],
+  "license": "MIT"
+}
