@@ -1,0 +1,50 @@
+{
+  "name": "huaweicloud-mate",
+  "version": "1.0.0",
+  "description": "Huawei Cloud AI Assistant — OBS/ECS tools, MCP server, and SDK",
+  "private": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "huaweicloud-mate": "dist/server.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "huaweicloud",
+    "huawei-cloud",
+    "obs",
+    "ecs",
+    "mcp",
+    "cloudmate"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "esdk-obs-nodejs": "^3.26.2"
+  },
+  "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@modelcontextprotocol/sdk": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hd-vector/huaweicloud-mate.git"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
