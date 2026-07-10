@@ -25,8 +25,8 @@ export class HwObsClient {
 
   async listBuckets(): Promise<ListBucketsResult> {
     const result = await promisify<any>(this.client.listBuckets.bind(this.client), {});
-    const buckets: BucketSummary[] = (result?.Buckets || []).map((b: any) => ({
-      name: b.Name,
+    const buckets: BucketSummary[] = (result?.InterfaceResult?.Buckets || []).map((b: any) => ({
+      name: b.BucketName,
       creationDate: b.CreationDate,
       location: b.Location,
     }));
@@ -35,18 +35,18 @@ export class HwObsClient {
 
   async getBucketLocation(bucketName: string): Promise<BucketLocationResult> {
     const result = await promisify<any>(this.client.getBucketLocation.bind(this.client), { Bucket: bucketName });
-    return { bucketName, location: result?.Location };
+    return { bucketName, location: result?.InterfaceResult?.Location };
   }
 
   async getBucketMetadata(bucketName: string): Promise<BucketMetadataResult> {
     const result = await promisify<any>(this.client.getBucketMetadata.bind(this.client), { Bucket: bucketName });
-    const headers = result?.header || {};
+    const ir = result?.InterfaceResult || {};
     return {
       bucketName,
-      location: headers["x-obs-bucket-location"],
-      storageClass: headers["x-obs-storage-class"] || headers["x-obs-default-storage-class"],
-      obsVersion: headers["x-obs-version"],
-      headers,
+      location: ir.Location || ir.LocationObs,
+      storageClass: ir.StorageClass || ir.StorageClassObs,
+      obsVersion: ir.ObsVersion || ir.ObsVersionObs,
+      headers: ir,
     };
   }
 
@@ -58,7 +58,8 @@ export class HwObsClient {
       Marker: params.marker,
       Delimiter: params.delimiter,
     });
-    const contents: any[] = result?.Contents || [];
+    const ir = result?.InterfaceResult || {};
+    const contents: any[] = ir.Contents || [];
     const objects: ObjectSummary[] = contents.map((o: any) => ({
       key: o.Key,
       size: o.Size,
@@ -69,8 +70,8 @@ export class HwObsClient {
     return {
       bucketName: params.bucket,
       objects,
-      isTruncated: !!result?.IsTruncated,
-      nextMarker: result?.NextMarker,
+      isTruncated: !!ir.IsTruncated,
+      nextMarker: ir.NextMarker,
     };
   }
 
