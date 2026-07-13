@@ -1,20 +1,20 @@
-# huaweicloud-mate-obs
+# @hd-vector/huaweicloud-meta
 
 Huawei Cloud AI Assistant — OBS (Object Storage Service) tools with Promise-based client and MCP server support.
 
 ## Installation
 
 ```bash
-npm install /path/to/huaweicloud-mate-obs
+npm install /path/to/huaweicloud-meta
 npm install git+ssh://git@github.com/hd-vector/huaweicloud-mate.git
 # or from npm registry (coming soon)
-npm install huaweicloud-mate-obs
+npm install @hd-vector/huaweicloud-meta
 ```
 
 ## Usage (Library)
 
 ```typescript
-import { HwObsClient } from "huaweicloud-mate-obs";
+import { HwObsClient } from "@hd-vector/huaweicloud-meta";
 
 const client = new HwObsClient({
   credentials: {
@@ -33,7 +33,7 @@ const { objects } = await client.listObjects({ bucket: "my-bucket" });
 ```bash
 export HUAWEICLOUD_AK=your-ak
 export HUAWEICLOUD_SK=your-sk
-npx huaweicloud-mate-obs
+npx @hd-vector/huaweicloud-meta
 ```
 
 ## API

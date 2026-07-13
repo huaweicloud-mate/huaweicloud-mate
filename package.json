@@ -1,12 +1,12 @@
 {
-  "name": "huaweicloud-mate-obs",
+  "name": "@hd-vector/huaweicloud-meta",
   "version": "1.0.0",
   "description": "Huawei Cloud AI Assistant — OBS/ECS tools, MCP server, and SDK",
   "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "huaweicloud-mate-obs": "dist/server.js"
+    "huaweicloud-meta": "dist/server.js"
   },
   "files": [
     "dist",
