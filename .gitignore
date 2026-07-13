@@ -1,2 +1,12 @@
 node_modules/
 dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+*.tgz
+.hcloud-agent/
+docs/架构方案.zip
+.DS_Store
+Thumbs.db
