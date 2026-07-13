@@ -1,20 +1,20 @@
 # ADR-0003：产品 MCP 与 KooCLI 作为同级执行器
 
-- 状态：Accepted
+- 状态：Superseded by ADR-0007
 - 日期：2026-07-13
 
-## 决策
+## 历史决策
 
-产品 MCP 与 KooCLI 都注册到统一 capability catalog，不把任一方固定为另一方的 fallback。Agent 根据用户意图和 Skills 选择 executor，Core 统一校验策略。
+产品 MCP 与 KooCLI 都注册到统一 capability catalog，不把任一方固定为另一方的 fallback，由 Agent 根据意图和 Skills 选择。
 
-## 约束
+## 被取代原因
 
-- plan 创建后锁定 executor。
-- 写、删、付费和高权限操作失败后不得自动切换 executor。
-- 两种执行器共用 target、凭证引用、region/project、审批、脱敏和审计规则。
-- Agent 不能指定任意 MCP endpoint、KooCLI 路径或原始凭证。
+该模型需要更复杂的执行器选择、对比展示和一致治理。开源首版为降低复杂度，改为确定性默认路由：
 
-## 未决项
+- 用户显式选择优先；
+- 未指定时产品 MCP 支持且健康则默认 MCP；
+- 产品 MCP 未覆盖或执行前不可用时使用 KooCLI；
+- 生成确认 token 或开始执行后锁定执行器；
+- 执行失败、超时或结果未知时不自动切换。
 
-- 低风险读操作是否允许 `executor=auto`。
-- 四个首版产品是否要求两种 executor 均达到生产可用。
+替代决策见 ADR-0007。

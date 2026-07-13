@@ -1,5 +1,90 @@
 # 调研与共识记录
 
+## 开源首版简化方向（已收敛，2026-07-13）
+- 用户认为 Proposed v0.2 过重，新增首版约束：以开源形式发布，并据此重新确定最小核心。
+- 原 v0.2 继续作为能力与安全边界基线，不在澄清前直接改写正式架构。
+- 当前复杂度主要来自五组机制：中心签名 Registry、设备 mTLS 与凭证控制面、统一 Capability/Policy/Audit、双执行器协调、四宿主完整安装与回滚。
+- 对纯开源首版而言，任何依赖华为云内部 KMS/HSM、证书签发、Provider 审核/on-call 的路径都不是仓库本身可独立交付的能力，需要确认是移出首版、作为可插拔接口保留，还是仍由官方托管服务配套。
+- 待验证的精简候选是：单一本地 stdio Core、静态受信配置、Canonical Skills、KooCLI 受控适配、最薄宿主安装；远程产品 MCP、动态 Registry、凭证委托控制面和企业治理作为可选或后续能力。
+
+### 当前重量来源与候选裁剪
+- 最大外部依赖：签名 Registry、设备证书签发、Provider KMS/HSM、公网凭证控制面、安全审批和产品 on-call。这些更像“官方托管服务版”能力，不适合作为纯开源仓库首版的前置条件。
+- 最大本地工程量：四套 Adapter 的 install/update/repair/uninstall 事务、三平台 Secret Store、KooCLI 下载/版本/回滚、Capability/Policy/Audit/双执行器的一致语义。
+- 如果首版只做读操作，可移除 `cloud_action_plan`、风险分级确认、幂等/结果未知处理和大部分审计，仅保留输入白名单、输出脱敏和超时。
+- 如果首版只以 KooCLI 执行，可移除远程 Provider Client、credential session、动态 Registry、Provider Manifest/conformance 和双执行器协调；产品 MCP 作为后续插件点保留接口即可。
+- 如果首版允许用户预先安装并配置 KooCLI，可进一步移除二进制下载、跨平台校验、私有版本目录与凭证管理；代价是一键安装体验变弱。
+- 如果四类宿主必须同时首发，仍可把 Adapter SPI 简化为四份声明式配置模板，不先实现 receipt、drift、repair 和原子回滚框架。
+
+### 精简核心候选（等待用户确认）
+```text
+Agent 宿主
+  -> MCP 配置 + Canonical Skills
+  -> 本地 stdio Router
+  -> 静态能力清单
+  -> 受控 KooCLI 调用
+```
+- 必留安全底线候选：禁止任意代码执行、禁止 Agent 指定 endpoint/命令/凭证、参数数组启动、超时/输出上限、基础脱敏、副作用失败不自动重放。
+- 首版工具面可从 5 个降到 3 个：`cloud_capabilities_search`、`cloud_capability_describe`、`cloud_action_execute`；只有允许副作用操作时才恢复 `cloud_action_plan`。
+- 远程产品 MCP 可先定义扩展接口但不实现运行链路；等至少有一个公开可用 Provider 和官方托管安全服务后再加入。
+
+### 用户第一轮简化答复
+- 核心成果：用户可以直接指挥 Agent 创建、修改并配置华为云资源，例如创建并配置 ECS、创建并配置 OBS。
+- 用户范围：个人、企业、华为内部等全部覆盖，不能通过缩小用户群减重。
+- 产品 MCP：首发时会有公开产品 MCP，但具体产品范围未定，预计覆盖核心常用云服务。
+- 操作范围：包含创建、修改、删除、IAM、网络和计费，不能以只读首版规避安全闭环。
+- Agent 范围：OpenCode、Claude Code、Codex、华为云码道全部首发。
+- KooCLI：插件必须自动下载安装，同时兼容用户预先安装的 KooCLI。
+- 凭证体验：用户只需提供 AK/SK；具体本地存储和远程使用方式仍需继续简化。
+- 固定小工具面：search/describe/execute 是首版核心差异，必须保留。
+- Provider 范围：只支持内置能力，不开放社区自定义 MCP。
+- 安装体验：必须自动完成宿主配置，不接受仅输出配置片段。
+
+### 基于答复的收敛判断
+- 不可裁剪：四宿主自动安装、KooCLI 自动安装/复用、固定小工具面、全风险操作、内置远程产品 MCP 接入。
+- 可以裁剪：动态中心 Registry、社区 Provider SDK、复杂 Adapter capability SPI、完整 repair/drift 框架、企业策略分发、分布式审计协议、Provider 自助接入/conformance 平台。
+- 工具面可固定为 3 个：`search`、`describe`、`execute`。危险操作的预览与确认可以合并进 `execute` 的两阶段协议，而不额外暴露 `plan` 工具。
+- 内置 Provider 清单可随 npm 版本静态发布；新增、变更或禁用 Provider 通过插件发版完成，从而移除动态 Registry、签名、缓存、吊销和 last-known-good 机制。
+- 最大剩余不确定性是 AK/SK：本地 KooCLI 可由 Core 注入凭证，但远程产品 MCP 若直接执行云 API，必须在“远程委托 AK/SK、远程只规划本地执行、Provider 自带认证”之间明确一种契约。
+
+### 用户第二轮简化答复
+- 产品 MCP 尚未定义用户鉴权协议；首版直接使用 AK/SK，允许 AK/SK 离开本机。
+- 路由接受简化为：产品 MCP 支持时默认 MCP，否则 KooCLI；用户可明确指定；执行失败后不自动切换。
+- 接受把危险操作预览与一次性确认令牌合并进 `execute` 两阶段协议，从而保持 3 个固定工具。
+- 接受首次使用时输入一次 AK/SK，并要求后续可以修改；用户询问是否允许把 AK/SK 放入配置文件。
+- 内置 Provider 随 npm 静态发布，不需要服务端紧急禁用。
+- 用户担心插件私有固定 KooCLI 版本不能保证正常使用，需要明确兼容性探测和安装后自检。
+- 接受声明式四宿主模板，以及 `install`、`doctor`、`uninstall` 的精简生命周期；不实现独立 repair 和复杂 drift 检测。
+- 接受仅保留本地 JSONL 日志，不上传遥测、不实现企业策略中心和分布式审计。
+- 原环境限制继续成立：不支持离线、HTTP/HTTPS 代理、无桌面 Keyring 的 headless Linux。
+
+### 凭证与 KooCLI 的当前建议
+- AK/SK 修改应通过 `hcloud-agent auth set` 覆盖当前凭证或 `auth rotate` 完成；修改后立即撤销旧远程 session，新的执行使用新凭证。
+- 主配置文件只保存非敏感设置和 credential reference。若允许明文文件，应限定在用户目录专用 credentials 文件、设置最小文件权限/ACL、明确警告且禁止 workspace 路径；不应把 AK/SK 混入普通 JSON 配置或 Agent 配置。
+- 固定 KooCLI 版本不能保证网络、凭证和所有云 API 永远可用，但能保证插件与 CLI 参数/输出契约可复现。安装器必须执行 SHA-256、`version`、最小只读 smoke/doctor；失败则中止，不宣称安装成功。
+- 预装 KooCLI 只有在版本落入插件兼容范围且 doctor 通过时才复用，否则安装并使用插件私有固定版本，不修改用户的系统 KooCLI。
+
+### 用户第三轮简化答复与最终收敛
+- 接受产品 MCP 在同域 HTTPS credential session 中接收 AK/SK，仅在内存保存最长 15 分钟并返回 opaque session ID。
+- 接受删除独立凭证控制面、设备 mTLS、应用层信封加密和 KMS/HSM 依赖；信任边界收敛为“内置官方产品 MCP 可以接触用户明文 AK/SK”。
+- 接受首版默认使用用户目录下权限受限的独立 credentials 文件，不实现跨平台 Keyring。
+- 接受首版只维护一个当前账号；`auth set` 覆盖更新 AK/SK，并使所有旧远程 session 立即失效。
+- 对精简首版的需求理解达到约 93%，已经超过 90% 目标；剩余产品清单和验收场景属于实施输入，不阻塞架构定稿。
+
+### Proposed v0.3-lite 核心模块
+```text
+公共 npm Installer
+  -> 四宿主声明式配置模板 + Canonical Skills
+  -> 本地 stdio Tool Router（search / describe / execute）
+       -> 内置产品 MCP Client（HTTPS AK/SK 短会话）
+       -> 受控 KooCLI Adapter（预装复用或私有固定版本）
+
+本地共享：静态能力清单、单账号 credentials 文件、最小风险门禁、JSONL 日志
+```
+- 不再设计通用 Adapter SPI 或多 package 控制平面；首版可以单一 npm package 组织实现。
+- 不再设计独立 `Policy Engine`；保留 Router 内置的风险分类和一次性确认令牌门禁。
+- 不再设计动态 Provider Registry；内置 endpoint、产品映射和版本兼容信息随 npm 发版。
+- 不再设计独立审计协议；只记录本地脱敏执行摘要和产品/KooCLI request ID。
+
 ## 用户给定目标
 - 构建华为云 Agent 插件，集成 MCP、Skills、KooCLI，让开发者通过 Agent 操作华为云各类资源。
 - 首版至少支持 OpenCode、Claude Code、Codex、华为云码道，并为后续 Agent 预留扩展能力。
