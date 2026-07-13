@@ -1,0 +1,244 @@
+{
+  "schemaVersion": "huaweicloud-agent-m0-test-vectors/v1",
+  "vectors": [
+    {
+      "id": "capability-ordinary-read-accepted",
+      "targetSchema": "capability-v1-lite.schema.json",
+      "expectation": "accept",
+      "instance": {
+        "schemaVersion": "huaweicloud-agent-capability/v1-lite",
+        "capabilityId": "huaweicloud.obs.bucket.list.v1",
+        "product": "obs",
+        "summary": "List OBS buckets",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object"
+        },
+        "scope": {
+          "region": "optional",
+          "project": "forbidden"
+        },
+        "operationKind": "read",
+        "riskTags": [],
+        "confirmationRequired": false,
+        "executors": {
+          "providerMcp": {
+            "providerId": "huaweicloud-obs",
+            "tool": "obs_list_buckets",
+            "inputSchemaDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "koocli": {
+            "service": "OBS",
+            "operation": "ListBuckets"
+          }
+        },
+        "defaultExecutor": "provider-mcp",
+        "outputPolicy": {
+          "sensitivePaths": [],
+          "maxBytes": 262144,
+          "allowProviderText": false
+        }
+      }
+    },
+    {
+      "id": "capability-composite-risk-write-accepted",
+      "targetSchema": "capability-v1-lite.schema.json",
+      "expectation": "accept",
+      "instance": {
+        "schemaVersion": "huaweicloud-agent-capability/v1-lite",
+        "capabilityId": "huaweicloud.ecs.server.create.v1",
+        "product": "ecs",
+        "summary": "Create an ECS server with public network access",
+        "inputSchema": {
+          "type": "object",
+          "required": ["name", "flavor"],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object"
+        },
+        "scope": {
+          "region": "required",
+          "project": "required"
+        },
+        "operationKind": "write",
+        "riskTags": ["cost", "privileged"],
+        "confirmationRequired": true,
+        "executors": {
+          "providerMcp": {
+            "providerId": "huaweicloud-ecs",
+            "tool": "ecs_create_server",
+            "inputSchemaDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          },
+          "koocli": {
+            "service": "ECS",
+            "operation": "CreateServers"
+          }
+        },
+        "defaultExecutor": "provider-mcp",
+        "outputPolicy": {
+          "sensitivePaths": ["/adminPass"],
+          "maxBytes": 262144,
+          "allowProviderText": false
+        }
+      }
+    },
+    {
+      "id": "capability-sensitive-read-without-confirmation-rejected",
+      "targetSchema": "capability-v1-lite.schema.json",
+      "expectation": "reject",
+      "expectedRule": "riskTags 非空时 confirmationRequired 必须为 true",
+      "instance": {
+        "schemaVersion": "huaweicloud-agent-capability/v1-lite",
+        "capabilityId": "huaweicloud.iam.credential.read.v1",
+        "product": "iam",
+        "summary": "Read sensitive credential metadata",
+        "inputSchema": {"type": "object"},
+        "outputSchema": {"type": "object"},
+        "scope": {"region": "forbidden", "project": "forbidden"},
+        "operationKind": "read",
+        "riskTags": ["sensitive-read"],
+        "confirmationRequired": false,
+        "executors": {
+          "providerMcp": {
+            "providerId": "huaweicloud-iam",
+            "tool": "iam_read_credential_metadata",
+            "inputSchemaDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        },
+        "defaultExecutor": "provider-mcp",
+        "outputPolicy": {
+          "sensitivePaths": ["/credential"],
+          "maxBytes": 65536,
+          "allowProviderText": false
+        }
+      }
+    },
+    {
+      "id": "credential-session-route-token-required",
+      "targetSchema": "credential-session-v1.schema.json",
+      "expectation": "reject",
+      "expectedRule": "createResponse 必须包含 routeToken",
+      "instance": {
+        "protocol": "huaweicloud-credential-session/v1",
+        "sessionId": "session_abcdefghijklmnopqrstuvwxyz0123456789",
+        "providerInstanceId": "ecs-mcp-01",
+        "credentialGeneration": "9d9b8dd6-4698-4a1a-b3ae-3cc52d7c41e4",
+        "expiresAt": "2026-07-13T13:15:00Z",
+        "accountIdentity": {
+          "accountId": "account-1",
+          "domainId": "domain-1"
+        }
+      }
+    },
+    {
+      "id": "provider-handshake-digest-mismatch-rejected",
+      "targetSchema": "provider-v1-lite.schema.json",
+      "expectation": "semantic-reject",
+      "expectedRule": "handshake capabilityDigest 必须与内置 descriptor 完全一致",
+      "descriptorDigest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "instance": {
+        "schemaVersion": "huaweicloud-agent-provider-handshake/v1",
+        "status": "healthy",
+        "providerId": "huaweicloud-ecs",
+        "providerVersion": "1.0.0",
+        "providerContractVersion": "huaweicloud-agent-provider-contract/v1-lite",
+        "credentialSessionProtocol": "huaweicloud-credential-session/v1",
+        "capabilityDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "toolSchemaDigest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "instanceId": "ecs-mcp-01"
+      }
+    },
+    {
+      "id": "approval-receipt-accepted-once",
+      "targetSchema": "approval-v1.schema.json",
+      "expectation": "accept-once",
+      "instance": {
+        "schemaVersion": "huaweicloud-agent-approval-receipt/v1",
+        "issuerId": "codex.host-approval",
+        "previewId": "preview_abcdefghijklmnopqrstuvwxyz0123456789",
+        "challengeDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "parameterDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        "executor": "provider-mcp",
+        "credentialGeneration": "9d9b8dd6-4698-4a1a-b3ae-3cc52d7c41e4",
+        "accountIdentityDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        "scopeDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        "approvedAt": "2026-07-13T13:00:00Z",
+        "expiresAt": "2026-07-13T13:05:00Z",
+        "signatureAlgorithm": "ed25519",
+        "signature": "signature_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      }
+    },
+    {
+      "id": "koocli-sha256-malformed-rejected",
+      "targetSchema": "koocli-policy-v1-lite.schema.json",
+      "expectation": "reject",
+      "expectedRule": "每个平台摘要必须是 64 位小写十六进制 SHA-256",
+      "instance": {
+        "schemaVersion": "huaweicloud-agent-koocli-policy/v1-lite",
+        "compatibleVersionRange": ">=1.0.0 <2.0.0",
+        "pinnedVersion": "1.0.0",
+        "downloads": [
+          {"platform": "windows-amd64", "url": "https://example.invalid/hcloud.zip", "sha256": "bad"},
+          {"platform": "linux-amd64", "url": "https://example.invalid/hcloud.tgz", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+          {"platform": "linux-arm64", "url": "https://example.invalid/hcloud.tgz", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+          {"platform": "macos-amd64", "url": "https://example.invalid/hcloud.tgz", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+          {"platform": "macos-arm64", "url": "https://example.invalid/hcloud.tgz", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+        ],
+        "reuse": {
+          "requiresCompatibleVersion": true,
+          "requiresDoctor": true,
+          "requiresReadSmokeTest": true
+        },
+        "privateInstall": {
+          "relativeDirectory": "koocli/versions/1.0.0",
+          "modifyPath": false,
+          "modifySystemInstallation": false
+        },
+        "invocation": {
+          "absolutePath": true,
+          "shell": false,
+          "credentialsViaEnvironment": true,
+          "timeoutMs": 60000,
+          "maxOutputBytes": 1048576
+        },
+        "smokeTest": {
+          "capabilityId": "huaweicloud.obs.bucket.list.v1",
+          "readOnly": true
+        }
+      }
+    }
+  ],
+  "stateMachineVectors": [
+    {
+      "id": "approval-replay",
+      "steps": [
+        {"event": "preview-created", "expectedState": "pending"},
+        {"event": "valid-receipt-verified", "expectedState": "pending"},
+        {"event": "dispatch-requested", "expectedState": "consumed"},
+        {"event": "same-preview-dispatch-requested", "expectedError": "APPROVAL_REPLAYED"}
+      ]
+    },
+    {
+      "id": "outcome-unknown-does-not-unlock-executor",
+      "steps": [
+        {"event": "preview-created", "executor": "provider-mcp", "expectedState": "pending"},
+        {"event": "dispatch-requested", "executor": "provider-mcp", "expectedState": "consumed"},
+        {"event": "provider-timeout", "expectedError": "OUTCOME_UNKNOWN"},
+        {"event": "automatic-koocli-fallback", "expectedError": "EXECUTOR_LOCKED"}
+      ]
+    },
+    {
+      "id": "credential-generation-changed",
+      "steps": [
+        {"event": "session-created", "credentialGeneration": "9d9b8dd6-4698-4a1a-b3ae-3cc52d7c41e4"},
+        {"event": "credentials-file-replaced", "credentialGeneration": "7cecf2cb-2a11-40ef-899a-7290e6ad66c5"},
+        {"event": "old-session-reuse-requested", "expectedError": "AUTH_SESSION_EXPIRED"},
+        {"event": "known-old-session-revoke", "expectedResult": "best-effort"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:huaweicloud:agent-plugin:koocli-policy:v1-lite",
+  "title": "Huawei Cloud Agent KooCLI Policy v1-lite",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "compatibleVersionRange",
+    "pinnedVersion",
+    "downloads",
+    "reuse",
+    "privateInstall",
+    "invocation",
+    "smokeTest"
+  ],
+  "properties": {
+    "schemaVersion": {"const": "huaweicloud-agent-koocli-policy/v1-lite"},
+    "compatibleVersionRange": {"type": "string", "minLength": 1, "maxLength": 64},
+    "pinnedVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+    "downloads": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["platform", "url", "sha256"],
+        "properties": {
+          "platform": {
+            "enum": ["windows-amd64", "linux-amd64", "linux-arm64", "macos-amd64", "macos-arm64"]
+          },
+          "url": {"type": "string", "format": "uri", "pattern": "^https://"},
+          "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+        }
+      }
+    },
+    "reuse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiresCompatibleVersion", "requiresDoctor", "requiresReadSmokeTest"],
+      "properties": {
+        "requiresCompatibleVersion": {"const": true},
+        "requiresDoctor": {"const": true},
+        "requiresReadSmokeTest": {"const": true}
+      }
+    },
+    "privateInstall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relativeDirectory", "modifyPath", "modifySystemInstallation"],
+      "properties": {
+        "relativeDirectory": {
+          "type": "string",
+          "pattern": "^koocli/versions/[A-Za-z0-9._-]+$"
+        },
+        "modifyPath": {"const": false},
+        "modifySystemInstallation": {"const": false}
+      }
+    },
+    "invocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["absolutePath", "shell", "credentialsViaEnvironment", "timeoutMs", "maxOutputBytes"],
+      "properties": {
+        "absolutePath": {"const": true},
+        "shell": {"const": false},
+        "credentialsViaEnvironment": {"const": true},
+        "timeoutMs": {"type": "integer", "minimum": 1000, "maximum": 600000},
+        "maxOutputBytes": {"type": "integer", "minimum": 1024, "maximum": 10485760}
+      }
+    },
+    "smokeTest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capabilityId", "readOnly"],
+      "properties": {
+        "capabilityId": {"type": "string", "minLength": 1, "maxLength": 160},
+        "readOnly": {"const": true}
+      }
+    }
+  },
+  "allOf": [
+    {"properties": {"downloads": {"contains": {"properties": {"platform": {"const": "windows-amd64"}}, "required": ["platform"]}}}},
+    {"properties": {"downloads": {"contains": {"properties": {"platform": {"const": "linux-amd64"}}, "required": ["platform"]}}}},
+    {"properties": {"downloads": {"contains": {"properties": {"platform": {"const": "linux-arm64"}}, "required": ["platform"]}}}},
+    {"properties": {"downloads": {"contains": {"properties": {"platform": {"const": "macos-amd64"}}, "required": ["platform"]}}}},
+    {"properties": {"downloads": {"contains": {"properties": {"platform": {"const": "macos-arm64"}}, "required": ["platform"]}}}}
+  ]
+}

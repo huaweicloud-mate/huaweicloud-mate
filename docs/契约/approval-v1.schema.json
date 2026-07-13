@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:huaweicloud:agent-plugin:approval:v1",
+  "title": "Huawei Cloud Agent Trusted Approval v1",
+  "oneOf": [
+    {"$ref": "#/$defs/approvalRequest"},
+    {"$ref": "#/$defs/approvalReceipt"}
+  ],
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "opaqueId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{32,256}$"
+    },
+    "executor": {
+      "enum": ["provider-mcp", "koocli"]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capabilityId", "executor", "operationKind", "riskTags", "scope", "resources", "effects"],
+      "properties": {
+        "capabilityId": {"type": "string"},
+        "executor": {"$ref": "#/$defs/executor"},
+        "operationKind": {"enum": ["read", "write"]},
+        "riskTags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["destructive", "privileged", "cost", "sensitive-read"]}
+        },
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "region": {"type": "string"},
+            "project": {"type": "string"}
+          }
+        },
+        "resources": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {"type": "string", "maxLength": 240}
+        },
+        "effects": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {"type": "string", "maxLength": 500}
+        }
+      }
+    },
+    "approvalRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "status",
+        "previewId",
+        "challenge",
+        "parameterDigest",
+        "summary",
+        "allowedIssuerIds",
+        "expiresAt"
+      ],
+      "properties": {
+        "schemaVersion": {"const": "huaweicloud-agent-approval-request/v1"},
+        "status": {"const": "confirmation_required"},
+        "previewId": {"$ref": "#/$defs/opaqueId"},
+        "challenge": {"$ref": "#/$defs/opaqueId"},
+        "parameterDigest": {"$ref": "#/$defs/digest"},
+        "summary": {"$ref": "#/$defs/summary"},
+        "allowedIssuerIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z0-9.-]+$"}
+        },
+        "expiresAt": {"type": "string", "format": "date-time"}
+      }
+    },
+    "approvalReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "issuerId",
+        "previewId",
+        "challengeDigest",
+        "parameterDigest",
+        "executor",
+        "credentialGeneration",
+        "accountIdentityDigest",
+        "scopeDigest",
+        "approvedAt",
+        "expiresAt",
+        "signatureAlgorithm",
+        "signature"
+      ],
+      "properties": {
+        "schemaVersion": {"const": "huaweicloud-agent-approval-receipt/v1"},
+        "issuerId": {"type": "string", "pattern": "^[a-z0-9.-]+$"},
+        "previewId": {"$ref": "#/$defs/opaqueId"},
+        "challengeDigest": {"$ref": "#/$defs/digest"},
+        "parameterDigest": {"$ref": "#/$defs/digest"},
+        "executor": {"$ref": "#/$defs/executor"},
+        "credentialGeneration": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "accountIdentityDigest": {"$ref": "#/$defs/digest"},
+        "scopeDigest": {"$ref": "#/$defs/digest"},
+        "approvedAt": {"type": "string", "format": "date-time"},
+        "expiresAt": {"type": "string", "format": "date-time"},
+        "signatureAlgorithm": {"enum": ["ed25519", "hmac-sha256"]},
+        "signature": {"$ref": "#/$defs/opaqueId"}
+      }
+    }
+  }
+}

@@ -4,10 +4,10 @@
 与用户共同完成一个可落地、可扩展的华为云 Agent 插件技术架构，使插件统一集成 MCP、Skills 与 KooCLI，首版支持 OpenCode、Claude Code、Codex、华为云码道，并能够低成本扩展到其他 Agent。
 
 ## 当前状态
-- 当前阶段：阶段 5 已完成，等待 M0 工程实现授权
+- 当前阶段：阶段 5 已完成；M0 契约冻结进行中，尚未授权应用工程实现
 - 理解度目标：达到并经用户确认至少 90%
 - 当前理解度：原 Proposed v0.2 约 95%；对新的开源精简首版约 93%
-- 仓库状态：已创建首个文档提交 `a4a0d40`，尚无工程代码
+- 仓库状态：最新提交 `e80b188`；M0 文档与 schema 未提交，尚无工程代码
 
 ## 阶段
 
@@ -45,6 +45,20 @@
 - [x] 区分首版必需核心、可选能力和后续企业级能力
 - [x] 输出精简方案 Proposed v0.3-lite
 - [x] 用户完成 Proposed v0.3-lite 文档终审并要求提交 Git
+
+### M0：精简契约冻结（进行中）
+- [x] 用户确认阶段 5 后续审查建议
+- [x] 新增 ADR-0008，补充可信审批、session 生命周期、复合风险、稳定运行路径和兼容握手
+- [x] 创建 Router、Capability、Provider、credential session、approval、宿主模板和 KooCLI Draft schema
+- [x] 创建正反例与状态机测试向量
+- [x] 同步技术、安全、Provider、宿主、路线图和线程交接文档
+- [ ] 使用独立 JSON Schema Draft 2020-12 校验器验证 schema 与测试向量
+- [ ] 绑定四宿主可信审批 issuer
+- [ ] 绑定首发产品 MCP、endpoint、版本范围和 schema digest
+- [ ] 绑定 KooCLI 固定版本、兼容范围、URL 和 SHA-256
+- [ ] 冻结 3～5 个真实端到端验收场景
+
+M0 未完成前不得创建 TypeScript 应用工程；未经用户明确授权不得提交或推送 Git。
 
 精简首版已无阻塞性需求问题。后续仍需在实施前补齐具体首发产品 MCP 清单、endpoint、KooCLI 兼容版本和 3～5 个端到端验收场景，但这些不改变核心架构。
 

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:huaweicloud:agent-plugin:provider:v1-lite",
+  "title": "Huawei Cloud Agent Provider v1-lite",
+  "oneOf": [
+    {"$ref": "#/$defs/descriptor"},
+    {"$ref": "#/$defs/handshake"}
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "providerId": {
+      "type": "string",
+      "pattern": "^huaweicloud-[a-z0-9-]+$",
+      "maxLength": 128
+    },
+    "endpoint": {
+      "type": "string",
+      "format": "uri",
+      "pattern": "^https://"
+    },
+    "descriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "providerId",
+        "product",
+        "expectedProviderVersionRange",
+        "dataPlane",
+        "credentialSession",
+        "health",
+        "capabilities",
+        "compatibility"
+      ],
+      "properties": {
+        "schemaVersion": {"const": "huaweicloud-agent-provider/v1-lite"},
+        "providerId": {"$ref": "#/$defs/providerId"},
+        "product": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+        "expectedProviderVersionRange": {"type": "string", "minLength": 1, "maxLength": 64},
+        "dataPlane": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["transport", "endpoint"],
+          "properties": {
+            "transport": {"const": "streamable-http"},
+            "endpoint": {"$ref": "#/$defs/endpoint"}
+          }
+        },
+        "credentialSession": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["endpoint", "protocol", "maxTtlSeconds", "routing"],
+          "properties": {
+            "endpoint": {"$ref": "#/$defs/endpoint"},
+            "protocol": {"const": "huaweicloud-credential-session/v1"},
+            "maxTtlSeconds": {"type": "integer", "minimum": 60, "maximum": 900},
+            "routing": {"const": "opaque-route-token"}
+          }
+        },
+        "health": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["endpoint"],
+          "properties": {
+            "endpoint": {"$ref": "#/$defs/endpoint"}
+          }
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "digest"],
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^capabilities/[A-Za-z0-9._-]+\\.json$"
+            },
+            "digest": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "compatibility": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["providerContractVersion", "credentialSessionProtocol", "toolSchemaDigest"],
+          "properties": {
+            "providerContractVersion": {"const": "huaweicloud-agent-provider-contract/v1-lite"},
+            "credentialSessionProtocol": {"const": "huaweicloud-credential-session/v1"},
+            "toolSchemaDigest": {"$ref": "#/$defs/sha256"}
+          }
+        }
+      }
+    },
+    "handshake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "status",
+        "providerId",
+        "providerVersion",
+        "providerContractVersion",
+        "credentialSessionProtocol",
+        "capabilityDigest",
+        "toolSchemaDigest",
+        "instanceId"
+      ],
+      "properties": {
+        "schemaVersion": {"const": "huaweicloud-agent-provider-handshake/v1"},
+        "status": {"enum": ["healthy", "degraded"]},
+        "providerId": {"$ref": "#/$defs/providerId"},
+        "providerVersion": {"type": "string", "minLength": 1, "maxLength": 64},
+        "providerContractVersion": {"const": "huaweicloud-agent-provider-contract/v1-lite"},
+        "credentialSessionProtocol": {"const": "huaweicloud-credential-session/v1"},
+        "capabilityDigest": {"$ref": "#/$defs/sha256"},
+        "toolSchemaDigest": {"$ref": "#/$defs/sha256"},
+        "instanceId": {"type": "string", "minLength": 1, "maxLength": 256}
+      }
+    }
+  }
+}

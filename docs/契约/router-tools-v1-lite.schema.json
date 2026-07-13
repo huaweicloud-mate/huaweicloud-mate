@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:huaweicloud:agent-plugin:router-tools:v1-lite",
+  "title": "Huawei Cloud Agent Router Tools v1-lite",
+  "oneOf": [
+    {"$ref": "#/$defs/searchInput"},
+    {"$ref": "#/$defs/searchOutput"},
+    {"$ref": "#/$defs/describeInput"},
+    {"$ref": "#/$defs/describeOutput"},
+    {"$ref": "#/$defs/executeInput"},
+    {"$ref": "approval-v1.schema.json#/$defs/approvalRequest"},
+    {"$ref": "#/$defs/executeOutput"},
+    {"$ref": "#/$defs/errorOutput"}
+  ],
+  "$defs": {
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "region": {"type": "string", "minLength": 1, "maxLength": 128},
+        "project": {"type": "string", "minLength": 1, "maxLength": 256}
+      }
+    },
+    "executor": {
+      "enum": ["provider-mcp", "koocli"]
+    },
+    "searchInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "query"],
+      "properties": {
+        "schemaVersion": {"const": "huaweicloud-agent-search-input/v1-lite"},
+        "query": {"type": "string", "minLength": 1, "maxLength": 1000},
+        "product": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+        "operationKind": {"enum": ["read", "write"]},
+        "riskTags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["destructive", "privileged", "cost", "sensitive-read"]}
+        },
+        "limit": {"type": "integer", "minimum": 1, "maximum": 50},
+        "cursor": {"type": "string", "minLength": 1, "maxLength": 1024}
+      }
+    },
+    "searchOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "capabilities"],
+      "properties": {
+        "schemaVersion": {"const": "huaweicloud-agent-search-output/v1-lite"},
+        "capabilities": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["capabilityId", "product", "summary", "operationKind", "riskTags", "executors", "defaultExecutor"],
+            "properties": {
+              "capabilityId": {"type": "string"},
+              "product": {"type": "string"},
+              "summary": {"type": "string", "maxLength": 240},
+              "operationKind": {"enum": ["read", "write"]},
+              "riskTags": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {"enum": ["destructive", "privileged", "cost", "sensitive-read"]}
+              },
+              "executors": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {"$ref": "#/$defs/executor"}
+              },
+              "defaultExecutor": {"$ref": "#/$defs/executor"}
+            }
+          }
+        },
+        "nextCursor": {"type": "string", "minLength": 1, "maxLength": 1024}
+      }
+    },
+    "describeInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "capabilityId"],
+      "properties": {
+        "schemaVersion": {"const": "huaweicloud-agent-describe-input/v1-lite"},
+        "capabilityId": {"type": "string", "minLength": 1, "maxLength": 160}
+      }
+    },
+    "describeOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "capability"],
+      "properties": {
+        "schemaVersion": {"const": "huaweicloud-agent-describe-output/v1-lite"},
+        "capability": {"$ref": "capability-v1-lite.schema.json"}
+      }
+    },
+    "executeInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "capabilityId", "arguments", "scope"],
+      "dependentRequired": {
+        "previewId": ["approvalReceipt"],
+        "approvalReceipt": ["previewId"]
+      },
+      "properties": {
+        "schemaVersion": {"const": "huaweicloud-agent-execute-input/v1-lite"},
+        "capabilityId": {"type": "string", "minLength": 1, "maxLength": 160},
+        "arguments": {"type": "object"},
+        "scope": {"$ref": "#/$defs/scope"},
+        "executorPreference": {"$ref": "#/$defs/executor"},
+        "previewId": {"type": "string", "pattern": "^[A-Za-z0-9_-]{32,256}$"},
+        "approvalReceipt": {"$ref": "approval-v1.schema.json#/$defs/approvalReceipt"}
+      }
+    },
+    "executeOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "status", "result", "execution"],
+      "properties": {
+        "schemaVersion": {"const": "huaweicloud-agent-execute-output/v1-lite"},
+        "status": {"const": "completed"},
+        "result": {},
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["correlationId", "executor", "effectiveAccountId", "durationMs"],
+          "properties": {
+            "correlationId": {"type": "string", "minLength": 1, "maxLength": 256},
+            "executor": {"$ref": "#/$defs/executor"},
+            "effectiveAccountId": {"type": "string", "minLength": 1, "maxLength": 256},
+            "effectiveProjectId": {"type": "string", "minLength": 1, "maxLength": 256},
+            "effectiveRegion": {"type": "string", "minLength": 1, "maxLength": 128},
+            "requestId": {"type": "string", "minLength": 1, "maxLength": 256},
+            "durationMs": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    },
+    "errorOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "status", "error"],
+      "properties": {
+        "schemaVersion": {"const": "huaweicloud-agent-error/v1-lite"},
+        "status": {"const": "error"},
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message", "retryable"],
+          "properties": {
+            "code": {
+              "enum": [
+                "CAPABILITY_NOT_FOUND",
+                "SCHEMA_MISMATCH",
+                "CONFIRMATION_REQUIRED",
+                "APPROVAL_INVALID",
+                "APPROVAL_EXPIRED",
+                "APPROVAL_REPLAYED",
+                "AUTH_REQUIRED",
+                "AUTH_SESSION_EXPIRED",
+                "ACCOUNT_MISMATCH",
+                "PERMISSION_DENIED",
+                "INVALID_SCOPE",
+                "VALIDATION_FAILED",
+                "CONFLICT",
+                "RATE_LIMITED",
+                "PROVIDER_INCOMPATIBLE",
+                "PROVIDER_UNAVAILABLE",
+                "UPSTREAM_TIMEOUT",
+                "OUTCOME_UNKNOWN",
+                "EXECUTOR_LOCKED",
+                "OUTPUT_REJECTED",
+                "UNKNOWN"
+              ]
+            },
+            "message": {"type": "string", "minLength": 1, "maxLength": 2000},
+            "retryable": {"type": "boolean"},
+            "correlationId": {"type": "string", "minLength": 1, "maxLength": 256},
+            "requestId": {"type": "string", "minLength": 1, "maxLength": 256},
+            "reconciliationHint": {"type": "string", "minLength": 1, "maxLength": 2000}
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,213 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:huaweicloud:agent-plugin:capability:v1-lite",
+  "title": "Huawei Cloud Agent Capability v1-lite",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "capabilityId",
+    "product",
+    "summary",
+    "inputSchema",
+    "outputSchema",
+    "scope",
+    "operationKind",
+    "riskTags",
+    "confirmationRequired",
+    "executors",
+    "defaultExecutor",
+    "outputPolicy"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "huaweicloud-agent-capability/v1-lite"
+    },
+    "capabilityId": {
+      "type": "string",
+      "pattern": "^huaweicloud\\.[a-z0-9-]+\\.[a-z0-9.-]+\\.v[1-9][0-9]*$",
+      "maxLength": 160
+    },
+    "product": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "maxLength": 40
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "inputSchema": {
+      "type": "object"
+    },
+    "outputSchema": {
+      "type": "object"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["region", "project"],
+      "properties": {
+        "region": {
+          "enum": ["required", "optional", "forbidden"]
+        },
+        "project": {
+          "enum": ["required", "optional", "forbidden"]
+        }
+      }
+    },
+    "operationKind": {
+      "enum": ["read", "write"]
+    },
+    "riskTags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["destructive", "privileged", "cost", "sensitive-read"]
+      }
+    },
+    "confirmationRequired": {
+      "type": "boolean"
+    },
+    "executors": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "providerMcp": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["providerId", "tool", "inputSchemaDigest"],
+          "properties": {
+            "providerId": {
+              "type": "string",
+              "pattern": "^huaweicloud-[a-z0-9-]+$"
+            },
+            "tool": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]+$",
+              "maxLength": 128
+            },
+            "inputSchemaDigest": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        "koocli": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["service", "operation"],
+          "properties": {
+            "service": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9]+$",
+              "maxLength": 64
+            },
+            "operation": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9]+$",
+              "maxLength": 128
+            }
+          }
+        }
+      }
+    },
+    "defaultExecutor": {
+      "enum": ["provider-mcp", "koocli"]
+    },
+    "outputPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sensitivePaths", "maxBytes", "allowProviderText"],
+      "properties": {
+        "sensitivePaths": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/jsonPointer"
+          }
+        },
+        "maxBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "allowProviderText": {
+          "type": "boolean"
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operationKind": {"const": "write"}
+        },
+        "required": ["operationKind"]
+      },
+      "then": {
+        "properties": {
+          "confirmationRequired": {"const": true}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "riskTags": {"minItems": 1}
+        },
+        "required": ["riskTags"]
+      },
+      "then": {
+        "properties": {
+          "confirmationRequired": {"const": true}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "defaultExecutor": {"const": "provider-mcp"}
+        },
+        "required": ["defaultExecutor"]
+      },
+      "then": {
+        "properties": {
+          "executors": {"required": ["providerMcp"]}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "defaultExecutor": {"const": "koocli"}
+        },
+        "required": ["defaultExecutor"]
+      },
+      "then": {
+        "properties": {
+          "executors": {"required": ["koocli"]}
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$"
+    },
+    "jsonPointer": {
+      "type": "string",
+      "pattern": "^(?:/(?:[^~/]|~0|~1)*)*$"
+    }
+  }
+}

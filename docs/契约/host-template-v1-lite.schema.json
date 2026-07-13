@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:huaweicloud:agent-plugin:host-template:v1-lite",
+  "title": "Huawei Cloud Agent Host Template v1-lite",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "displayName", "detect", "mcp", "skills", "approval", "verify"],
+  "properties": {
+    "schemaVersion": {"const": "huaweicloud-agent-host-template/v1-lite"},
+    "id": {"enum": ["codex", "claude", "opencode", "codearts"]},
+    "displayName": {"type": "string", "minLength": 1, "maxLength": 80},
+    "detect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commands", "paths"],
+      "properties": {
+        "commands": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 5,
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"}
+        },
+        "paths": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 10,
+          "items": {"$ref": "#/$defs/templatePath"}
+        }
+      }
+    },
+    "mcp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["configPath", "entryKey", "mergeStrategy", "launcher"],
+      "properties": {
+        "configPath": {"$ref": "#/$defs/templatePath"},
+        "entryKey": {"const": "huaweicloud-agent"},
+        "mergeStrategy": {"enum": ["json-object", "jsonc-object", "toml-table", "plugin-manifest"]},
+        "launcher": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ref", "args"],
+          "properties": {
+            "ref": {"const": "stable-runtime"},
+            "args": {
+              "type": "array",
+              "prefixItems": [{"const": "router"}, {"const": "--stdio"}],
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        }
+      }
+    },
+    "skills": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "targetPath"],
+      "properties": {
+        "source": {"const": "canonical"},
+        "targetPath": {"$ref": "#/$defs/templatePath"}
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "issuerId", "verifierKeyId"],
+      "properties": {
+        "mode": {"enum": ["host-native-receipt", "bundled-trusted-companion"]},
+        "issuerId": {"type": "string", "pattern": "^[a-z0-9.-]+$"},
+        "verifierKeyId": {"type": "string", "pattern": "^[a-z0-9._-]+$"}
+      }
+    },
+    "verify": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "requiresTrustedApprovalProbe"],
+      "properties": {
+        "type": {"const": "config-process-skill"},
+        "requiresTrustedApprovalProbe": {"const": true}
+      }
+    }
+  },
+  "$defs": {
+    "templatePath": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(\\{userConfig\\}|\\{userData\\}|\\{pluginRoot\\}|\\{runtimeRoot\\})([/\\\\][^<>:\"|?*]+)+$"
+    }
+  }
+}
