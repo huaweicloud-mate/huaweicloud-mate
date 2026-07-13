@@ -1,4 +1,4 @@
-# @hd-vector/huaweicloud-meta
+# @hd_vector/huaweicloud-meta
 
 Huawei Cloud AI Assistant — OBS (Object Storage Service) tools with Promise-based client and MCP server support.
 
@@ -8,13 +8,13 @@ Huawei Cloud AI Assistant — OBS (Object Storage Service) tools with Promise-ba
 npm install /path/to/huaweicloud-meta
 npm install git+ssh://git@github.com/hd-vector/huaweicloud-mate.git
 # or from npm registry (coming soon)
-npm install @hd-vector/huaweicloud-meta
+npm install @hd_vector/huaweicloud-meta
 ```
 
 ## Usage (Library)
 
 ```typescript
-import { HwObsClient } from "@hd-vector/huaweicloud-meta";
+import { HwObsClient } from "@hd_vector/huaweicloud-meta";
 
 const client = new HwObsClient({
   credentials: {
@@ -33,7 +33,7 @@ const { objects } = await client.listObjects({ bucket: "my-bucket" });
 ```bash
 export HUAWEICLOUD_AK=your-ak
 export HUAWEICLOUD_SK=your-sk
-npx @hd-vector/huaweicloud-meta
+npx @hd_vector/huaweicloud-meta
 ```
 
 ## API

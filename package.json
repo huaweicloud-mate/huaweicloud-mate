@@ -1,5 +1,5 @@
 {
-  "name": "@hd-vector/huaweicloud-meta",
+  "name": "@hd_vector/huaweicloud-meta",
   "version": "1.0.0",
   "description": "Huawei Cloud AI Assistant — OBS/ECS tools, MCP server, and SDK",
   "private": false,
