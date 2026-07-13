@@ -159,6 +159,7 @@
       "instance": {
         "schemaVersion": "huaweicloud-agent-approval-receipt/v1",
         "issuerId": "huaweicloud-mate.local-approval",
+        "approvalSessionId": "approval_session_abcdefghijklmnopqrstuvwxyz0123456789",
         "previewId": "preview_abcdefghijklmnopqrstuvwxyz0123456789",
         "challengeDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
         "parameterDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",

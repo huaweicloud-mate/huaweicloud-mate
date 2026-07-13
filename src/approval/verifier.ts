@@ -9,10 +9,10 @@ import {
   maxApprovalReceiptTtlMs,
 } from "./constants.js";
 import { ApprovalError } from "./errors.js";
-import { importApprovalPublicKey } from "./key-store.js";
+import { importApprovalSessionPublicKey } from "./session-key.js";
 import type {
-  ApprovalPublicKeyBinding,
   ApprovalReceipt,
+  ApprovalSessionBinding,
   ExpectedApprovalBinding,
   UnsignedApprovalReceipt,
 } from "./types.js";
@@ -29,6 +29,7 @@ function assertExpectedFields(
 ): void {
   const fields = [
     "issuerId",
+    "approvalSessionId",
     "previewId",
     "challengeDigest",
     "parameterDigest",
@@ -52,14 +53,14 @@ export class TrustedApprovalVerifier {
   readonly #consumedPreviewIds = new Set<string>();
 
   private constructor(
-    private readonly binding: ApprovalPublicKeyBinding,
+    private readonly binding: ApprovalSessionBinding,
     private readonly contracts: ContractRegistry,
   ) {
-    this.#publicKey = importApprovalPublicKey(binding);
+    this.#publicKey = importApprovalSessionPublicKey(binding);
   }
 
   static async create(
-    binding: ApprovalPublicKeyBinding,
+    binding: ApprovalSessionBinding,
     contractDirectory?: URL,
   ): Promise<TrustedApprovalVerifier> {
     if (
@@ -91,6 +92,7 @@ export class TrustedApprovalVerifier {
     }
     if (
       receipt.issuerId !== this.binding.issuerId ||
+      receipt.approvalSessionId !== this.binding.sessionId ||
       receipt.signatureAlgorithm !== this.binding.signatureAlgorithm
     ) {
       throw new ApprovalError(

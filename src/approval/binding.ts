@@ -11,9 +11,11 @@ import type {
 
 export function createExpectedApprovalBinding(
   context: ApprovalSigningContext,
+  approvalSessionId: string,
 ): ExpectedApprovalBinding {
   return {
     issuerId: approvalIssuerId,
+    approvalSessionId,
     previewId: context.request.previewId,
     challengeDigest: sha256String(context.request.challenge),
     parameterDigest: context.request.parameterDigest,

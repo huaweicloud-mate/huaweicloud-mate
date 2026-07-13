@@ -6,10 +6,10 @@ import {
 } from "./constants.js";
 import { createExpectedApprovalBinding } from "./binding.js";
 import { ApprovalError } from "./errors.js";
-import { ApprovalKeyStore } from "./key-store.js";
+import { ApprovalSessionKey } from "./session-key.js";
 import type {
-  ApprovalPublicKeyBinding,
   ApprovalReceipt,
+  ApprovalSessionBinding,
   ApprovalSigningContext,
   ApprovalTerminal,
   UnsignedApprovalReceipt,
@@ -74,25 +74,24 @@ function validateSigningContext(context: ApprovalSigningContext): void {
 }
 
 export class TrustedApprovalCompanion {
-  readonly binding: ApprovalPublicKeyBinding;
+  readonly binding: ApprovalSessionBinding;
+  #reviewed = false;
 
   private constructor(
-    private readonly keyStore: ApprovalKeyStore,
+    private readonly sessionKey: ApprovalSessionKey,
     private readonly contracts: ContractRegistry,
   ) {
-    this.binding = keyStore.binding;
+    this.binding = sessionKey.binding;
   }
 
   static async create(
-    keyDirectory: string,
     contractDirectory?: URL,
     now = new Date(),
   ): Promise<TrustedApprovalCompanion> {
-    const [keyStore, contracts] = await Promise.all([
-      ApprovalKeyStore.initialize(keyDirectory, now),
-      ContractRegistry.load(contractDirectory),
-    ]);
-    return new TrustedApprovalCompanion(keyStore, contracts);
+    return new TrustedApprovalCompanion(
+      ApprovalSessionKey.create(now),
+      await ContractRegistry.load(contractDirectory),
+    );
   }
 
   async reviewAndSign(
@@ -100,6 +99,12 @@ export class TrustedApprovalCompanion {
     terminal: ApprovalTerminal,
     options: { readonly now?: Date; readonly ttlSeconds?: number } = {},
   ): Promise<ApprovalReceipt | null> {
+    if (this.#reviewed) {
+      throw new ApprovalError(
+        "APPROVAL_COMPANION_USED",
+        "Approval companion is one-shot and has already reviewed a request",
+      );
+    }
     if (!terminal.interactive) {
       throw new ApprovalError(
         "APPROVAL_INTERACTIVE_REQUIRED",
@@ -146,12 +151,16 @@ export class TrustedApprovalCompanion {
     }
 
     terminal.write(renderSummary(context));
+    this.#reviewed = true;
     const answer = await terminal.readLine('Type "APPROVE" to authorize once: ');
     if (answer !== "APPROVE") {
       return null;
     }
 
-    const expected = createExpectedApprovalBinding(context);
+    const expected = createExpectedApprovalBinding(
+      context,
+      this.binding.sessionId,
+    );
     const expiresAt = new Date(
       Math.min(
         now.getTime() + Math.min(ttlSeconds * 1000, maxApprovalReceiptTtlMs),
@@ -161,6 +170,7 @@ export class TrustedApprovalCompanion {
     const unsigned: UnsignedApprovalReceipt = {
       schemaVersion: "huaweicloud-agent-approval-receipt/v1",
       issuerId: expected.issuerId,
+      approvalSessionId: expected.approvalSessionId,
       previewId: expected.previewId,
       challengeDigest: expected.challengeDigest,
       parameterDigest: expected.parameterDigest,
@@ -174,7 +184,7 @@ export class TrustedApprovalCompanion {
     };
     const receipt: ApprovalReceipt = {
       ...unsigned,
-      signature: this.keyStore.sign(approvalReceiptSigningPayload(unsigned)),
+      signature: this.sessionKey.signOnce(approvalReceiptSigningPayload(unsigned)),
     };
 
     if (!this.contracts.validate("approval-v1.schema.json", receipt).valid) {

@@ -22,6 +22,6 @@
 
 ## 当前限制
 
-当前工程已包含契约注册表、CLI doctor 基础和受信审批 companion 核心：安装级 Ed25519 密钥、交互式摘要、receipt 签发、验签、时效与一次性消费。它仍不能作为可安装的正式插件或 MCP Server 使用。请勿提供真实 AK/SK，也不要通过环境变量、工具参数或日志传递凭证。
+当前工程已包含契约注册表、CLI doctor 基础和受信审批 companion 核心：一次审批一次的内存 Ed25519 密钥、交互式摘要、receipt 签发、验签、时效与一次性消费。它仍不能作为可安装的正式插件或 MCP Server 使用。请勿提供真实 AK/SK，也不要通过环境变量、工具参数或日志传递凭证。
 
-早期 OBS-only 原型已经从活动分支退役，仍可在 Git 历史中追溯。审批 companion 尚未拆为独立 launcher/进程，Windows ACL 加固与 doctor 交互探测也未完成；真实产品 MCP、固定 KooCLI 制品、账号身份校验和真实端到端场景仍是后续发布门禁。
+早期 OBS-only 原型已经从活动分支退役，仍可在 Git 历史中追溯。审批 companion 尚未接入固定 launcher、私有 IPC 和独立 UI，进程来源/隔离验证与 doctor 交互探测也未完成；真实产品 MCP、固定 KooCLI 制品、账号身份校验和真实端到端场景仍是后续发布门禁。

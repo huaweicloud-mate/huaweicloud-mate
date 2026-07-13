@@ -29,8 +29,8 @@
 8. session 最长 900 秒，只在 Provider 实例内存中保存；数据面使用 `Hwc-Credential-Session` 和 `Hwc-Session-Route`，后者保证请求命中创建实例。
 9. `npx` 仅为安装入口，宿主长期配置只指向用户目录下的稳定 launcher。
 10. 开发态 reference provider 不接收真实 AK/SK、不访问云资源且不进入正式 Provider 清单；真实 Provider 通过相同 descriptor/handshake 契约替换。
-11. 四宿主统一使用 `huaweicloud-mate.local-approval` 受信 companion；它按需启动、不暴露为普通 Tool，并以每安装实例独立 Ed25519 密钥签发 receipt。
-12. v1-lite 的宿主模板只接受 `bundled-trusted-companion`、固定 issuer/key ID 和 Ed25519；Approval Request 只允许该唯一 issuer。
+11. 四宿主统一使用 `huaweicloud-mate.local-approval` 受信 companion；它按待审批操作一次性启动、不暴露为普通 Tool，以仅存在于进程内存的临时 Ed25519 密钥签发 receipt，并绑定随机 `approvalSessionId`。
+12. v1-lite 的宿主模板只接受 `bundled-trusted-companion`、固定 issuer/key protocol ID 和 Ed25519；Approval Request 只允许该唯一 issuer。key ID 标识协议，实际公钥按审批进程临时生成。
 
 ## 独立校验记录
 

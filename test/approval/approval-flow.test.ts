@@ -1,18 +1,15 @@
-import { readFile, rm, stat, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { mkdtemp } from "node:fs/promises";
+import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { createExpectedApprovalBinding } from "../../src/approval/binding.js";
 import { TrustedApprovalCompanion } from "../../src/approval/companion.js";
 import { ApprovalError } from "../../src/approval/errors.js";
 import {
-  ApprovalKeyStore,
-  approvalKeyFileNames,
-} from "../../src/approval/key-store.js";
+  createApprovalSessionReadyMessage,
+  parseApprovalSessionReadyMessage,
+} from "../../src/approval/session-protocol.js";
 import type {
   ApprovalReceipt,
   ApprovalSigningContext,
@@ -71,12 +68,8 @@ class FakeTerminal implements ApprovalTerminal {
   }
 }
 
-const temporaryDirectories: string[] = [];
-
-async function temporaryKeyDirectory(): Promise<string> {
-  const directory = await mkdtemp(join(tmpdir(), "huaweicloud-mate-approval-"));
-  temporaryDirectories.push(directory);
-  return directory;
+async function createCompanion(): Promise<TrustedApprovalCompanion> {
+  return TrustedApprovalCompanion.create(contractDirectory, now);
 }
 
 async function createSignedReceipt(): Promise<{
@@ -84,17 +77,17 @@ async function createSignedReceipt(): Promise<{
   readonly receipt: ApprovalReceipt;
   readonly terminal: FakeTerminal;
 }> {
-  const companion = await TrustedApprovalCompanion.create(
-    await temporaryKeyDirectory(),
-    contractDirectory,
-    now,
-  );
+  const companion = await createCompanion();
   const terminal = new FakeTerminal(true, "APPROVE");
   const receipt = await companion.reviewAndSign(context, terminal, { now });
   if (receipt === null) {
     throw new Error("Expected the test approval to be signed");
   }
   return { companion, receipt, terminal };
+}
+
+function expectedBinding(companion: TrustedApprovalCompanion) {
+  return createExpectedApprovalBinding(context, companion.binding.sessionId);
 }
 
 function captureApprovalError(action: () => void): ApprovalError {
@@ -109,50 +102,19 @@ function captureApprovalError(action: () => void): ApprovalError {
   throw new Error("Expected an ApprovalError");
 }
 
-afterEach(async () => {
-  await Promise.all(
-    temporaryDirectories.splice(0).map((directory) =>
-      rm(directory, { recursive: true, force: true }),
-    ),
-  );
-});
-
 describe("trusted approval companion", () => {
-  it("creates one installation key pair and reuses the same public binding", async () => {
-    const directory = await temporaryKeyDirectory();
-    const first = await ApprovalKeyStore.initialize(directory, now);
-    const second = await ApprovalKeyStore.initialize(
-      directory,
-      new Date("2026-07-14T14:00:00.000Z"),
-    );
+  it("creates a distinct in-memory key and strict ready message per approval process", async () => {
+    const first = await createCompanion();
+    const second = await createCompanion();
+    const ready = createApprovalSessionReadyMessage(first.binding);
 
-    expect(second.binding).toEqual(first.binding);
+    expect(second.binding.sessionId).not.toBe(first.binding.sessionId);
+    expect(second.binding.publicKeySpki).not.toBe(first.binding.publicKeySpki);
     expect(first.binding).not.toHaveProperty("privateKey");
-    expect(
-      await readFile(join(directory, approvalKeyFileNames.publicBinding), "utf8"),
-    ).not.toContain("PRIVATE KEY");
-
-    if (process.platform !== "win32") {
-      const privateFile = await stat(
-        join(directory, approvalKeyFileNames.privateKey),
-      );
-      expect(privateFile.mode & 0o077).toBe(0);
-    }
-  });
-
-  it("fails closed when the persisted public binding no longer matches the private key", async () => {
-    const directory = await temporaryKeyDirectory();
-    const keyStore = await ApprovalKeyStore.initialize(directory, now);
-    const bindingPath = join(directory, approvalKeyFileNames.publicBinding);
-    const changedBinding = {
-      ...keyStore.binding,
-      publicKeySpki: `${keyStore.binding.publicKeySpki.startsWith("A") ? "B" : "A"}${keyStore.binding.publicKeySpki.slice(1)}`,
-    };
-    await writeFile(bindingPath, `${JSON.stringify(changedBinding, null, 2)}\n`);
-
-    await expect(
-      ApprovalKeyStore.initialize(directory, now),
-    ).rejects.toMatchObject({ code: "APPROVAL_KEY_INVALID" });
+    expect(parseApprovalSessionReadyMessage(ready)).toEqual(ready);
+    expect(() =>
+      parseApprovalSessionReadyMessage({ ...ready, unexpected: true }),
+    ).toThrowError(ApprovalError);
   });
 
   it("shows the normalized summary, signs once, and rejects replay", async () => {
@@ -161,44 +123,50 @@ describe("trusted approval companion", () => {
       companion.binding,
       contractDirectory,
     );
-    const expected = createExpectedApprovalBinding(context);
+    const expected = expectedBinding(companion);
 
     expect(terminal.messages.join("\n")).toContain('Account: "account-1"');
     expect(terminal.messages.join("\n")).toContain('"Create one billable ECS server"');
+    expect(receipt.approvalSessionId).toBe(companion.binding.sessionId);
     expect(receipt.signature).toMatch(/^[A-Za-z0-9_-]{86}$/);
     expect(() => verifier.verifyAndConsume(receipt, expected, now)).not.toThrow();
 
-    const replay = captureApprovalError(() =>
-      verifier.verifyAndConsume(receipt, expected, now),
-    );
-    expect(replay.code).toBe("APPROVAL_REPLAYED");
+    expect(
+      captureApprovalError(() =>
+        verifier.verifyAndConsume(receipt, expected, now),
+      ).code,
+    ).toBe("APPROVAL_REPLAYED");
+    await expect(
+      companion.reviewAndSign(context, new FakeTerminal(true, "APPROVE"), {
+        now,
+      }),
+    ).rejects.toMatchObject({ code: "APPROVAL_COMPANION_USED" });
   });
 
   it("does not sign without an interactive exact approval", async () => {
-    const companion = await TrustedApprovalCompanion.create(
-      await temporaryKeyDirectory(),
-      contractDirectory,
-      now,
-    );
-
     await expect(
-      companion.reviewAndSign(context, new FakeTerminal(false, "APPROVE"), {
-        now,
-      }),
+      (await createCompanion()).reviewAndSign(
+        context,
+        new FakeTerminal(false, "APPROVE"),
+        { now },
+      ),
     ).rejects.toMatchObject({ code: "APPROVAL_INTERACTIVE_REQUIRED" });
+
+    const rejected = await createCompanion();
     await expect(
-      companion.reviewAndSign(context, new FakeTerminal(true, "approve"), {
+      rejected.reviewAndSign(context, new FakeTerminal(true, "approve"), {
         now,
       }),
     ).resolves.toBeNull();
+    await expect(
+      rejected.reviewAndSign(context, new FakeTerminal(true, "APPROVE"), {
+        now,
+      }),
+    ).rejects.toMatchObject({ code: "APPROVAL_COMPANION_USED" });
   });
 
   it("escapes terminal control and bidirectional text in the approval UI", async () => {
-    const companion = await TrustedApprovalCompanion.create(
-      await temporaryKeyDirectory(),
-      contractDirectory,
-      now,
-    );
+    const companion = await createCompanion();
     const terminal = new FakeTerminal(true, "reject");
     const spoofedContext: ApprovalSigningContext = {
       ...context,
@@ -220,9 +188,9 @@ describe("trusted approval companion", () => {
     expect(rendered).toContain("\\u001b[2J\\u202eapproved");
   });
 
-  it("rejects changed bindings and tampered signatures", async () => {
+  it("rejects changed fields, signatures, and session public keys", async () => {
     const { companion, receipt } = await createSignedReceipt();
-    const expected = createExpectedApprovalBinding(context);
+    const expected = expectedBinding(companion);
 
     const changedVerifier = await TrustedApprovalVerifier.create(
       companion.binding,
@@ -251,6 +219,21 @@ describe("trusted approval companion", () => {
         signatureVerifier.verifyAndConsume(tamperedSignature, expected, now),
       ).code,
     ).toBe("APPROVAL_INVALID");
+
+    const otherCompanion = await createCompanion();
+    const wrongKeyForSession = {
+      ...otherCompanion.binding,
+      sessionId: companion.binding.sessionId,
+    };
+    const wrongKeyVerifier = await TrustedApprovalVerifier.create(
+      wrongKeyForSession,
+      contractDirectory,
+    );
+    expect(
+      captureApprovalError(() =>
+        wrongKeyVerifier.verifyAndConsume(receipt, expected, now),
+      ).code,
+    ).toBe("APPROVAL_INVALID");
   });
 
   it("rejects receipts outside the five-minute lifetime and clock skew", async () => {
@@ -261,13 +244,14 @@ describe("trusted approval companion", () => {
     );
     const afterExpiryAndSkew = new Date(now.getTime() + 330_001);
 
-    const expired = captureApprovalError(() =>
-      verifier.verifyAndConsume(
-        receipt,
-        createExpectedApprovalBinding(context),
-        afterExpiryAndSkew,
-      ),
-    );
-    expect(expired.code).toBe("APPROVAL_EXPIRED");
+    expect(
+      captureApprovalError(() =>
+        verifier.verifyAndConsume(
+          receipt,
+          expectedBinding(companion),
+          afterExpiryAndSkew,
+        ),
+      ).code,
+    ).toBe("APPROVAL_EXPIRED");
   });
 });

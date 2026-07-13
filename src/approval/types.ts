@@ -46,6 +46,7 @@ export interface ApprovalSigningContext {
 export interface UnsignedApprovalReceipt {
   readonly schemaVersion: "huaweicloud-agent-approval-receipt/v1";
   readonly issuerId: string;
+  readonly approvalSessionId: string;
   readonly previewId: string;
   readonly challengeDigest: string;
   readonly parameterDigest: string;
@@ -62,17 +63,19 @@ export interface ApprovalReceipt extends UnsignedApprovalReceipt {
   readonly signature: string;
 }
 
-export interface ApprovalPublicKeyBinding {
-  readonly schemaVersion: "huaweicloud-mate-approval-key/v1";
+export interface ApprovalSessionBinding {
+  readonly schemaVersion: "huaweicloud-mate-approval-session/v1";
   readonly issuerId: string;
   readonly verifierKeyId: string;
   readonly signatureAlgorithm: "ed25519";
+  readonly sessionId: string;
   readonly publicKeySpki: string;
   readonly createdAt: string;
 }
 
 export interface ExpectedApprovalBinding {
   readonly issuerId: string;
+  readonly approvalSessionId: string;
   readonly previewId: string;
   readonly challengeDigest: string;
   readonly parameterDigest: string;

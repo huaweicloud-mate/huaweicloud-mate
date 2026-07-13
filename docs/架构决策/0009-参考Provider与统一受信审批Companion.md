@@ -28,7 +28,9 @@ Codex、Claude Code、OpenCode 和华为云码道统一绑定 npm 内置的本�
 - issuer ID：`huaweicloud-mate.local-approval`；
 - verifier key ID：`local-approval-ed25519-v1`；
 - 签名算法：Ed25519；
-- 安装时为当前用户生成独立密钥对，私钥只供 companion 使用，Router 只读取绑定的公钥；
+- Router 为每次待审批操作通过固定绝对路径启动一个一次性 companion 进程，并建立不暴露给 Agent 的继承管道；
+- companion 每次在内存生成独立 Ed25519 密钥，先通过私有管道返回带随机 `approvalSessionId` 的公钥 binding，再在明确用户批准后签发同一 session 的 receipt；
+- 私钥不写入磁盘、不使用密码或 OS Keyring，companion 返回批准/拒绝结果后立即退出并销毁密钥；
 - companion 由 Router 按需启动，不是常驻 daemon，也不作为 Agent 可调用的普通 Tool 或 MCP tool 暴露；
 - 只有 companion 自己展示规范化摘要，并观察到用户明确批准后，才签发绑定 `previewId`、challenge digest、参数摘要、执行器、凭证 generation、账号身份和 scope 的短期 receipt；
 - 不提供 `--yes`、环境变量自动批准、宿主配置自动批准或可由 Prompt/Skill 触发的非交互签发路径；
@@ -38,9 +40,9 @@ Codex、Claude Code、OpenCode 和华为云码道统一绑定 npm 内置的本�
 
 ### 2.1 当前实现状态
 
-开发态 TypeScript 核心已实现每安装实例 Ed25519 密钥、固定 public binding、交互式规范化摘要、receipt 签发、Router 验签、最长五分钟时效和进程内原子一次性消费，并覆盖非交互、拒绝、UI 控制字符、篡改、过期和重放测试。
+开发态 TypeScript 核心已实现一次审批一次的内存 Ed25519 密钥、严格 ready message、`approvalSessionId` 绑定、交互式规范化摘要、receipt 签发、Router 验签、最长五分钟时效和进程内原子一次性消费，并覆盖非交互、拒绝、UI 控制字符、错误 session 公钥、篡改、过期和重放测试。
 
-该实现仍不是正式安全边界：signer 尚未拆为 Agent 不可调用的独立 launcher/进程，Windows 私钥 ACL、Router preview 存储接线和 doctor 真实交互探测仍未完成。
+该实现仍不是正式安全边界：固定 launcher 尚未真正创建独立 UI 进程和私有继承管道，Router preview 存储、子进程来源/二进制摘要校验、同账号进程隔离和 doctor 真实交互探测仍未完成。
 
 ### 3. 当前工程与发布边界
 
