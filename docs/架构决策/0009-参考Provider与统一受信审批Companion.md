@@ -36,6 +36,12 @@ Codex、Claude Code、OpenCode 和华为云码道统一绑定 npm 内置的本�
 
 宿主原生审批 UI 可以保留为额外的用户提示，但不作为 v1-lite 强制安全边界的 receipt 来源。
 
+### 2.1 当前实现状态
+
+开发态 TypeScript 核心已实现每安装实例 Ed25519 密钥、固定 public binding、交互式规范化摘要、receipt 签发、Router 验签、最长五分钟时效和进程内原子一次性消费，并覆盖非交互、拒绝、UI 控制字符、篡改、过期和重放测试。
+
+该实现仍不是正式安全边界：signer 尚未拆为 Agent 不可调用的独立 launcher/进程，Windows 私钥 ACL、Router preview 存储接线和 doctor 真实交互探测仍未完成。
+
 ### 3. 当前工程与发布边界
 
 - 当前开发包使用私有、不可发布的临时 npm identity；公共 npm scope 与发布身份另行绑定。

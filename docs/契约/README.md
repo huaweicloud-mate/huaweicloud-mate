@@ -30,6 +30,7 @@
 9. `npx` 仅为安装入口，宿主长期配置只指向用户目录下的稳定 launcher。
 10. 开发态 reference provider 不接收真实 AK/SK、不访问云资源且不进入正式 Provider 清单；真实 Provider 通过相同 descriptor/handshake 契约替换。
 11. 四宿主统一使用 `huaweicloud-mate.local-approval` 受信 companion；它按需启动、不暴露为普通 Tool，并以每安装实例独立 Ed25519 密钥签发 receipt。
+12. v1-lite 的宿主模板只接受 `bundled-trusted-companion`、固定 issuer/key ID 和 Ed25519；Approval Request 只允许该唯一 issuer。
 
 ## 独立校验记录
 

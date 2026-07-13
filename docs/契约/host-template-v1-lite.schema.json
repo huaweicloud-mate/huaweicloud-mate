@@ -66,9 +66,9 @@
       "additionalProperties": false,
       "required": ["mode", "issuerId", "verifierKeyId"],
       "properties": {
-        "mode": {"enum": ["host-native-receipt", "bundled-trusted-companion"]},
-        "issuerId": {"type": "string", "pattern": "^[a-z0-9.-]+$"},
-        "verifierKeyId": {"type": "string", "pattern": "^[a-z0-9._-]+$"}
+        "mode": {"const": "bundled-trusted-companion"},
+        "issuerId": {"const": "huaweicloud-mate.local-approval"},
+        "verifierKeyId": {"const": "local-approval-ed25519-v1"}
       }
     },
     "verify": {

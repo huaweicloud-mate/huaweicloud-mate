@@ -75,8 +75,9 @@
         "allowedIssuerIds": {
           "type": "array",
           "minItems": 1,
+          "maxItems": 1,
           "uniqueItems": true,
-          "items": {"type": "string", "pattern": "^[a-z0-9.-]+$"}
+          "items": {"const": "huaweicloud-mate.local-approval"}
         },
         "expiresAt": {"type": "string", "format": "date-time"}
       }
@@ -114,7 +115,7 @@
         "scopeDigest": {"$ref": "#/$defs/digest"},
         "approvedAt": {"type": "string", "format": "date-time"},
         "expiresAt": {"type": "string", "format": "date-time"},
-        "signatureAlgorithm": {"enum": ["ed25519", "hmac-sha256"]},
+        "signatureAlgorithm": {"const": "ed25519"},
         "signature": {"$ref": "#/$defs/opaqueId"}
       }
     }
