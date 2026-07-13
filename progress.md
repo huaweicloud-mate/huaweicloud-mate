@@ -1,0 +1,50 @@
+# 工作进展
+
+## 2026-07-13
+- 新线程按 `docs/线程交接说明.md` 接续工作；已完整读取交接说明与 `planning-with-files` 规则。
+- 运行会话恢复检查，未发现未同步上下文；重新读取 `task_plan.md`、`findings.md` 与 `progress.md`，确认仍处于阶段 5，尚未获准进入 M0。
+- 完整读取 `docs/技术架构.md` 与 `docs/安全架构.md`，确认图示修改可直接继承 Proposed v0.2 的模块和安全边界。
+- 将 `docs/技术架构.md` 的旧 Mermaid 主图替换为交接说明推荐的无 edge-label 运行时主图。
+- 在技术架构中新增安装/升级/回滚流程图，以及 AK/SK 凭证会话时序图；未创建工程代码，未执行 Git 暂存或提交。
+- 文档初检确认旧主图已移除、旧 edge labels 为零、技术架构包含 3 个 Mermaid 图；随后消除安装图的成功/失败分支歧义，并补充预检失败不修改现状的路径。
+- 完成文档结构校验：相对链接缺失数为 0、Markdown 围栏成对、旧 edge labels 为 0；当前环境未安装 Mermaid CLI，像素级渲染留待实际文档宿主终审。
+- 更新交接说明与阶段 5 待办：推荐下一步已推进到用户完成 Proposed v0.2 文档终审；未关闭阶段 5，未进入 M0。
+- 启动技术架构共创。
+- 完整读取 `planning-with-files` 技能说明。
+- 运行会话恢复检查；没有发现此前会话上下文。
+- 检查仓库：全新 Git 仓库，只有 `.git`，无提交、代码或约束文件。
+- 查看并解读用户提供的初步架构草图。
+- 创建 `task_plan.md`、`findings.md`、`progress.md` 作为持续设计记录。
+- 尝试通过 Codex 官方手册抓取器核验 Codex 插件能力；因代理响应缺少 `x-content-sha256` 校验头失败，已切换到官方 Docs MCP 路径。
+- 当前会话未发现 OpenAI Docs MCP；按技能尝试添加时，`codex.exe` 被系统拒绝访问。将以 OpenAI 官方域名网页作为本轮兜底来源。
+- 完成第一轮官方资料核验：MetaMCP、OpenCode MCP/Skills/插件、码道 Space/CLI MCP。
+- 发现关键差异：MetaMCP 当前公开机制仍聚合并返回 namespace 内工具列表，并非草图所示只暴露少量 meta-tools；后续架构必须明确是“借鉴”还是“复用”。
+- 核验 KooCLI 的单二进制和平台矩阵，以及官方 SHA-256 校验物；形成“插件私有目录 + 固定版本 + 校验”的候选集成方案。
+- 核验码道 CLI 的 Skills 与 JS/TS hooks 机制；确认码道 CLI 与 OpenCode 的 Skills 基础格式高度相近。
+- 核验 Claude Code 插件市场、插件自包含 cache、插件内 MCP 生命周期与 MCP scope；发现 Claude Code 已默认提供 tool search，需要重新评估统一 meta-tools 间接层的必要性和安全影响。
+- 官方文档批量直连曾挂起，终止后通过窄范围官方域名检索取得 Claude 资料；Codex 官方页面仍需继续核验。
+- 从本机已安装的 `huaweicloud-obs 0.1.0` Codex 原型确认 Codex plugin 的 manifest/Skills/MCP 组合形态，并识别出硬编码绝对路径和写权限策略漂移两个 PoC 问题。
+- `rg --files` 未返回 manifest，改用 PowerShell 枚举后成功定位，错误已记录。
+- 下一步：向用户提交第一轮高价值澄清问题，重点确认产品 surface、PoC 继承关系、MCP 运行形态、安全边界和 KooCLI 定位。
+- 收到第一轮答复并固化 8 项决策：npm 式一键安装、四类本地 Agent、远程 Streamable HTTP 产品 MCP、中心注册表、自研 Router、AK/SK、KooCLI 同等路径、四产品首版范围。
+- 只读检查 `D:\CodeSpace\AI-Plugin`；确认它是 OBS-only Demo，紧凑 meta-tools 为自研代码而非 MetaMCP 上游能力。
+- 解析 `mcp_provision`：PoC 中存在“意图查找工具”和“建立凭证会话”两种冲突语义，建议正式接口移除该名称并拆分职责。
+- 阶段 1 已完成，进入阶段 2 需求澄清与架构决策。
+- 深读 PoC 总体方案、凭证委托草案和 meta-tools 实现；确认任意 JavaScript `mcp_execute` 不适合生产，且旧的 MCP 优先路由与用户最新决策冲突。
+- 形成 Tool Router MCP v0.1 固定工具面候选，拆除模糊的 `mcp_provision`，把读调用与高风险 plan/execute 分离。
+- 识别下一项核心决策：远程产品 MCP 如何安全获得调用华为云所需的用户身份，需在短期 IAM 凭证与原始 AK/SK 内存委托之间选择。
+- 核验华为云 IAM/STS 官方文档：临时凭证是首选，但 `AssumeAgency` 需要预设委托，且临时 policy 的通用操作级限制不能覆盖 ECS/VPC/IAM。
+- 将远程 MCP 凭证设计收敛为三个候选方案，并确认这是进入 90% 理解度前必须由用户/安全团队决定的问题。
+- 生成总体技术架构 Draft v0.1，覆盖总体架构、进程模型、固定 Router 工具面、能力目录、Registry、双执行器、KooCLI、凭证、策略、Adapter SPI、工程结构和验收基线。
+- 写入 4 个已确认 ADR：统一 Core/薄适配器、自研 Tool Router、MCP 与 KooCLI 同级、插件私有 KooCLI。
+- 运行 `git diff --check`，未发现空白或补丁格式错误；当前新增文件均未提交。
+- 下一步：用户回答第二轮 8 个收敛问题后，将理解度提升至 90% 以上并产出 v0.2。
+- 收到第二轮回答，理解度达到约 95%；确认公共 npm、user-scope、方案 B、公网 Provider、read auto、私有 hcloud 和不支持环境。
+- 将总体技术架构升级为 Proposed v0.2，移除全部已决问题并固化 mTLS + 信封加密 + 内存短会话的 AK/SK 委托。
+- 新增智能体适配器、产品 MCP 接入、安全架构和首版实施路线图文档。
+- 新增 ADR-0005（公共 npm/user-scope）和 ADR-0006（AK/SK 内存委托）。
+- 阶段 2、3、4 完成，进入阶段 5 架构评审。
+- 运行文档结构检查：所有相对 Markdown 链接均可解析；未发现遗留的 v0.1 未决标题；当前文件仍为未提交状态。
+- 将正式交付文档与架构决策文件统一改为中文文件名，并同步更新内部链接。
+- 创建 `docs/线程交接说明.md`，汇总目标、确认决策、架构模块、文档索引、PoC 边界、Mermaid 黑框问题、仓库状态、部署依赖、下一步和新线程启动提示词。
+- 下一步：核验官方资料并形成第一轮高价值澄清问题。
