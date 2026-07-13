@@ -52,13 +52,13 @@
 - [x] 创建 Router、Capability、Provider、credential session、approval、宿主模板和 KooCLI Draft schema
 - [x] 创建正反例与状态机测试向量
 - [x] 同步技术、安全、Provider、宿主、路线图和线程交接文档
-- [ ] 使用独立 JSON Schema Draft 2020-12 校验器验证 schema 与测试向量
+- [x] 使用独立 JSON Schema Draft 2020-12 校验器验证 schema 与测试向量
 - [ ] 绑定四宿主可信审批 issuer
 - [ ] 绑定首发产品 MCP、endpoint、版本范围和 schema digest
 - [ ] 绑定 KooCLI 固定版本、兼容范围、URL 和 SHA-256
 - [ ] 冻结 3～5 个真实端到端验收场景
 
-M0 未完成前不得创建 TypeScript 应用工程；本轮仅授权在 `dev_explore` 进行文档整合、旧原型清理和本地提交，未经用户明确授权不得推送 Git。
+M0 未完成前不得创建 TypeScript 应用工程；用户已授权在 `dev_explore` 继续 M0 文档与契约工作并推送该分支，不得操作其他分支。
 
 精简首版已无阻塞性需求问题。后续仍需在实施前补齐具体首发产品 MCP 清单、endpoint、KooCLI 兼容版本和 3～5 个端到端验收场景，但这些不改变核心架构。
 

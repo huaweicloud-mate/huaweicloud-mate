@@ -15,6 +15,7 @@
 - `koocli-policy-v1-lite.schema.json`：KooCLI 兼容范围、固定版本、下载摘要与验证；
 - `m0-contract-vectors.json`：正反例和状态机测试向量。
 - `端到端验收场景草案.md`：5 个覆盖读取、复合风险、执行器锁定、结果未知和敏感读取的场景。
+- `M0外部绑定审计.md`：独立校验结果、官方资料核验和仍需外部责任人补齐的阻塞项。
 
 ## 固定规则
 
@@ -27,6 +28,16 @@
 7. v1 摘要和签名载荷使用 RFC 8785 JCS，摘要使用 SHA-256；receipt 最长有效 300 秒，允许时钟偏差最长 30 秒。
 8. session 最长 900 秒，只在 Provider 实例内存中保存；数据面使用 `Hwc-Credential-Session` 和 `Hwc-Session-Route`，后者保证请求命中创建实例。
 9. `npx` 仅为安装入口，宿主长期配置只指向用户目录下的稳定 launcher。
+
+## 独立校验记录
+
+2026-07-13 使用仓库外临时安装的 `python-jsonschema 4.25.1`、`Draft202012Validator` 与离线 `referencing Registry` 完成校验：
+
+- 7 个 schema 均通过 Draft 2020-12 元 schema 检查；
+- 7 个测试向量的 schema 层结果均与声明一致；
+- `provider-handshake-digest-mismatch-rejected` 与 `approval-receipt-accepted-once` 按设计先通过结构校验，分别留给运行时握手语义和单次消费状态机验证；
+- 3 个状态机向量已纳入契约，但必须在后续运行时实现中执行，不能由 JSON Schema 单独判定；
+- 所有 schema 通过显式本地 registry 解析，校验过程未获取远程 `$ref`。
 
 ## M0 尚未绑定的外部输入
 
