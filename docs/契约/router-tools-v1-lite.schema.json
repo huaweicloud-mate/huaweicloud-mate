@@ -8,7 +8,7 @@
     {"$ref": "#/$defs/describeInput"},
     {"$ref": "#/$defs/describeOutput"},
     {"$ref": "#/$defs/executeInput"},
-    {"$ref": "approval-v1.schema.json#/$defs/approvalRequest"},
+    {"$ref": "urn:huaweicloud:agent-plugin:approval:v1#/$defs/approvalRequest"},
     {"$ref": "#/$defs/executeOutput"},
     {"$ref": "#/$defs/errorOutput"}
   ],
@@ -93,7 +93,7 @@
       "required": ["schemaVersion", "capability"],
       "properties": {
         "schemaVersion": {"const": "huaweicloud-agent-describe-output/v1-lite"},
-        "capability": {"$ref": "capability-v1-lite.schema.json"}
+        "capability": {"$ref": "urn:huaweicloud:agent-plugin:capability:v1-lite"}
       }
     },
     "executeInput": {
@@ -111,7 +111,7 @@
         "scope": {"$ref": "#/$defs/scope"},
         "executorPreference": {"$ref": "#/$defs/executor"},
         "previewId": {"type": "string", "pattern": "^[A-Za-z0-9_-]{32,256}$"},
-        "approvalReceipt": {"$ref": "approval-v1.schema.json#/$defs/approvalReceipt"}
+        "approvalReceipt": {"$ref": "urn:huaweicloud:agent-plugin:approval:v1#/$defs/approvalReceipt"}
       }
     },
     "executeOutput": {

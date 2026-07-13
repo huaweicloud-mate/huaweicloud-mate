@@ -82,10 +82,10 @@
     }
   },
   "allOf": [
-    {"properties": {"downloads": {"contains": {"properties": {"platform": {"const": "windows-amd64"}}, "required": ["platform"]}}}},
-    {"properties": {"downloads": {"contains": {"properties": {"platform": {"const": "linux-amd64"}}, "required": ["platform"]}}}},
-    {"properties": {"downloads": {"contains": {"properties": {"platform": {"const": "linux-arm64"}}, "required": ["platform"]}}}},
-    {"properties": {"downloads": {"contains": {"properties": {"platform": {"const": "macos-amd64"}}, "required": ["platform"]}}}},
-    {"properties": {"downloads": {"contains": {"properties": {"platform": {"const": "macos-arm64"}}, "required": ["platform"]}}}}
+    {"properties": {"downloads": {"type": "array", "contains": {"type": "object", "properties": {"platform": {"const": "windows-amd64"}}, "required": ["platform"]}}}},
+    {"properties": {"downloads": {"type": "array", "contains": {"type": "object", "properties": {"platform": {"const": "linux-amd64"}}, "required": ["platform"]}}}},
+    {"properties": {"downloads": {"type": "array", "contains": {"type": "object", "properties": {"platform": {"const": "linux-arm64"}}, "required": ["platform"]}}}},
+    {"properties": {"downloads": {"type": "array", "contains": {"type": "object", "properties": {"platform": {"const": "macos-amd64"}}, "required": ["platform"]}}}},
+    {"properties": {"downloads": {"type": "array", "contains": {"type": "object", "properties": {"platform": {"const": "macos-arm64"}}, "required": ["platform"]}}}}
   ]
 }

@@ -2,7 +2,7 @@
 
 状态：Draft for M0
 
-本目录保存 Proposed v0.3-lite 的机器可读契约和测试向量，不是应用工程代码。契约以 ADR-0007 和 ADR-0008 为决策基线。
+本目录保存 Proposed v0.3-lite 的机器可读契约和测试向量。契约以 ADR-0007、ADR-0008 和 ADR-0009 为决策基线。
 
 ## 契约文件
 
@@ -28,6 +28,8 @@
 7. v1 摘要和签名载荷使用 RFC 8785 JCS，摘要使用 SHA-256；receipt 最长有效 300 秒，允许时钟偏差最长 30 秒。
 8. session 最长 900 秒，只在 Provider 实例内存中保存；数据面使用 `Hwc-Credential-Session` 和 `Hwc-Session-Route`，后者保证请求命中创建实例。
 9. `npx` 仅为安装入口，宿主长期配置只指向用户目录下的稳定 launcher。
+10. 开发态 reference provider 不接收真实 AK/SK、不访问云资源且不进入正式 Provider 清单；真实 Provider 通过相同 descriptor/handshake 契约替换。
+11. 四宿主统一使用 `huaweicloud-mate.local-approval` 受信 companion；它按需启动、不暴露为普通 Tool，并以每安装实例独立 Ed25519 密钥签发 receipt。
 
 ## 独立校验记录
 
@@ -39,10 +41,12 @@
 - 3 个状态机向量已纳入契约，但必须在后续运行时实现中执行，不能由 JSON Schema 单独判定；
 - 所有 schema 通过显式本地 registry 解析，校验过程未获取远程 `$ref`。
 
+2026-07-13 工程注册表进一步使用 `Ajv 8.20.0` strict mode 编译全部 7 个 schema，并执行 7 个 schema 层测试向量。该检查修正了条件分支缺少显式类型以及 URN schema 使用相对跨文件 `$ref` 的问题；`npm test` 和 `huaweicloud-mate doctor --contracts-only` 均通过。
+
 ## M0 尚未绑定的外部输入
 
 - 公共 npm scope 与发布身份；
-- 四宿主各自可验证的审批签发方式和 issuer ID；
+- 统一受信审批 companion 的实现验证、私钥权限和责任人；
 - `auth set` 使用的固定只读账号身份校验能力；
 - 首发产品 MCP 清单、同源 endpoint、版本范围和 capability digest；
 - KooCLI 兼容范围、固定版本、下载 URL 与 SHA-256；

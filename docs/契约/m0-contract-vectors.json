@@ -158,7 +158,7 @@
       "expectation": "accept-once",
       "instance": {
         "schemaVersion": "huaweicloud-agent-approval-receipt/v1",
-        "issuerId": "codex.host-approval",
+        "issuerId": "huaweicloud-mate.local-approval",
         "previewId": "preview_abcdefghijklmnopqrstuvwxyz0123456789",
         "challengeDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
         "parameterDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
