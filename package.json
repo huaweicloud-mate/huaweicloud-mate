@@ -16,9 +16,9 @@
     "README.md"
   ],
   "scripts": {
-    "build": "node scripts/clean.mjs && tsc -p tsconfig.json && node scripts/copy-contracts.mjs",
+    "build": "node scripts/clean.mjs && tsc -p tsconfig.json && node scripts/copy-contracts.mjs && node scripts/create-runtime-manifest.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "npm run build && vitest run",
     "doctor": "npm run build && node dist/cli.js doctor --contracts-only"
   },
   "dependencies": {
