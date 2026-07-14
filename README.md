@@ -25,9 +25,10 @@
 - [ADR-0013：宿主配置事务与 Hash 安全回滚](docs/架构决策/0013-宿主配置事务与Hash安全回滚.md)
 - [ADR-0014：宿主资产 Staging 与 Hash 安全物化](docs/架构决策/0014-宿主资产Staging与Hash安全物化.md)
 - [ADR-0015：最小 Install-State 状态信封](docs/架构决策/0015-最小Install-State状态信封.md)
+- [ADR-0016：首装事务编排与逆序安全回滚](docs/架构决策/0016-首装事务编排与逆序安全回滚.md)
 
 ## 当前限制
 
-当前工程已包含契约注册表、CLI doctor、stdio MCP 三工具服务、静态开发态 capability catalog、最小 Router `preview/execute` 状态机、受信审批 companion 核心，以及完整安装清单、版本化运行时物化和稳定 launcher。四宿主真实用户级路径与原生 MCP 形态已固化为内置模板；单一 Canonical Skill 会在构建时生成 Codex/Claude 插件与通用 Skills 产物，两类插件 manifest 均已接入实际校验。宿主配置事务已支持严格 JSON、保留注释的 JSONC、同名冲突、权限受限备份、原子替换和基于安装前后 hash 的安全回滚；插件/Skills 资产也已支持安装清单复验、staging 渲染、完整 tree hash、幂等冲突和 quarantine 安全回滚。最小 install-state 已能严格绑定 runtime/config/assets 证据，支持清单复验、幂等/CAS 写入和 hash 安全回滚。开发态 reference executor 只返回确定性本地数据，不读取凭证、不访问华为云；Router 在结果进入 Agent 前执行 output schema、大小和 JSON Pointer 敏感路径脱敏。`doctor --approval-probe` 可执行一次无云副作用的真实交互探测；审批只需点击批准或拒绝，不要求输入密码。
+当前工程已包含契约注册表、CLI doctor、stdio MCP 三工具服务、静态开发态 capability catalog、最小 Router `preview/execute` 状态机、受信审批 companion 核心，以及完整安装清单、版本化运行时物化和稳定 launcher。四宿主真实用户级路径与原生 MCP 形态已固化为内置模板；单一 Canonical Skill 会在构建时生成 Codex/Claude 插件与通用 Skills 产物，两类插件 manifest 均已接入实际校验。宿主配置事务已支持严格 JSON、保留注释的 JSONC、同名冲突、权限受限备份、原子替换和基于安装前后 hash 的安全回滚；插件/Skills 资产也已支持安装清单复验、staging 渲染、完整 tree hash、幂等冲突和 quarantine 安全回滚。最小 install-state 已能严格绑定 runtime/config/assets 证据，支持清单复验、幂等/CAS 写入和 hash 安全回滚；首装协调器会在提交状态前完成只读复核，并在失败时逆序回滚配置与资产。开发态 reference executor 只返回确定性本地数据，不读取凭证、不访问华为云；Router 在结果进入 Agent 前执行 output schema、大小和 JSON Pointer 敏感路径脱敏。`doctor --approval-probe` 可执行一次无云副作用的真实交互探测；审批只需点击批准或拒绝，不要求输入密码。
 
-开发服务可通过 `npm run mcp` 启动。三工具 Draft 已冻结开发态危险流程：第二次 `execute` 只提交原输入和 `previewId`，Router 内部完成浏览器审批、回执验签、凭证复核与原子 dispatch；不增加第四个 Tool，也不要求密码。稳定 launcher 已能从固定版本目录启动自包含 Router，并在启动前校验完整制品清单。它仍不是可安装的正式插件：完整安装失败回滚编排、受管资产升级、宿主注册与可发现性验证、`install/uninstall` CLI、真实产品 MCP、KooCLI、账号身份校验和四宿主隔离仍是发布门禁。请勿提供真实 AK/SK。
+开发服务可通过 `npm run mcp` 启动。三工具 Draft 已冻结开发态危险流程：第二次 `execute` 只提交原输入和 `previewId`，Router 内部完成浏览器审批、回执验签、凭证复核与原子 dispatch；不增加第四个 Tool，也不要求密码。稳定 launcher 已能从固定版本目录启动自包含 Router，并在启动前校验完整制品清单。它仍不是可安装的正式插件：真实宿主注册与可发现性验证、受管资产升级、`install/uninstall` CLI、真实产品 MCP、KooCLI、账号身份校验和四宿主隔离仍是发布门禁。请勿提供真实 AK/SK。

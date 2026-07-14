@@ -14,6 +14,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   materializeHostAssets,
   rollbackHostAssetChange,
+  verifyHostAssetChange,
 } from "../../src/installer/host-assets.js";
 import { materializeStableRuntime } from "../../src/installer/runtime.js";
 import { createHostInstallPlan } from "../../src/hosts/plan.js";
@@ -143,6 +144,9 @@ describe("host asset materialization", () => {
     await writeFile(skillPath, modified, "utf8");
 
     await expect(materializeHostAssets(plan, runtime)).rejects.toMatchObject({
+      code: "HOST_ASSET_CONFLICT",
+    });
+    await expect(verifyHostAssetChange(change)).rejects.toMatchObject({
       code: "HOST_ASSET_CONFLICT",
     });
     await expect(rollbackHostAssetChange(change)).rejects.toMatchObject({

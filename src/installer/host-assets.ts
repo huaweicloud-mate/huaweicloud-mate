@@ -656,3 +656,28 @@ export async function rollbackHostAssetChange(
     );
   }
 }
+
+export async function verifyHostAssetChange(
+  change: AppliedHostAssetChange,
+): Promise<void> {
+  try {
+    if (
+      !isAbsolute(change.targetPath) ||
+      !digestPattern.test(change.installedTreeHash)
+    ) {
+      return invalid("Host asset verification evidence is invalid");
+    }
+    const currentTreeHash = await existingTreeHash(change.targetPath);
+    if (currentTreeHash !== change.installedTreeHash) {
+      return conflict("Host asset changed before installation verification");
+    }
+  } catch (error) {
+    if (error instanceof InstallerError) {
+      throw error;
+    }
+    throw new InstallerError(
+      "HOST_ASSET_WRITE_FAILED",
+      "Host asset verification failed",
+    );
+  }
+}

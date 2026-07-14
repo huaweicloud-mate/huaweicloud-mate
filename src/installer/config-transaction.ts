@@ -589,3 +589,30 @@ export async function rollbackHostConfigChange(
     );
   }
 }
+
+export async function verifyHostConfigChange(
+  change: AppliedHostConfigChange,
+): Promise<void> {
+  try {
+    if (
+      !isAbsolute(change.configPath) ||
+      change.entryKey !== "huaweicloud-agent" ||
+      !/^sha256:[a-f0-9]{64}$/u.test(change.installedSha256) ||
+      !/^sha256:[a-f0-9]{64}$/u.test(change.installedValueHash)
+    ) {
+      return invalid("Host config verification evidence is invalid");
+    }
+    const current = await readSnapshot(change.configPath);
+    if (!current.exists || current.sha256 !== change.installedSha256) {
+      return conflict("Host config changed before installation verification");
+    }
+  } catch (error) {
+    if (error instanceof InstallerError) {
+      throw error;
+    }
+    throw new InstallerError(
+      "HOST_CONFIG_WRITE_FAILED",
+      "Host config verification failed",
+    );
+  }
+}

@@ -677,6 +677,7 @@ async function commitBytes(
     dirname(path),
     `.${basename(path)}.${randomBytes(16).toString("hex")}.tmp`,
   );
+  let committed = false;
   try {
     await writeExclusive(temporaryPath, bytes);
     const current = await readSnapshot(path);
@@ -692,12 +693,20 @@ async function commitBytes(
         }
         throw error;
       }
-      await unlink(temporaryPath);
+      committed = true;
       return;
     }
     await rename(temporaryPath, path);
+    committed = true;
   } finally {
-    await rm(temporaryPath, { force: true });
+    try {
+      await rm(temporaryPath, { force: true });
+    } catch (error) {
+      if (!committed) {
+        throw error;
+      }
+      // The state is committed; a same-user race may leave only the temp link.
+    }
   }
 }
 

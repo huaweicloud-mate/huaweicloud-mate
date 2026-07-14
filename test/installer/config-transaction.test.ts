@@ -16,6 +16,7 @@ import {
   applyHostConfigChange,
   type ManagedHostConfig,
   rollbackHostConfigChange,
+  verifyHostConfigChange,
 } from "../../src/installer/config-transaction.js";
 
 const temporaryRoots: string[] = [];
@@ -301,6 +302,9 @@ describe("host config transactions", () => {
     const userModified = `${await readFile(configPath, "utf8")}\n`;
     await writeFile(configPath, userModified, "utf8");
 
+    await expect(verifyHostConfigChange(change)).rejects.toMatchObject({
+      code: "HOST_CONFIG_CONFLICT",
+    });
     await expect(rollbackHostConfigChange(change)).rejects.toMatchObject({
       code: "HOST_CONFIG_ROLLBACK_CONFLICT",
     });
