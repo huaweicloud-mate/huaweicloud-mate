@@ -31,14 +31,14 @@ describe("host installation plans", () => {
     );
     expect(codex).toMatchObject({
       configPath:
-        "C:\\Users\\example\\AppData\\Local\\hcloud-agent\\runtime\\hosts\\codex\\huaweicloud-mate\\.mcp.json",
+        "C:\\Users\\example\\plugins\\huaweicloud-mate\\.mcp.json",
       mergeStrategy: "plugin-manifest",
       pluginSourcePath:
         "C:\\Users\\example\\AppData\\Local\\hcloud-agent\\runtime\\versions\\0.0.0-development\\host-assets\\codex\\plugin",
       pluginTargetPath:
-        "C:\\Users\\example\\AppData\\Local\\hcloud-agent\\runtime\\hosts\\codex\\huaweicloud-mate",
+        "C:\\Users\\example\\plugins\\huaweicloud-mate",
       skillTargetPath:
-        "C:\\Users\\example\\AppData\\Local\\hcloud-agent\\runtime\\hosts\\codex\\huaweicloud-mate\\skills\\huaweicloud",
+        "C:\\Users\\example\\plugins\\huaweicloud-mate\\skills\\huaweicloud",
       configFragment: {
         mcpServers: {
           "huaweicloud-agent": {

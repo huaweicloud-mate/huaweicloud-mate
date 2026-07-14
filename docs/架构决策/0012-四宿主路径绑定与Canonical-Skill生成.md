@@ -9,7 +9,7 @@ ADR-0011 已冻结版本化运行时与稳定 launcher，但宿主模板仍只�
 
 ## 决策
 
-1. Codex 与 Claude Code 使用 `plugin-manifest`：安装器把随包生成的自包含插件复制到稳定的 `runtime/hosts/<host>/huaweicloud-mate`，再把插件根 `.mcp.json` 渲染为 `process.execPath + current/hcloud-agent.mjs + router --stdio`。
+1. Codex 与 Claude Code 使用 `plugin-manifest`：安装器把随包生成的自包含插件复制到稳定宿主目录，再把插件根 `.mcp.json` 渲染为 `process.execPath + current/hcloud-agent.mjs + router --stdio`。Claude Code 使用 `runtime/hosts/claude/huaweicloud-mate`；Codex 的目录后来由 ADR-0018 按个人 marketplace 约定精确修正为 `~/plugins/huaweicloud-mate`。
 2. OpenCode 使用用户级 `~/.config/opencode/opencode.json`，在 `mcp.huaweicloud-agent` 写入 `type: local`、`command[]` 和 `enabled: true`；Skills 写入 `~/.config/opencode/skills/huaweicloud`。
 3. 华为云码道使用用户级 `~/.codeartsdoer/codearts_cli.jsonc`，采用同样的 `mcp.huaweicloud-agent` 本地命令数组；Skills 写入 `~/.codeartsdoer/skills/huaweicloud`。官方同时支持 `.json` 与 `.jsonc`，首版选择 `.jsonc` 并要求后续合并器保留注释。
 4. 仓库只维护 `skills/canonical/huaweicloud/SKILL.md`。构建过程生成 Codex、Claude Code 和通用目录布局，不允许长期维护四份内容副本。
@@ -27,6 +27,7 @@ ADR-0011 已冻结版本化运行时与稳定 launcher，但宿主模板仍只�
 
 - 四宿主模板、配置 fragment 和文件路径可以确定性生成，并被完整安装清单覆盖。
 - Codex 与 Claude Code 插件资产可以分别通过随 Codex 提供的校验器和本机 Claude CLI 校验。
+- ADR-0018 仅修正 Codex `pluginRoot` 以满足个人 marketplace 的固定 source 布局；本 ADR 的稳定 launcher、插件自包含和 Canonical Skill 决策不变。
 - 本 ADR 不开放 `install`，也不宣称已经修改任何用户宿主配置。下一步仍需实现冲突检测、备份、JSON/JSONC 原子合并、失败回滚、最小 install-state 与安全卸载。
 
 ## 未采用

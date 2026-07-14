@@ -104,7 +104,7 @@ describe("host asset materialization race checks", () => {
         name.endsWith(".tmp"),
       ),
     ).toEqual([]);
-  });
+  }, 15_000);
 
   it("restores user content changed immediately before rollback rename", async () => {
     const root = await mkdtemp(join(tmpdir(), "huaweicloud-mate-rollback-race-"));

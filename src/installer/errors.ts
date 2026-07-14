@@ -23,6 +23,10 @@ export const installerErrorCodes = [
   "HOST_DISCOVERY_FAILED",
   "HOST_REGISTRATION_MISSING",
   "HOST_VERIFICATION_FAILED",
+  "CODEX_MARKETPLACE_INVALID",
+  "CODEX_MARKETPLACE_CONFLICT",
+  "CODEX_MARKETPLACE_WRITE_FAILED",
+  "CODEX_MARKETPLACE_ROLLBACK_CONFLICT",
 ] as const;
 
 export type InstallerErrorCode = (typeof installerErrorCodes)[number];

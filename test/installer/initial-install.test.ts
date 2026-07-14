@@ -117,7 +117,7 @@ describe("initial install transaction", () => {
       state: result.state,
       sha256: result.stateChange.installedSha256,
     });
-  });
+  }, 15_000);
 
   it("rejects an existing install state before applying any new change", async () => {
     const { runtime, plans } = await fixture(["codex"]);

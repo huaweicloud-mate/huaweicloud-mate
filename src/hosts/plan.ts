@@ -92,15 +92,18 @@ export function defaultHostPathRoots(
     }
   })();
   const resolvedRuntimeRoot = api.resolve(runtimeRoot);
+  const pluginRoot = id === "codex"
+    ? api.resolve(homeDirectory, "plugins", "huaweicloud-mate")
+    : api.resolve(
+        resolvedRuntimeRoot,
+        "hosts",
+        id,
+        "huaweicloud-mate",
+      );
   return {
     userConfig,
     userData: userConfig,
-    pluginRoot: api.resolve(
-      resolvedRuntimeRoot,
-      "hosts",
-      id,
-      "huaweicloud-mate",
-    ),
+    pluginRoot,
     runtimeRoot: resolvedRuntimeRoot,
   };
 }
