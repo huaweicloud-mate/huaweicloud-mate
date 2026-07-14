@@ -19,11 +19,14 @@
     "build": "node scripts/clean.mjs && tsc -p tsconfig.json && node scripts/copy-contracts.mjs && node scripts/create-runtime-manifest.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "npm run build && vitest run",
-    "doctor": "npm run build && node dist/cli.js doctor --contracts-only"
+    "doctor": "npm run build && node dist/cli.js doctor --contracts-only",
+    "mcp": "npm run build && node dist/cli.js mcp"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
     "ajv": "8.20.0",
-    "ajv-formats": "3.0.1"
+    "ajv-formats": "3.0.1",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@types/node": "24.13.3",

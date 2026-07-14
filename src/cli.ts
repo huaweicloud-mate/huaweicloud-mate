@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 
 import { runApprovalDoctor } from "./doctor/approval-doctor.js";
 import { runContractDoctor } from "./doctor/contract-doctor.js";
+import { runDevelopmentMcpServer } from "./mcp/stdio.js";
 
 const version = "0.0.0-development";
 
@@ -12,6 +13,7 @@ function printUsage(): void {
 
 Usage:
   huaweicloud-mate doctor [--contracts-only | --approval-probe] [--json]
+  huaweicloud-mate mcp
   huaweicloud-mate version
 
 This development build does not accept credentials or execute cloud operations.`);
@@ -78,6 +80,13 @@ export async function main(args: readonly string[]): Promise<number> {
   switch (command) {
     case "doctor":
       return runDoctor(commandArguments);
+    case "mcp":
+      if (commandArguments.length > 0) {
+        console.error(`Unknown mcp option: ${String(commandArguments[0])}`);
+        return 2;
+      }
+      await runDevelopmentMcpServer();
+      return 0;
     case "version":
     case "--version":
     case "-v":
@@ -101,5 +110,10 @@ const isEntryPoint =
   import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isEntryPoint) {
-  process.exitCode = await main(process.argv.slice(2));
+  try {
+    process.exitCode = await main(process.argv.slice(2));
+  } catch {
+    console.error("huaweicloud-mate failed to start");
+    process.exitCode = 1;
+  }
 }

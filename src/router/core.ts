@@ -26,6 +26,7 @@ import type {
 import { ContractRegistry } from "../contracts/registry.js";
 import { canonicalizeJson, digestCanonicalJson } from "./canonical.js";
 import { RouterError } from "./errors.js";
+import { redactJsonPointers } from "./redaction.js";
 import type {
   CompiledRouterCapability,
   RouterCapabilityDefinition,
@@ -594,7 +595,12 @@ export class RouterCore {
       identity,
       correlationId,
     });
-    this.#validateDispatchResult(capability, dispatchResult, scope, identity);
+    const result = this.#validateDispatchResult(
+      capability,
+      dispatchResult,
+      scope,
+      identity,
+    );
 
     const execution: RouterExecuteOutput["execution"] = {
       correlationId,
@@ -614,7 +620,7 @@ export class RouterCore {
     const output: RouterExecuteOutput = {
       schemaVersion: "huaweicloud-agent-execute-output/v1-lite",
       status: "completed",
-      result: dispatchResult.result,
+      result,
       execution,
     };
     if (
@@ -633,7 +639,7 @@ export class RouterCore {
     result: RouterDispatchResult,
     scope: ApprovalScope,
     identity: RouterIdentityContext,
-  ): void {
+  ): unknown {
     if (result.effectiveAccountId !== identity.accountIdentity.accountId) {
       throw new RouterError(
         "ACCOUNT_MISMATCH",
@@ -666,14 +672,6 @@ export class RouterCore {
         "Executor result does not match the capability output schema",
       );
     }
-    if (
-      capability.registration.definition.outputPolicy.sensitivePaths.length > 0
-    ) {
-      throw new RouterError(
-        "OUTPUT_REJECTED",
-        "Sensitive output redaction is not implemented in this development slice",
-      );
-    }
     let outputBytes: number;
     try {
       outputBytes = Buffer.byteLength(JSON.stringify(result.result), "utf8");
@@ -693,5 +691,9 @@ export class RouterCore {
         "Executor result violates the capability output policy",
       );
     }
+    return redactJsonPointers(
+      result.result,
+      capability.registration.definition.outputPolicy.sensitivePaths,
+    );
   }
 }

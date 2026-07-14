@@ -391,7 +391,7 @@ describe("minimal Router approval state machine", () => {
     ).rejects.toMatchObject({ code: "AUTH_SESSION_EXPIRED" });
   });
 
-  it("fails closed until declared sensitive output paths can be redacted", async () => {
+  it("redacts declared sensitive output paths before returning to the Agent", async () => {
     const sensitiveRead: RouterCapabilityRegistration = {
       ...safeRead,
       definition: {
@@ -411,6 +411,9 @@ describe("minimal Router approval state machine", () => {
         arguments: {},
         scope: {},
       }),
-    ).rejects.toMatchObject({ code: "OUTPUT_REJECTED" });
+    ).resolves.toMatchObject({
+      status: "completed",
+      result: { buckets: "[REDACTED]" },
+    });
   });
 });

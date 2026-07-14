@@ -22,6 +22,6 @@
 
 ## 当前限制
 
-当前工程已包含契约注册表、CLI doctor、最小 Router `preview/execute` 状态机和受信审批 companion 核心：一次审批一次的内存 Ed25519 密钥、固定制品摘要、私有父子 IPC、受限本地浏览器审批页、receipt 签发/验签、参数/执行器/账号代次绑定，以及 dispatch 前的原子一次性消费。`doctor --approval-probe` 可执行一次不读取凭证、不访问云资源的真实交互探测；审批只需点击批准或拒绝，不要求输入密码。它仍不能作为可安装的正式插件或 MCP Server 使用。请勿提供真实 AK/SK，也不要通过环境变量、工具参数或日志传递凭证。
+当前工程已包含契约注册表、CLI doctor、stdio MCP 三工具服务、静态开发态 capability catalog、最小 Router `preview/execute` 状态机和受信审批 companion 核心。开发态 reference executor 只返回确定性本地数据，不读取凭证、不访问华为云；Router 在结果进入 Agent 前执行 output schema、大小和 JSON Pointer 敏感路径脱敏。`doctor --approval-probe` 可执行一次无云副作用的真实交互探测；审批只需点击批准或拒绝，不要求输入密码。
 
-早期 OBS-only 原型已经从活动分支退役，仍可在 Git 历史中追溯。审批 launcher 已接入最小 Router 核心和 doctor，但 stdio MCP 三工具服务、静态正式能力清单、真实执行器、安装目录真实性、同账号进程隔离及浏览器自动化威胁仍未完成；真实产品 MCP、固定 KooCLI 制品、账号身份校验和四宿主端到端场景仍是后续发布门禁。当前输出脱敏尚未实现，声明敏感路径的能力会 fail closed。
+开发服务可通过 `npm run mcp` 启动。它仍不是可安装的正式插件：危险调用目前只能通过 stdio 返回 preview，三工具 Draft schema 尚未定义 Router 内部启动 companion 后如何把 receipt 交回第二次 Tool 调用；在该编排冻结前不得宣称 Agent 端危险操作闭环已完成。真实产品 MCP、KooCLI、账号身份校验、稳定安装目录和四宿主隔离仍是发布门禁。请勿提供真实 AK/SK。
