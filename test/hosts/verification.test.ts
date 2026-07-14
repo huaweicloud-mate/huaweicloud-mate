@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { FakeCodexPluginRunner } from "../fixtures/codex-plugin-runner.js";
 import {
   type HostCommandResult,
   type HostCommandRunner,
@@ -46,7 +47,8 @@ async function fixture(ids: readonly HostId[]) {
       resolve(root, "home"),
     ),
   );
-  return { root, runtime, plans };
+  const codexRunner = new FakeCodexPluginRunner(root);
+  return { root, runtime, plans, codexRunner };
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -102,8 +104,21 @@ function successfulRunner(
       }
       const command = basename(executablePath, ".exe");
       const invocation = args.join(" ");
-      if (command === "codex" && invocation === "plugin list") {
-        return result("installed  huaweicloud-mate@personal\n");
+      if (command === "codex" && invocation === "plugin list --json") {
+        return result(`${JSON.stringify({
+          installed: [{
+            pluginId: "huaweicloud-mate@personal",
+            name: "huaweicloud-mate",
+            marketplaceName: "personal",
+            version: "local",
+            installed: true,
+            enabled: true,
+            source: { source: "local" },
+            installPolicy: "AVAILABLE",
+            authPolicy: "ON_INSTALL",
+          }],
+          available: [],
+        })}\n`);
       }
       if (command === "claude" && invocation === "plugin list --json") {
         return result(`${JSON.stringify([{ id: "huaweicloud-mate@local" }])}\n`);
@@ -129,7 +144,7 @@ afterEach(async () => {
 
 describe("initial host verification", () => {
   it("verifies four-host discovery before the install-state commit", async () => {
-    const { root, runtime, plans } = await fixture([
+    const { root, runtime, plans, codexRunner } = await fixture([
       "codex",
       "claude",
       "opencode",
@@ -142,6 +157,7 @@ describe("initial host verification", () => {
     const installed = await runInitialInstallTransaction({
       runtime,
       plans,
+      codexRunner,
       verify: async (context) => {
         expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
         report = await verifyInitialInstallHosts(context, {
@@ -179,13 +195,13 @@ describe("initial host verification", () => {
   }, 15_000);
 
   it("rolls back when a detected plugin is not registered", async () => {
-    const { root, runtime, plans } = await fixture(["codex"]);
+    const { root, runtime, plans, codexRunner } = await fixture(["codex"]);
     const baseRunner = successfulRunner(runtime, root, []);
     const runner: HostCommandRunner = {
       resolveCommand: (command) => baseRunner.resolveCommand(command),
       run: async (executablePath, args, timeoutMs) =>
         basename(executablePath, ".exe") === "codex"
-          ? result("not-huaweicloud-mate\n")
+          ? result(`${JSON.stringify({ installed: [], available: [] })}\n`)
           : baseRunner.run(executablePath, args, timeoutMs),
     };
 
@@ -193,6 +209,7 @@ describe("initial host verification", () => {
       runInitialInstallTransaction({
         runtime,
         plans,
+        codexRunner,
         verify: createInitialHostVerificationHook({
           runner,
           approvalProbe: async () => undefined,
@@ -205,12 +222,13 @@ describe("initial host verification", () => {
   });
 
   it("rolls back when neither a host command nor a detection path exists", async () => {
-    const { root, runtime, plans } = await fixture(["codex"]);
+    const { root, runtime, plans, codexRunner } = await fixture(["codex"]);
 
     await expect(
       runInitialInstallTransaction({
         runtime,
         plans,
+        codexRunner,
         verify: createInitialHostVerificationHook({
           runner: successfulRunner(runtime, root, ["codex"]),
           approvalProbe: async () => undefined,

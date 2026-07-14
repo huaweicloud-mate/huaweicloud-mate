@@ -48,6 +48,7 @@ vi.mock("node:fs/promises", async (importOriginal) => {
 
 import { createHostInstallPlan } from "../../src/hosts/plan.js";
 import { HostTemplateRegistry } from "../../src/hosts/registry.js";
+import { applyCodexPluginActivation } from "../../src/installer/codex-activation.js";
 import { materializeHostAssets } from "../../src/installer/host-assets.js";
 import {
   applyCodexMarketplaceChange,
@@ -60,6 +61,7 @@ import {
   rollbackInstallStateChange,
 } from "../../src/installer/install-state.js";
 import { materializeStableRuntime } from "../../src/installer/runtime.js";
+import { FakeCodexPluginRunner } from "../fixtures/codex-plugin-runner.js";
 
 const contractDirectory = pathToFileURL(`${resolve("docs/契约")}/`);
 const platform = process.platform as "win32" | "darwin" | "linux";
@@ -93,10 +95,14 @@ async function fixture() {
     createCodexMarketplacePlan(plan.pluginTargetPath!),
     resolve(root, "backups", "codex-marketplace"),
   );
+  const activationChange = await applyCodexPluginActivation(
+    registrationChange.marketplaceName,
+    new FakeCodexPluginRunner(root),
+  );
   return {
     runtime,
     state: createInstallState(runtime, [
-      { plan, assetChange, registrationChange },
+      { plan, assetChange, registrationChange, activationChange },
     ]),
   };
 }

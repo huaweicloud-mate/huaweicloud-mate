@@ -12,6 +12,10 @@ import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import {
+  codexInstalledEntry,
+  FakeCodexPluginRunner,
+} from "../fixtures/codex-plugin-runner.js";
 import { createHostInstallPlan } from "../../src/hosts/plan.js";
 import { HostTemplateRegistry } from "../../src/hosts/registry.js";
 import type { HostId } from "../../src/hosts/types.js";
@@ -48,7 +52,8 @@ async function fixture(ids: readonly HostId[]) {
       resolve(root, "home"),
     ),
   );
-  return { root, runtime, plans };
+  const codexRunner = new FakeCodexPluginRunner(root);
+  return { root, runtime, plans, codexRunner };
 }
 
 async function pathExists(path: string): Promise<boolean> {
@@ -94,7 +99,7 @@ afterEach(async () => {
 
 describe("initial install transaction", () => {
   it("commits install state only after integrity and host verification", async () => {
-    const { runtime, plans } = await fixture(["codex", "codearts"]);
+    const { runtime, plans, codexRunner } = await fixture(["codex", "codearts"]);
     const verify = vi.fn(async ({ completedHosts }) => {
       expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
       expect(completedHosts.map((host) => host.plan.id)).toEqual([
@@ -118,6 +123,7 @@ describe("initial install transaction", () => {
     const result = await runInitialInstallTransaction({
       runtime,
       plans,
+      codexRunner,
       verify,
     });
 
@@ -135,6 +141,12 @@ describe("initial install transaction", () => {
         kind: "codex-personal-marketplace",
         changed: true,
         createdFile: true,
+        activation: {
+          kind: "codex-cli-plugin",
+          changed: true,
+          installed: true,
+          enabled: true,
+        },
       },
     });
     expect(await readInstallState(runtime.runtimeRoot)).toEqual({
@@ -144,13 +156,17 @@ describe("initial install transaction", () => {
   }, 15_000);
 
   it("rejects an existing install state before applying any new change", async () => {
-    const { runtime, plans } = await fixture(["codex"]);
-    const first = await runInitialInstallTransaction({ runtime, plans });
+    const { runtime, plans, codexRunner } = await fixture(["codex"]);
+    const first = await runInitialInstallTransaction({
+      runtime,
+      plans,
+      codexRunner,
+    });
     const stateBytes = await readFile(installStatePath(runtime.runtimeRoot));
     const assetPath = first.completedHosts[0]!.assetChange.targetPath;
 
     await expect(
-      runInitialInstallTransaction({ runtime, plans }),
+      runInitialInstallTransaction({ runtime, plans, codexRunner }),
     ).rejects.toMatchObject({ code: "INSTALL_TRANSACTION_CONFLICT" });
     expect(await readFile(installStatePath(runtime.runtimeRoot))).toEqual(
       stateBytes,
@@ -159,23 +175,28 @@ describe("initial install transaction", () => {
   });
 
   it("rejects duplicate plans before materializing host assets", async () => {
-    const { runtime, plans } = await fixture(["codex"]);
+    const { runtime, plans, codexRunner } = await fixture(["codex"]);
 
     await expect(
-      runInitialInstallTransaction({ runtime, plans: [plans[0]!, plans[0]!] }),
+      runInitialInstallTransaction({
+        runtime,
+        plans: [plans[0]!, plans[0]!],
+        codexRunner,
+      }),
     ).rejects.toMatchObject({ code: "INSTALL_TRANSACTION_INVALID" });
     expect(await pathExists(assetTarget(plans[0]!))).toBe(false);
     expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
   });
 
   it("rolls back every applied host when final verification fails", async () => {
-    const { runtime, plans } = await fixture(["codex", "codearts"]);
+    const { runtime, plans, codexRunner } = await fixture(["codex", "codearts"]);
     const codearts = plans.find((plan) => plan.id === "codearts")!;
 
     await expect(
       runInitialInstallTransaction({
         runtime,
         plans,
+        codexRunner,
         verify: async () => {
           throw new Error("verification failed");
         },
@@ -185,19 +206,24 @@ describe("initial install transaction", () => {
     expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
     expect(await pathExists(codearts.configPath)).toBe(false);
     expect(await pathExists(codexMarketplacePath(plans))).toBe(false);
+    expect(codexRunner.installedEntry).toBeUndefined();
+    expect(codexRunner.invocations).toContain(
+      "plugin remove huaweicloud-mate@personal --json",
+    );
     for (const plan of plans) {
       expect(await pathExists(assetTarget(plan))).toBe(false);
     }
   });
 
   it("preserves a state file that appears before commit and rolls back hosts", async () => {
-    const { runtime, plans } = await fixture(["codex"]);
+    const { runtime, plans, codexRunner } = await fixture(["codex"]);
     const statePath = installStatePath(runtime.runtimeRoot);
 
     await expect(
       runInitialInstallTransaction({
         runtime,
         plans,
+        codexRunner,
         verify: async () => {
           await writeFile(statePath, "external state\n", "utf8");
         },
@@ -210,7 +236,7 @@ describe("initial install transaction", () => {
   });
 
   it("preserves a conflicting config and rolls back earlier assets", async () => {
-    const { runtime, plans } = await fixture(["opencode", "codex"]);
+    const { runtime, plans, codexRunner } = await fixture(["opencode", "codex"]);
     const opencode = plans.find((plan) => plan.id === "opencode")!;
     const conflicting = `${JSON.stringify({
       mcp: {
@@ -225,7 +251,7 @@ describe("initial install transaction", () => {
     await writeFile(opencode.configPath, conflicting, "utf8");
 
     await expect(
-      runInitialInstallTransaction({ runtime, plans }),
+      runInitialInstallTransaction({ runtime, plans, codexRunner }),
     ).rejects.toMatchObject({ code: "HOST_CONFIG_CONFLICT" });
 
     expect(await readFile(opencode.configPath, "utf8")).toBe(conflicting);
@@ -263,7 +289,7 @@ describe("initial install transaction", () => {
   });
 
   it("preserves a Codex plugin when an edited marketplace cannot roll back", async () => {
-    const { runtime, plans } = await fixture(["codex", "codearts"]);
+    const { runtime, plans, codexRunner } = await fixture(["codex", "codearts"]);
     const marketplacePath = codexMarketplacePath(plans);
     const codex = plans.find((plan) => plan.id === "codex")!;
     const codearts = plans.find((plan) => plan.id === "codearts")!;
@@ -272,6 +298,7 @@ describe("initial install transaction", () => {
       runInitialInstallTransaction({
         runtime,
         plans,
+        codexRunner,
         verify: async () => {
           const marketplace = JSON.parse(
             await readFile(marketplacePath, "utf8"),
@@ -295,8 +322,57 @@ describe("initial install transaction", () => {
     expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
   }, 15_000);
 
+  it("preserves Codex dependencies when activation outcome is unknown", async () => {
+    const { runtime, plans, codexRunner } = await fixture(["codex", "codearts"]);
+    const codex = plans.find((plan) => plan.id === "codex")!;
+    const codearts = plans.find((plan) => plan.id === "codearts")!;
+    codexRunner.failingListCalls.add(2);
+
+    await expect(
+      runInitialInstallTransaction({ runtime, plans, codexRunner }),
+    ).rejects.toMatchObject({ code: "CODEX_ACTIVATION_OUTCOME_UNKNOWN" });
+
+    expect(codexRunner.installedEntry).toBeDefined();
+    expect(await pathExists(codexMarketplacePath(plans))).toBe(true);
+    expect(await pathExists(assetTarget(codex))).toBe(true);
+    expect(await pathExists(codearts.configPath)).toBe(false);
+    expect(await pathExists(assetTarget(codearts))).toBe(false);
+    expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
+  }, 15_000);
+
+  it("preserves Codex dependencies when exact activation cannot roll back", async () => {
+    const { runtime, plans, codexRunner } = await fixture(["codex", "codearts"]);
+    const codex = plans.find((plan) => plan.id === "codex")!;
+    const codearts = plans.find((plan) => plan.id === "codearts")!;
+
+    await expect(
+      runInitialInstallTransaction({
+        runtime,
+        plans,
+        codexRunner,
+        verify: async () => {
+          codexRunner.installedEntry = {
+            ...codexRunner.installedEntry!,
+            version: "user-update",
+          };
+          throw new Error("verification failed after plugin update");
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "INSTALL_TRANSACTION_ROLLBACK_CONFLICT",
+    });
+
+    expect(codexRunner.installedEntry?.version).toBe("user-update");
+    expect(await pathExists(codexMarketplacePath(plans))).toBe(true);
+    expect(await pathExists(assetTarget(codex))).toBe(true);
+    expect(await pathExists(codearts.configPath)).toBe(false);
+    expect(await pathExists(assetTarget(codearts))).toBe(false);
+    expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
+  }, 15_000);
+
   it("records a pre-existing identical marketplace entry without ownership", async () => {
-    const { runtime, plans } = await fixture(["codex"]);
+    const { runtime, plans, codexRunner } = await fixture(["codex"]);
+    codexRunner.installedEntry = codexInstalledEntry();
     const marketplacePath = codexMarketplacePath(plans);
     await mkdir(dirname(marketplacePath), { recursive: true });
     await writeFile(
@@ -322,17 +398,22 @@ describe("initial install transaction", () => {
       "utf8",
     );
 
-    const result = await runInitialInstallTransaction({ runtime, plans });
+    const result = await runInitialInstallTransaction({
+      runtime,
+      plans,
+      codexRunner,
+    });
 
     expect(result.state.hosts[0]?.registration).toMatchObject({
       changed: false,
       createdFile: false,
+      activation: { changed: false },
     });
     expect(result.state.hosts[0]?.registration).not.toHaveProperty("backupPath");
   }, 15_000);
 
   it("preserves a conflicting Codex marketplace and rolls back its new asset", async () => {
-    const { runtime, plans } = await fixture(["codex"]);
+    const { runtime, plans, codexRunner } = await fixture(["codex"]);
     const marketplacePath = codexMarketplacePath(plans);
     const conflicting = `${JSON.stringify({
       name: "personal",
@@ -349,7 +430,7 @@ describe("initial install transaction", () => {
     await writeFile(marketplacePath, conflicting, "utf8");
 
     await expect(
-      runInitialInstallTransaction({ runtime, plans }),
+      runInitialInstallTransaction({ runtime, plans, codexRunner }),
     ).rejects.toMatchObject({ code: "CODEX_MARKETPLACE_CONFLICT" });
 
     expect(await readFile(marketplacePath, "utf8")).toBe(conflicting);

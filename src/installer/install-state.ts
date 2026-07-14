@@ -20,6 +20,7 @@ import {
 import { approvalIssuerId } from "../approval/constants.js";
 import type { HostInstallPlan } from "../hosts/plan.js";
 import type { HostId } from "../hosts/types.js";
+import type { AppliedCodexActivationChange } from "./codex-activation.js";
 import type { AppliedHostConfigChange } from "./config-transaction.js";
 import type { AppliedCodexMarketplaceChange } from "./codex-marketplace.js";
 import { InstallerError } from "./errors.js";
@@ -69,9 +70,22 @@ export interface InstallStateCodexRegistrationEvidence {
   readonly createdFile: boolean;
   readonly installedSha256: string;
   readonly installedEntryHash: string;
+  readonly activation: InstallStateCodexActivationEvidence;
   readonly beforeSha256?: string;
   readonly backupPath?: string;
   readonly backupSha256?: string;
+}
+
+export interface InstallStateCodexActivationEvidence {
+  readonly kind: "codex-cli-plugin";
+  readonly pluginId: string;
+  readonly pluginName: "huaweicloud-mate";
+  readonly marketplaceName: string;
+  readonly version: string;
+  readonly installedEntryHash: string;
+  readonly changed: boolean;
+  readonly installed: true;
+  readonly enabled: true;
 }
 
 export interface InstallStateHost {
@@ -100,6 +114,7 @@ export interface CompletedHostInstallation {
   readonly assetChange: AppliedHostAssetChange;
   readonly configChange?: AppliedHostConfigChange;
   readonly registrationChange?: AppliedCodexMarketplaceChange;
+  readonly activationChange?: AppliedCodexActivationChange;
 }
 
 export interface InstallStateSnapshot {
@@ -394,6 +409,7 @@ function parseCodexRegistrationEvidence(
       "createdFile",
       "installedSha256",
       "installedEntryHash",
+      "activation",
       ...optionalKeys,
     ]) ||
     value.kind !== "codex-personal-marketplace" ||
@@ -414,6 +430,7 @@ function parseCodexRegistrationEvidence(
   }
   const marketplacePath = resolve(value.marketplacePath);
   const pluginPath = resolve(value.pluginPath);
+  const activation = parseCodexActivationEvidence(value.activation);
   const homeDirectory = dirname(dirname(pluginPath));
   if (
     basename(pluginPath) !== "huaweicloud-mate" ||
@@ -424,6 +441,9 @@ function parseCodexRegistrationEvidence(
     )
   ) {
     return invalid("Install state Codex registration paths are inconsistent");
+  }
+  if (activation.marketplaceName !== value.marketplaceName) {
+    return invalid("Codex activation does not match its marketplace registration");
   }
   const beforeSha256 = value.beforeSha256;
   const backupPath = value.backupPath;
@@ -465,9 +485,56 @@ function parseCodexRegistrationEvidence(
     createdFile: value.createdFile,
     installedSha256: value.installedSha256,
     installedEntryHash: value.installedEntryHash,
+    activation,
     ...(beforeSha256 === undefined ? {} : { beforeSha256 }),
     ...(backupPath === undefined ? {} : { backupPath: resolve(backupPath) }),
     ...(backupSha256 === undefined ? {} : { backupSha256 }),
+  };
+}
+
+function parseCodexActivationEvidence(
+  value: unknown,
+): InstallStateCodexActivationEvidence {
+  if (
+    !isRecord(value) ||
+    !exactKeys(value, [
+      "kind",
+      "pluginId",
+      "pluginName",
+      "marketplaceName",
+      "version",
+      "installedEntryHash",
+      "changed",
+      "installed",
+      "enabled",
+    ]) ||
+    value.kind !== "codex-cli-plugin" ||
+    typeof value.pluginId !== "string" ||
+    value.pluginId.length === 0 ||
+    value.pluginId.length > 256 ||
+    value.pluginName !== "huaweicloud-mate" ||
+    typeof value.marketplaceName !== "string" ||
+    !/^[A-Za-z0-9._-]{1,64}$/u.test(value.marketplaceName) ||
+    typeof value.version !== "string" ||
+    value.version.length === 0 ||
+    value.version.length > 256 ||
+    !isDigest(value.installedEntryHash) ||
+    typeof value.changed !== "boolean" ||
+    value.installed !== true ||
+    value.enabled !== true
+  ) {
+    return invalid("Install state Codex activation evidence is invalid");
+  }
+  return {
+    kind: "codex-cli-plugin",
+    pluginId: value.pluginId,
+    pluginName: "huaweicloud-mate",
+    marketplaceName: value.marketplaceName,
+    version: value.version,
+    installedEntryHash: value.installedEntryHash,
+    changed: value.changed,
+    installed: true,
+    enabled: true,
   };
 }
 
@@ -640,6 +707,7 @@ function assetEvidence(change: AppliedHostAssetChange): InstallStateAssetEvidenc
 
 function codexRegistrationEvidence(
   change: AppliedCodexMarketplaceChange,
+  activationChange: AppliedCodexActivationChange,
 ): InstallStateCodexRegistrationEvidence {
   return parseCodexRegistrationEvidence({
     kind: "codex-personal-marketplace",
@@ -652,6 +720,17 @@ function codexRegistrationEvidence(
     createdFile: change.createdFile,
     installedSha256: change.installedSha256,
     installedEntryHash: change.installedEntryHash,
+    activation: parseCodexActivationEvidence({
+      kind: activationChange.kind,
+      pluginId: activationChange.pluginId,
+      pluginName: activationChange.pluginName,
+      marketplaceName: activationChange.marketplaceName,
+      version: activationChange.version,
+      installedEntryHash: activationChange.installedEntryHash,
+      changed: activationChange.changed,
+      installed: activationChange.installed,
+      enabled: activationChange.enabled,
+    }),
     ...(change.changed && change.beforeSha256 !== undefined
       ? { beforeSha256: change.beforeSha256 }
       : {}),
@@ -663,7 +742,13 @@ function codexRegistrationEvidence(
 }
 
 function hostState(completed: CompletedHostInstallation): InstallStateHost {
-  const { plan, assetChange, configChange, registrationChange } = completed;
+  const {
+    plan,
+    assetChange,
+    configChange,
+    registrationChange,
+    activationChange,
+  } = completed;
   const isPlugin = plan.mergeStrategy === "plugin-manifest";
   const expectedAssetTarget = isPlugin
     ? plan.pluginTargetPath
@@ -676,7 +761,8 @@ function hostState(completed: CompletedHostInstallation): InstallStateHost {
     (isPlugin && !samePath(plan.pluginSourcePath ?? "", assetChange.sourcePath)) ||
     isPlugin !== (assetChange.kind === "plugin") ||
     isPlugin === (configChange !== undefined) ||
-    (plan.id === "codex") !== (registrationChange !== undefined)
+    (plan.id === "codex") !== (registrationChange !== undefined) ||
+    (plan.id === "codex") !== (activationChange !== undefined)
   ) {
     return invalid("Completed host installation does not match its plan");
   }
@@ -697,9 +783,12 @@ function hostState(completed: CompletedHostInstallation): InstallStateHost {
   }
   if (
     registrationChange !== undefined &&
-    (!samePath(registrationChange.pluginPath, assetChange.targetPath) ||
+    (activationChange === undefined ||
+      !samePath(registrationChange.pluginPath, assetChange.targetPath) ||
       registrationChange.pluginName !== "huaweicloud-mate" ||
-      registrationChange.sourcePath !== "./plugins/huaweicloud-mate")
+      registrationChange.sourcePath !== "./plugins/huaweicloud-mate" ||
+      activationChange.pluginName !== registrationChange.pluginName ||
+      activationChange.marketplaceName !== registrationChange.marketplaceName)
   ) {
     return invalid("Completed Codex registration does not match its plan");
   }
@@ -713,7 +802,12 @@ function hostState(completed: CompletedHostInstallation): InstallStateHost {
     ...(configChange === undefined ? {} : { config: configEvidence(configChange) }),
     ...(registrationChange === undefined
       ? {}
-      : { registration: codexRegistrationEvidence(registrationChange) }),
+      : {
+          registration: codexRegistrationEvidence(
+            registrationChange,
+            activationChange!,
+          ),
+        }),
     asset: assetEvidence(assetChange),
   });
 }

@@ -12,6 +12,8 @@ import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { FakeCodexPluginRunner } from "../fixtures/codex-plugin-runner.js";
+import { applyCodexPluginActivation } from "../../src/installer/codex-activation.js";
 import { applyHostConfigChange } from "../../src/installer/config-transaction.js";
 import {
   applyCodexMarketplaceChange,
@@ -61,7 +63,11 @@ async function completedHost(
       createCodexMarketplacePlan(plan.pluginTargetPath!),
       resolve(root, "backups", "codex-marketplace"),
     );
-    return { plan, assetChange, registrationChange };
+    const activationChange = await applyCodexPluginActivation(
+      registrationChange.marketplaceName,
+      new FakeCodexPluginRunner(root),
+    );
+    return { plan, assetChange, registrationChange, activationChange };
   }
   if (plan.mergeStrategy === "plugin-manifest") {
     return { plan, assetChange };
@@ -125,6 +131,15 @@ describe("minimal install state", () => {
         sourcePath: "./plugins/huaweicloud-mate",
         changed: true,
         createdFile: true,
+        activation: {
+          kind: "codex-cli-plugin",
+          pluginName: "huaweicloud-mate",
+          marketplaceName: "personal",
+          version: "local",
+          changed: true,
+          installed: true,
+          enabled: true,
+        },
       },
     });
     expect(state.hosts[1]).not.toHaveProperty("config");
@@ -167,6 +182,16 @@ describe("minimal install state", () => {
     ) as unknown as { hosts: Array<{ registration?: unknown }> };
     delete missingRegistration.hosts[0]!.registration;
     expect(() => parseInstallState(missingRegistration)).toThrowError(
+      expect.objectContaining({ code: "INSTALL_STATE_INVALID" }),
+    );
+
+    const missingActivation = structuredClone(
+      createInstallState(codexRuntime, codexCompleted),
+    ) as unknown as {
+      hosts: Array<{ registration: { activation?: unknown } }>;
+    };
+    delete missingActivation.hosts[0]!.registration.activation;
+    expect(() => parseInstallState(missingActivation)).toThrowError(
       expect.objectContaining({ code: "INSTALL_STATE_INVALID" }),
     );
   });

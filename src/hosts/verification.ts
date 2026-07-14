@@ -100,18 +100,6 @@ function containsText(output: string, token: string): boolean {
   return output.toLowerCase().includes(token.toLowerCase());
 }
 
-function containsPluginToken(output: string): boolean {
-  return output
-    .split(/\r?\n/gu)
-    .flatMap((line) => line.split(/\s+/gu))
-    .some((token) => {
-      const normalized = token
-        .toLowerCase()
-        .replace(/^[^a-z0-9_-]+|[^a-z0-9_@.-]+$/gu, "");
-      return isPluginIdentity(normalized);
-    });
-}
-
 function isPluginIdentity(value: string): boolean {
   const normalized = value.toLowerCase();
   return normalized === pluginName ||
@@ -136,25 +124,16 @@ async function verifyPluginRegistration(
   executablePath: string,
   runner: HostCommandRunner,
 ): Promise<void> {
-  const args = id === "codex"
-    ? ["plugin", "list"]
-    : ["plugin", "list", "--json"];
-  const result = await runner.run(executablePath, args);
-  const output = commandSucceeded(result, `${id} plugin discovery`);
-  if (id === "codex") {
-    if (!containsPluginToken(output)) {
-      return registrationMissing("Codex does not list the installed plugin");
-    }
-    return;
-  }
+  const result = await runner.run(executablePath, ["plugin", "list", "--json"]);
+  commandSucceeded(result, `${id} plugin discovery`);
   let parsed: unknown;
   try {
     parsed = JSON.parse(result.stdout) as unknown;
   } catch {
-    return verificationFailed("Claude plugin list did not return valid JSON");
+    return verificationFailed(`${id} plugin list did not return valid JSON`);
   }
   if (!jsonContainsPlugin(parsed)) {
-    return registrationMissing("Claude Code does not list the installed plugin");
+    return registrationMissing(`${id} does not list the installed plugin`);
   }
 }
 

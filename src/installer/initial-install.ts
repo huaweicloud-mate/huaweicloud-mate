@@ -1,6 +1,16 @@
 import { isAbsolute, resolve } from "node:path";
 
+import {
+  type HostCommandRunner,
+  NodeHostCommandRunner,
+} from "../hosts/command-runner.js";
 import type { HostInstallPlan } from "../hosts/plan.js";
+import {
+  applyCodexPluginActivation,
+  type AppliedCodexActivationChange,
+  rollbackCodexPluginActivation,
+  verifyCodexPluginActivation,
+} from "./codex-activation.js";
 import {
   applyHostConfigChange,
   type AppliedHostConfigChange,
@@ -36,6 +46,8 @@ interface PartialHostInstallation {
   readonly assetChange: AppliedHostAssetChange;
   configChange?: AppliedHostConfigChange;
   registrationChange?: AppliedCodexMarketplaceChange;
+  activationChange?: AppliedCodexActivationChange;
+  preserveCodexDependencies?: boolean;
 }
 
 export interface InitialInstallVerificationContext {
@@ -49,6 +61,7 @@ export interface InitialInstallOptions {
   readonly verify?: (
     context: InitialInstallVerificationContext,
   ) => Promise<void>;
+  readonly codexRunner?: HostCommandRunner;
 }
 
 export interface InitialInstallResult {
@@ -118,21 +131,39 @@ function completed(
     ...(partial.registrationChange === undefined
       ? {}
       : { registrationChange: partial.registrationChange }),
+    ...(partial.activationChange === undefined
+      ? {}
+      : { activationChange: partial.activationChange }),
   };
 }
 
 async function rollbackPartialHosts(
   applied: readonly PartialHostInstallation[],
+  codexRunner: HostCommandRunner,
 ): Promise<readonly unknown[]> {
   const failures: unknown[] = [];
   for (const partial of [...applied].reverse()) {
-    let preserveAsset = false;
-    if (partial.registrationChange !== undefined) {
+    let preserveCodexDependencies = partial.preserveCodexDependencies === true;
+    if (partial.activationChange !== undefined) {
+      try {
+        await rollbackCodexPluginActivation(
+          partial.activationChange,
+          codexRunner,
+        );
+      } catch (error) {
+        failures.push(error);
+        preserveCodexDependencies = true;
+      }
+    }
+    if (
+      partial.registrationChange !== undefined &&
+      !preserveCodexDependencies
+    ) {
       try {
         await rollbackCodexMarketplaceChange(partial.registrationChange);
       } catch (error) {
         failures.push(error);
-        preserveAsset = true;
+        preserveCodexDependencies = true;
       }
     }
     if (partial.configChange !== undefined) {
@@ -142,7 +173,7 @@ async function rollbackPartialHosts(
         failures.push(error);
       }
     }
-    if (!preserveAsset) {
+    if (!preserveCodexDependencies) {
       try {
         await rollbackHostAssetChange(partial.assetChange);
       } catch (error) {
@@ -155,6 +186,7 @@ async function rollbackPartialHosts(
 
 async function verifyCompletedHosts(
   completedHosts: readonly CompletedHostInstallation[],
+  codexRunner: HostCommandRunner,
 ): Promise<void> {
   for (const host of completedHosts) {
     if (host.configChange !== undefined) {
@@ -164,6 +196,9 @@ async function verifyCompletedHosts(
     if (host.registrationChange !== undefined) {
       await verifyCodexMarketplaceChange(host.registrationChange);
     }
+    if (host.activationChange !== undefined) {
+      await verifyCodexPluginActivation(host.activationChange, codexRunner);
+    }
   }
 }
 
@@ -171,6 +206,7 @@ export async function runInitialInstallTransaction(
   options: InitialInstallOptions,
 ): Promise<InitialInstallResult> {
   const plans = validatePlans(options.plans);
+  const codexRunner = options.codexRunner ?? new NodeHostCommandRunner();
   const existingState = await readInstallState(options.runtime.runtimeRoot);
   if (existingState !== undefined) {
     return transactionConflict(
@@ -200,11 +236,25 @@ export async function runInitialInstallTransaction(
           createCodexMarketplacePlan(plan.pluginTargetPath),
           resolve(options.runtime.runtimeRoot, "backups", "codex-marketplace"),
         );
+        try {
+          partial.activationChange = await applyCodexPluginActivation(
+            partial.registrationChange.marketplaceName,
+            codexRunner,
+          );
+        } catch (error) {
+          if (
+            error instanceof InstallerError &&
+            error.code === "CODEX_ACTIVATION_OUTCOME_UNKNOWN"
+          ) {
+            partial.preserveCodexDependencies = true;
+          }
+          throw error;
+        }
       }
     }
 
     const completedHosts = applied.map(completed);
-    await verifyCompletedHosts(completedHosts);
+    await verifyCompletedHosts(completedHosts, codexRunner);
     await options.verify?.({
       runtime: options.runtime,
       completedHosts,
@@ -217,7 +267,7 @@ export async function runInitialInstallTransaction(
     );
     return { state, stateChange, completedHosts };
   } catch (error) {
-    const rollbackFailures = await rollbackPartialHosts(applied);
+    const rollbackFailures = await rollbackPartialHosts(applied, codexRunner);
     if (rollbackFailures.length > 0) {
       throw new InstallerError(
         "INSTALL_TRANSACTION_ROLLBACK_CONFLICT",
