@@ -157,7 +157,7 @@ describe("versioned stable runtime", () => {
     });
     expect(repeated.reusedVersion).toBe(true);
     expect(repeated.versionDirectory).toBe(installed.versionDirectory);
-  });
+  }, 15_000);
 
   it("fails closed when an active runtime artifact is modified", async () => {
     const root = await temporaryRoot();

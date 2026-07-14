@@ -11,6 +11,10 @@ export const installerErrorCodes = [
   "HOST_ASSET_CONFLICT",
   "HOST_ASSET_WRITE_FAILED",
   "HOST_ASSET_ROLLBACK_CONFLICT",
+  "INSTALL_STATE_INVALID",
+  "INSTALL_STATE_CONFLICT",
+  "INSTALL_STATE_WRITE_FAILED",
+  "INSTALL_STATE_ROLLBACK_CONFLICT",
 ] as const;
 
 export type InstallerErrorCode = (typeof installerErrorCodes)[number];
