@@ -227,10 +227,10 @@ describe("Codex install and uninstall CLI", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await expect(
-      main(["install", "--host", "claude"], dependencies),
+      main(["install", "--host", "opencode"], dependencies),
     ).resolves.toBe(2);
     expect(error).toHaveBeenCalledWith(
-      "install currently supports only --host codex",
+      "install supports only --host codex or --host claude",
     );
     expect(await pathExists(runtimeRoot)).toBe(false);
   });

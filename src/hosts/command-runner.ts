@@ -1,9 +1,12 @@
 import { spawn } from "node:child_process";
-import { lstat, realpath } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import {
+  basename,
   delimiter,
+  dirname,
   extname,
   isAbsolute,
+  relative,
   resolve,
 } from "node:path";
 
@@ -12,6 +15,7 @@ import { InstallerError } from "../installer/errors.js";
 const commandNamePattern = /^[A-Za-z0-9._-]+$/u;
 const maxCommandOutputBytes = 1024 * 1024;
 const defaultCommandTimeoutMs = 15_000;
+const maxNativeShimBytes = 8 * 1024;
 
 export interface HostCommandResult {
   readonly code: number | null;
@@ -57,6 +61,60 @@ async function regularExecutable(path: string): Promise<string | undefined> {
   }
 }
 
+function isContained(root: string, candidate: string): boolean {
+  const fromRoot = relative(root, candidate);
+  return fromRoot !== "" && !fromRoot.startsWith("..") && !isAbsolute(fromRoot);
+}
+
+async function resolveNpmNativeShim(
+  shimPath: string,
+  command: string,
+): Promise<string | undefined> {
+  try {
+    const canonicalShim = await realpath(shimPath);
+    const entry = await lstat(canonicalShim);
+    if (
+      !entry.isFile() ||
+      entry.isSymbolicLink() ||
+      entry.size <= 0 ||
+      entry.size > maxNativeShimBytes
+    ) {
+      return undefined;
+    }
+    const bytes = await readFile(canonicalShim);
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    const matches = [...text.matchAll(
+      /^"%dp0%\\([^"\r\n]+\.(?:exe|com))"[ \t]+%\*[ \t]*$/gimu,
+    )];
+    if (matches.length !== 1 || matches[0]?.[1] === undefined) {
+      return undefined;
+    }
+    const segments = matches[0][1]
+      .split(/[\\/]+/u)
+      .filter((segment) => segment.length > 0);
+    if (
+      segments.length === 0 ||
+      segments.some((segment) => segment === "." || segment === "..")
+    ) {
+      return undefined;
+    }
+    const target = resolve(dirname(canonicalShim), ...segments);
+    const expectedNames = new Set([
+      `${command}.exe`.toLowerCase(),
+      `${command}.com`.toLowerCase(),
+    ]);
+    if (
+      !isContained(dirname(canonicalShim), target) ||
+      !expectedNames.has(basename(target).toLowerCase())
+    ) {
+      return undefined;
+    }
+    return await regularExecutable(target);
+  } catch {
+    return undefined;
+  }
+}
+
 export class NodeHostCommandRunner implements HostCommandRunner {
   async resolveCommand(command: string): Promise<string | undefined> {
     if (!commandNamePattern.test(command)) {
@@ -73,6 +131,15 @@ export class NodeHostCommandRunner implements HostCommandRunner {
         const executable = await regularExecutable(candidate);
         if (executable !== undefined) {
           return executable;
+        }
+      }
+      if (process.platform === "win32" && extname(command) === "") {
+        const nativeShimTarget = await resolveNpmNativeShim(
+          resolve(entry, `${command}.cmd`),
+          command,
+        );
+        if (nativeShimTarget !== undefined) {
+          return nativeShimTarget;
         }
       }
     }

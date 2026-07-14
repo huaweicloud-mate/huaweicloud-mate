@@ -2,8 +2,8 @@
 
 import { lstat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { resolve, sep } from "node:path";
-import { pathToFileURL } from "node:url";
+import { dirname, resolve, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { runApprovalDoctor } from "./doctor/approval-doctor.js";
 import { runContractDoctor } from "./doctor/contract-doctor.js";
@@ -14,6 +14,11 @@ import {
 import { createHostInstallPlan } from "./hosts/plan.js";
 import { HostTemplateRegistry } from "./hosts/registry.js";
 import { createInitialHostVerificationHook } from "./hosts/verification.js";
+import {
+  bindClaudeInstallation,
+  verifyBoundClaudeInstallation,
+} from "./installer/claude-installation.js";
+import { uninstallClaude } from "./installer/claude-uninstall.js";
 import { uninstallCodex } from "./installer/codex-uninstall.js";
 import { upgradeCodex } from "./installer/codex-upgrade.js";
 import { InstallerError } from "./installer/errors.js";
@@ -23,6 +28,7 @@ import {
   readInstallState,
 } from "./installer/install-state.js";
 import { defaultRuntimeRoot } from "./installer/paths.js";
+import { verifyInstallDirectory } from "./installer/install-manifest.js";
 import { materializeStableRuntime } from "./installer/runtime.js";
 import { readCodexUpgradeRecovery } from "./installer/upgrade-recovery.js";
 import { runDevelopmentMcpServer } from "./mcp/stdio.js";
@@ -33,8 +39,8 @@ function printUsage(): void {
   console.log(`huaweicloud-mate ${version}
 
 Usage:
-  huaweicloud-mate install --host codex [--json]
-  huaweicloud-mate uninstall --host codex [--json]
+  huaweicloud-mate install --host <codex|claude> [--json]
+  huaweicloud-mate uninstall --host <codex|claude> [--json]
   huaweicloud-mate doctor [--contracts-only | --approval-probe] [--json]
   huaweicloud-mate router --stdio
   huaweicloud-mate mcp
@@ -52,7 +58,7 @@ export interface CliDependencies {
 }
 
 interface ManagedHostArguments {
-  readonly host: "codex";
+  readonly host: "codex" | "claude";
   readonly json: boolean;
 }
 
@@ -84,15 +90,15 @@ function parseManagedHostArguments(
     console.error(`Unknown ${command} option: ${String(argument)}`);
     return undefined;
   }
-  if (host !== "codex") {
+  if (host !== "codex" && host !== "claude") {
     console.error(
       host === undefined
-        ? `${command} requires --host codex`
-        : `${command} currently supports only --host codex`,
+        ? `${command} requires --host codex or --host claude`
+        : `${command} supports only --host codex or --host claude`,
     );
     return undefined;
   }
-  return { host: "codex", json };
+  return { host, json };
 }
 
 function cliRuntimeRoot(dependencies: CliDependencies): string {
@@ -164,6 +170,59 @@ async function runInstall(
   const runner = dependencies.runner ?? new NodeHostCommandRunner();
   const approvalProbe = dependencies.approvalProbe ?? defaultApprovalProbe;
   if (await hasManagedInstallState(runtimeRoot)) {
+    if (parsed.host === "claude") {
+      const snapshot = await readInstallState(runtimeRoot);
+      if (snapshot === undefined) {
+        throw new InstallerError(
+          "INSTALL_STATE_CONFLICT",
+          "Managed install state disappeared during Claude verification",
+        );
+      }
+      const sourceDirectory = resolve(
+        dependencies.sourceDirectory ??
+          dirname(
+            fileURLToPath(new URL("./install-manifest.json", import.meta.url)),
+          ),
+      );
+      const source = await verifyInstallDirectory(sourceDirectory);
+      if (
+        source.manifest.pluginVersion !== snapshot.state.pluginVersion ||
+        source.manifestSha256 !== snapshot.state.installManifestSha256
+      ) {
+        throw new InstallerError(
+          "INSTALL_TRANSACTION_CONFLICT",
+          "Claude managed upgrade is not available yet; uninstall before installing a different version",
+        );
+      }
+      const bound = await bindClaudeInstallation({
+        runtimeRoot,
+        snapshot,
+        runner,
+        requireExecutable: true,
+        ...(dependencies.homeDirectory === undefined
+          ? {}
+          : { homeDirectory: dependencies.homeDirectory }),
+      });
+      await verifyBoundClaudeInstallation(bound, runner);
+      await approvalProbe();
+      const report = {
+        host: "claude",
+        status: "unchanged",
+        changed: false,
+        pluginVersion: snapshot.state.pluginVersion,
+        runtimePath: snapshot.state.runtimePath,
+        statePath: installStatePath(runtimeRoot),
+        nextStep: "Start a new Claude Code session to load the plugin.",
+      } as const;
+      if (parsed.json) {
+        console.log(JSON.stringify(report, null, 2));
+      } else {
+        console.log(
+          `Claude plugin is already current (${report.pluginVersion}).`,
+        );
+      }
+      return 0;
+    }
     const result = await upgradeCodex({
       runtimeRoot,
       ...(dependencies.sourceDirectory === undefined
@@ -209,6 +268,7 @@ async function runInstall(
     runtime,
     plans: [plan],
     codexRunner: runner,
+    claudeRunner: runner,
     verify: createInitialHostVerificationHook({
       runner,
       approvalProbe,
@@ -221,12 +281,16 @@ async function runInstall(
     pluginVersion: result.state.pluginVersion,
     runtimePath: result.state.runtimePath,
     statePath: installStatePath(runtime.runtimeRoot),
-    nextStep: "Start a new Codex task to load the plugin.",
+    nextStep: parsed.host === "codex"
+      ? "Start a new Codex task to load the plugin."
+      : "Start a new Claude Code session to load the plugin.",
   } as const;
   if (parsed.json) {
     console.log(JSON.stringify(report, null, 2));
   } else {
-    console.log(`Codex plugin installed (${report.pluginVersion}).`);
+    console.log(
+      `${parsed.host === "codex" ? "Codex" : "Claude"} plugin installed (${report.pluginVersion}).`,
+    );
     console.log(report.nextStep);
   }
   return 0;
@@ -240,7 +304,7 @@ async function runUninstall(
   if (parsed === undefined) {
     return 2;
   }
-  const result = await uninstallCodex({
+  const uninstallOptions = {
     runtimeRoot: cliRuntimeRoot(dependencies),
     ...(dependencies.homeDirectory === undefined
       ? {}
@@ -248,13 +312,20 @@ async function runUninstall(
     ...(dependencies.runner === undefined
       ? {}
       : { runner: dependencies.runner }),
-  });
+  };
+  const result = parsed.host === "codex"
+    ? await uninstallCodex(uninstallOptions)
+    : await uninstallClaude(uninstallOptions);
   if (parsed.json) {
     console.log(JSON.stringify(result, null, 2));
   } else if (result.status === "not-installed") {
-    console.log("Codex plugin is not installed by huaweicloud-mate.");
+    console.log(
+      `${parsed.host === "codex" ? "Codex" : "Claude"} plugin is not installed by huaweicloud-mate.`,
+    );
   } else {
-    console.log("Codex plugin uninstalled; verified runtime cache retained.");
+    console.log(
+      `${parsed.host === "codex" ? "Codex" : "Claude"} plugin uninstalled; verified runtime cache retained.`,
+    );
   }
   return 0;
 }

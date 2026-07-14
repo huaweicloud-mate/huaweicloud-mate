@@ -6,6 +6,23 @@ import {
 } from "../hosts/command-runner.js";
 import type { HostInstallPlan } from "../hosts/plan.js";
 import {
+  applyClaudePluginActivation,
+  type AppliedClaudeActivationChange,
+  rollbackClaudePluginActivation,
+  verifyClaudePluginActivation,
+} from "./claude-activation.js";
+import {
+  applyClaudeMarketplaceCatalog,
+  applyClaudeMarketplaceRegistration,
+  type AppliedClaudeMarketplaceCatalogChange,
+  type AppliedClaudeMarketplaceRegistration,
+  createClaudeMarketplaceCatalogPlan,
+  rollbackClaudeMarketplaceCatalog,
+  rollbackClaudeMarketplaceRegistration,
+  verifyClaudeMarketplaceCatalog,
+  verifyClaudeMarketplaceRegistration,
+} from "./claude-marketplace.js";
+import {
   applyCodexPluginActivation,
   type AppliedCodexActivationChange,
   rollbackCodexPluginActivation,
@@ -45,9 +62,14 @@ interface PartialHostInstallation {
   readonly plan: HostInstallPlan;
   readonly assetChange: AppliedHostAssetChange;
   configChange?: AppliedHostConfigChange;
-  registrationChange?: AppliedCodexMarketplaceChange;
-  activationChange?: AppliedCodexActivationChange;
-  preserveCodexDependencies?: boolean;
+  catalogChange?: AppliedClaudeMarketplaceCatalogChange;
+  registrationChange?:
+    | AppliedCodexMarketplaceChange
+    | AppliedClaudeMarketplaceRegistration;
+  activationChange?:
+    | AppliedCodexActivationChange
+    | AppliedClaudeActivationChange;
+  preservePluginDependencies?: boolean;
 }
 
 export interface InitialInstallVerificationContext {
@@ -62,6 +84,7 @@ export interface InitialInstallOptions {
     context: InitialInstallVerificationContext,
   ) => Promise<void>;
   readonly codexRunner?: HostCommandRunner;
+  readonly claudeRunner?: HostCommandRunner;
 }
 
 export interface InitialInstallResult {
@@ -128,6 +151,9 @@ function completed(
     ...(partial.configChange === undefined
       ? {}
       : { configChange: partial.configChange }),
+    ...(partial.catalogChange === undefined
+      ? {}
+      : { catalogChange: partial.catalogChange }),
     ...(partial.registrationChange === undefined
       ? {}
       : { registrationChange: partial.registrationChange }),
@@ -140,30 +166,66 @@ function completed(
 async function rollbackPartialHosts(
   applied: readonly PartialHostInstallation[],
   codexRunner: HostCommandRunner,
+  claudeRunner: HostCommandRunner,
 ): Promise<readonly unknown[]> {
   const failures: unknown[] = [];
   for (const partial of [...applied].reverse()) {
-    let preserveCodexDependencies = partial.preserveCodexDependencies === true;
+    let preservePluginDependencies =
+      partial.preservePluginDependencies === true;
     if (partial.activationChange !== undefined) {
+      if (
+        partial.activationChange.kind === "claude-cli-plugin" &&
+        !partial.activationChange.changed
+      ) {
+        preservePluginDependencies = true;
+      }
       try {
-        await rollbackCodexPluginActivation(
-          partial.activationChange,
-          codexRunner,
-        );
+        if (partial.activationChange.kind === "codex-cli-plugin") {
+          await rollbackCodexPluginActivation(
+            partial.activationChange,
+            codexRunner,
+          );
+        } else {
+          await rollbackClaudePluginActivation(
+            partial.activationChange,
+            claudeRunner,
+          );
+        }
       } catch (error) {
         failures.push(error);
-        preserveCodexDependencies = true;
+        preservePluginDependencies = true;
       }
     }
     if (
       partial.registrationChange !== undefined &&
-      !preserveCodexDependencies
+      !preservePluginDependencies
     ) {
       try {
-        await rollbackCodexMarketplaceChange(partial.registrationChange);
+        if ("kind" in partial.registrationChange) {
+          await rollbackClaudeMarketplaceRegistration(
+            partial.registrationChange,
+            claudeRunner,
+          );
+          if (!partial.registrationChange.changed) {
+            preservePluginDependencies = true;
+          }
+        } else {
+          await rollbackCodexMarketplaceChange(partial.registrationChange);
+        }
       } catch (error) {
         failures.push(error);
-        preserveCodexDependencies = true;
+        preservePluginDependencies = true;
+      }
+    }
+    if (partial.catalogChange !== undefined && !preservePluginDependencies) {
+      try {
+        await rollbackClaudeMarketplaceCatalog(partial.catalogChange);
+        if (!partial.catalogChange.changed) {
+          preservePluginDependencies = true;
+        }
+      } catch (error) {
+        failures.push(error);
+        preservePluginDependencies = true;
       }
     }
     if (partial.configChange !== undefined) {
@@ -173,7 +235,7 @@ async function rollbackPartialHosts(
         failures.push(error);
       }
     }
-    if (!preserveCodexDependencies) {
+    if (!preservePluginDependencies) {
       try {
         await rollbackHostAssetChange(partial.assetChange);
       } catch (error) {
@@ -187,17 +249,32 @@ async function rollbackPartialHosts(
 async function verifyCompletedHosts(
   completedHosts: readonly CompletedHostInstallation[],
   codexRunner: HostCommandRunner,
+  claudeRunner: HostCommandRunner,
 ): Promise<void> {
   for (const host of completedHosts) {
     if (host.configChange !== undefined) {
       await verifyHostConfigChange(host.configChange);
     }
     await verifyHostAssetChange(host.assetChange);
+    if (host.catalogChange !== undefined) {
+      await verifyClaudeMarketplaceCatalog(host.catalogChange);
+    }
     if (host.registrationChange !== undefined) {
-      await verifyCodexMarketplaceChange(host.registrationChange);
+      if ("kind" in host.registrationChange) {
+        await verifyClaudeMarketplaceRegistration(
+          host.registrationChange,
+          claudeRunner,
+        );
+      } else {
+        await verifyCodexMarketplaceChange(host.registrationChange);
+      }
     }
     if (host.activationChange !== undefined) {
-      await verifyCodexPluginActivation(host.activationChange, codexRunner);
+      if (host.activationChange.kind === "codex-cli-plugin") {
+        await verifyCodexPluginActivation(host.activationChange, codexRunner);
+      } else {
+        await verifyClaudePluginActivation(host.activationChange, claudeRunner);
+      }
     }
   }
 }
@@ -207,6 +284,7 @@ export async function runInitialInstallTransaction(
 ): Promise<InitialInstallResult> {
   const plans = validatePlans(options.plans);
   const codexRunner = options.codexRunner ?? new NodeHostCommandRunner();
+  const claudeRunner = options.claudeRunner ?? new NodeHostCommandRunner();
   const existingState = await readInstallState(options.runtime.runtimeRoot);
   if (existingState !== undefined) {
     return transactionConflict(
@@ -246,7 +324,39 @@ export async function runInitialInstallTransaction(
             error instanceof InstallerError &&
             error.code === "CODEX_ACTIVATION_OUTCOME_UNKNOWN"
           ) {
-            partial.preserveCodexDependencies = true;
+            partial.preservePluginDependencies = true;
+          }
+          throw error;
+        }
+      }
+      if (plan.id === "claude") {
+        if (plan.pluginTargetPath === undefined) {
+          return invalid("Claude install plan is missing its plugin target");
+        }
+        partial.catalogChange = await applyClaudeMarketplaceCatalog(
+          createClaudeMarketplaceCatalogPlan(
+            plan.pluginTargetPath,
+            options.runtime.pluginVersion,
+          ),
+        );
+        try {
+          partial.registrationChange =
+            await applyClaudeMarketplaceRegistration(
+              partial.catalogChange,
+              claudeRunner,
+            );
+          partial.activationChange = await applyClaudePluginActivation(
+            partial.catalogChange,
+            partial.registrationChange,
+            claudeRunner,
+          );
+        } catch (error) {
+          if (
+            error instanceof InstallerError &&
+            (error.code === "CLAUDE_MARKETPLACE_OUTCOME_UNKNOWN" ||
+              error.code === "CLAUDE_ACTIVATION_OUTCOME_UNKNOWN")
+          ) {
+            partial.preservePluginDependencies = true;
           }
           throw error;
         }
@@ -254,7 +364,7 @@ export async function runInitialInstallTransaction(
     }
 
     const completedHosts = applied.map(completed);
-    await verifyCompletedHosts(completedHosts, codexRunner);
+    await verifyCompletedHosts(completedHosts, codexRunner, claudeRunner);
     await options.verify?.({
       runtime: options.runtime,
       completedHosts,
@@ -267,7 +377,11 @@ export async function runInitialInstallTransaction(
     );
     return { state, stateChange, completedHosts };
   } catch (error) {
-    const rollbackFailures = await rollbackPartialHosts(applied, codexRunner);
+    const rollbackFailures = await rollbackPartialHosts(
+      applied,
+      codexRunner,
+      claudeRunner,
+    );
     if (rollbackFailures.length > 0) {
       throw new InstallerError(
         "INSTALL_TRANSACTION_ROLLBACK_CONFLICT",

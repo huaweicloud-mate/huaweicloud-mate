@@ -108,7 +108,10 @@ export async function bindCodexInstallation(
     return conflict("Install state does not match the fixed Codex layout");
   }
   const registration = host.registration;
-  if (registration === undefined) {
+  if (
+    registration === undefined ||
+    registration.kind !== "codex-personal-marketplace"
+  ) {
     return invalid("Codex install state is missing registration evidence");
   }
   const marketplacePlan = createCodexMarketplacePlan(plan.pluginTargetPath);

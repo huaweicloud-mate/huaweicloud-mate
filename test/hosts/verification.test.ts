@@ -1,11 +1,19 @@
-import { lstat, mkdtemp, rm } from "node:fs/promises";
+import {
+  copyFile,
+  lstat,
+  mkdir,
+  mkdtemp,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { FakeCodexPluginRunner } from "../fixtures/codex-plugin-runner.js";
+import { FakeClaudeLifecycleRunner } from "../fixtures/claude-lifecycle-runner.js";
 import {
   type HostCommandResult,
   type HostCommandRunner,
@@ -152,16 +160,27 @@ describe("initial host verification", () => {
     ]);
     const approvalProbe = vi.fn(async () => undefined);
     const runner = successfulRunner(runtime, root);
+    const claudePlan = plans.find((plan) => plan.id === "claude");
+    if (claudePlan?.pluginTargetPath === undefined) {
+      throw new Error("Claude plan is missing");
+    }
+    const claudeRunner = new FakeClaudeLifecycleRunner(
+      root,
+      dirname(claudePlan.pluginTargetPath),
+      runtime.pluginVersion,
+      runner,
+    );
     let report: Awaited<ReturnType<typeof verifyInitialInstallHosts>> | undefined;
 
     const installed = await runInitialInstallTransaction({
       runtime,
       plans,
       codexRunner,
+      claudeRunner,
       verify: async (context) => {
         expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
         report = await verifyInitialInstallHosts(context, {
-          runner,
+          runner: claudeRunner,
           approvalProbe,
         });
       },
@@ -267,6 +286,58 @@ describe("host command runner", () => {
       code: "HOST_VERIFICATION_FAILED",
     });
   });
+
+  it.runIf(process.platform === "win32")(
+    "resolves a bounded npm shim directly to its contained native executable",
+    async () => {
+      const root = await temporaryRoot();
+      const target = resolve(
+        root,
+        "node_modules",
+        "vendor",
+        "tool",
+        "bin",
+        "claude.exe",
+      );
+      await mkdir(resolve(target, ".."), { recursive: true });
+      await copyFile(process.execPath, target);
+      await writeFile(
+        resolve(root, "claude.cmd"),
+        '@ECHO off\r\n"%dp0%\\node_modules\\vendor\\tool\\bin\\claude.exe" %*\r\n',
+        "utf8",
+      );
+      const before = process.env.PATH;
+      process.env.PATH = root;
+      try {
+        const runner = new NodeHostCommandRunner();
+        await expect(runner.resolveCommand("claude")).resolves.toBe(
+          await (await import("node:fs/promises")).realpath(target),
+        );
+      } finally {
+        process.env.PATH = before;
+      }
+    },
+  );
+
+  it.runIf(process.platform === "win32")(
+    "rejects a cmd shim that contains arbitrary commands",
+    async () => {
+      const root = await temporaryRoot();
+      await writeFile(
+        resolve(root, "claude.cmd"),
+        '@ECHO off\r\necho unsafe\r\n',
+        "utf8",
+      );
+      const before = process.env.PATH;
+      process.env.PATH = root;
+      try {
+        const runner = new NodeHostCommandRunner();
+        await expect(runner.resolveCommand("claude")).resolves.toBeUndefined();
+      } finally {
+        process.env.PATH = before;
+      }
+    },
+  );
 
   it("terminates commands that exceed the timeout", async () => {
     const runner = new NodeHostCommandRunner();

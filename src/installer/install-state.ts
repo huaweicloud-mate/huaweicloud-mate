@@ -20,6 +20,11 @@ import {
 import { approvalIssuerId } from "../approval/constants.js";
 import type { HostInstallPlan } from "../hosts/plan.js";
 import type { HostId } from "../hosts/types.js";
+import type { AppliedClaudeActivationChange } from "./claude-activation.js";
+import type {
+  AppliedClaudeMarketplaceCatalogChange,
+  AppliedClaudeMarketplaceRegistration,
+} from "./claude-marketplace.js";
 import type { AppliedCodexActivationChange } from "./codex-activation.js";
 import type { AppliedHostConfigChange } from "./config-transaction.js";
 import type { AppliedCodexMarketplaceChange } from "./codex-marketplace.js";
@@ -88,6 +93,49 @@ export interface InstallStateCodexActivationEvidence {
   readonly enabled: true;
 }
 
+export interface InstallStateClaudeMarketplaceEvidence {
+  readonly kind: "claude-local-marketplace";
+  readonly marketplaceRoot: string;
+  readonly manifestPath: string;
+  readonly marketplaceName: "huaweicloud-mate-local";
+  readonly pluginPath: string;
+  readonly pluginName: "huaweicloud-mate";
+  readonly pluginVersion: string;
+  readonly sourcePath: "./huaweicloud-mate";
+  readonly changed: boolean;
+  readonly createdFile: boolean;
+  readonly installedSha256: string;
+  readonly createdPaths: readonly string[];
+  readonly cli: InstallStateClaudeRegistrationEvidence;
+  readonly activation: InstallStateClaudeActivationEvidence;
+}
+
+export interface InstallStateClaudeRegistrationEvidence {
+  readonly kind: "claude-cli-marketplace";
+  readonly source: string;
+  readonly installedEntryHash: string;
+  readonly changed: boolean;
+  readonly registered: true;
+}
+
+export interface InstallStateClaudeActivationEvidence {
+  readonly kind: "claude-cli-plugin";
+  readonly pluginId: "huaweicloud-mate@huaweicloud-mate-local";
+  readonly pluginName: "huaweicloud-mate";
+  readonly marketplaceName: "huaweicloud-mate-local";
+  readonly version: string;
+  readonly scope: "user";
+  readonly installPath: string;
+  readonly installedEntryHash: string;
+  readonly changed: boolean;
+  readonly installed: true;
+  readonly enabled: true;
+}
+
+export type InstallStateRegistrationEvidence =
+  | InstallStateCodexRegistrationEvidence
+  | InstallStateClaudeMarketplaceEvidence;
+
 export interface InstallStateHost {
   readonly id: HostId;
   readonly mergeStrategy: (typeof mergeStrategies)[number];
@@ -96,7 +144,7 @@ export interface InstallStateHost {
   readonly installedValueHash: string;
   readonly approvalIssuerId: typeof approvalIssuerId;
   readonly config?: InstallStateConfigEvidence;
-  readonly registration?: InstallStateCodexRegistrationEvidence;
+  readonly registration?: InstallStateRegistrationEvidence;
   readonly asset: InstallStateAssetEvidence;
 }
 
@@ -113,8 +161,13 @@ export interface CompletedHostInstallation {
   readonly plan: HostInstallPlan;
   readonly assetChange: AppliedHostAssetChange;
   readonly configChange?: AppliedHostConfigChange;
-  readonly registrationChange?: AppliedCodexMarketplaceChange;
-  readonly activationChange?: AppliedCodexActivationChange;
+  readonly catalogChange?: AppliedClaudeMarketplaceCatalogChange;
+  readonly registrationChange?:
+    | AppliedCodexMarketplaceChange
+    | AppliedClaudeMarketplaceRegistration;
+  readonly activationChange?:
+    | AppliedCodexActivationChange
+    | AppliedClaudeActivationChange;
 }
 
 export interface InstallStateSnapshot {
@@ -538,6 +591,212 @@ function parseCodexActivationEvidence(
   };
 }
 
+function parseClaudeRegistrationEvidence(
+  value: unknown,
+): InstallStateClaudeRegistrationEvidence {
+  if (
+    !isRecord(value) ||
+    !exactKeys(value, [
+      "kind",
+      "source",
+      "installedEntryHash",
+      "changed",
+      "registered",
+    ]) ||
+    value.kind !== "claude-cli-marketplace" ||
+    typeof value.source !== "string" ||
+    value.source.length === 0 ||
+    value.source.length > 256 ||
+    !isDigest(value.installedEntryHash) ||
+    typeof value.changed !== "boolean" ||
+    value.registered !== true
+  ) {
+    return invalid("Install state Claude registration evidence is invalid");
+  }
+  return {
+    kind: "claude-cli-marketplace",
+    source: value.source,
+    installedEntryHash: value.installedEntryHash,
+    changed: value.changed,
+    registered: true,
+  };
+}
+
+function parseClaudeActivationEvidence(
+  value: unknown,
+): InstallStateClaudeActivationEvidence {
+  if (
+    !isRecord(value) ||
+    !exactKeys(value, [
+      "kind",
+      "pluginId",
+      "pluginName",
+      "marketplaceName",
+      "version",
+      "scope",
+      "installPath",
+      "installedEntryHash",
+      "changed",
+      "installed",
+      "enabled",
+    ]) ||
+    value.kind !== "claude-cli-plugin" ||
+    value.pluginId !== "huaweicloud-mate@huaweicloud-mate-local" ||
+    value.pluginName !== "huaweicloud-mate" ||
+    value.marketplaceName !== "huaweicloud-mate-local" ||
+    typeof value.version !== "string" ||
+    !isSafePluginVersion(value.version) ||
+    value.scope !== "user" ||
+    typeof value.installPath !== "string" ||
+    !isAbsolute(value.installPath) ||
+    !isDigest(value.installedEntryHash) ||
+    typeof value.changed !== "boolean" ||
+    value.installed !== true ||
+    value.enabled !== true
+  ) {
+    return invalid("Install state Claude activation evidence is invalid");
+  }
+  const installPath = resolve(value.installPath);
+  if (
+    basename(installPath) !== value.version ||
+    basename(dirname(installPath)) !== "huaweicloud-mate" ||
+    basename(dirname(dirname(installPath))) !== "huaweicloud-mate-local"
+  ) {
+    return invalid("Install state Claude activation path is inconsistent");
+  }
+  return {
+    kind: "claude-cli-plugin",
+    pluginId: "huaweicloud-mate@huaweicloud-mate-local",
+    pluginName: "huaweicloud-mate",
+    marketplaceName: "huaweicloud-mate-local",
+    version: value.version,
+    scope: "user",
+    installPath,
+    installedEntryHash: value.installedEntryHash,
+    changed: value.changed,
+    installed: true,
+    enabled: true,
+  };
+}
+
+function parseClaudeMarketplaceEvidence(
+  value: unknown,
+): InstallStateClaudeMarketplaceEvidence {
+  if (
+    !isRecord(value) ||
+    !exactKeys(value, [
+      "kind",
+      "marketplaceRoot",
+      "manifestPath",
+      "marketplaceName",
+      "pluginPath",
+      "pluginName",
+      "pluginVersion",
+      "sourcePath",
+      "changed",
+      "createdFile",
+      "installedSha256",
+      "createdPaths",
+      "cli",
+      "activation",
+    ]) ||
+    value.kind !== "claude-local-marketplace" ||
+    typeof value.marketplaceRoot !== "string" ||
+    !isAbsolute(value.marketplaceRoot) ||
+    typeof value.manifestPath !== "string" ||
+    !isAbsolute(value.manifestPath) ||
+    value.marketplaceName !== "huaweicloud-mate-local" ||
+    typeof value.pluginPath !== "string" ||
+    !isAbsolute(value.pluginPath) ||
+    value.pluginName !== "huaweicloud-mate" ||
+    typeof value.pluginVersion !== "string" ||
+    !isSafePluginVersion(value.pluginVersion) ||
+    value.sourcePath !== "./huaweicloud-mate" ||
+    typeof value.changed !== "boolean" ||
+    typeof value.createdFile !== "boolean" ||
+    !isDigest(value.installedSha256) ||
+    !Array.isArray(value.createdPaths)
+  ) {
+    return invalid("Install state Claude marketplace evidence is invalid");
+  }
+  const marketplaceRoot = resolve(value.marketplaceRoot);
+  const manifestPath = resolve(value.manifestPath);
+  const pluginPath = resolve(value.pluginPath);
+  if (
+    basename(marketplaceRoot) !== "claude" ||
+    basename(dirname(marketplaceRoot)) !== "hosts" ||
+    !samePath(pluginPath, resolve(marketplaceRoot, "huaweicloud-mate")) ||
+    !samePath(
+      manifestPath,
+      resolve(marketplaceRoot, ".claude-plugin", "marketplace.json"),
+    )
+  ) {
+    return invalid("Install state Claude marketplace paths are inconsistent");
+  }
+  const createdPaths: string[] = [];
+  const seen = new Set<string>();
+  for (const path of value.createdPaths) {
+    if (typeof path !== "string" || !isAbsolute(path)) {
+      return invalid("Install state Claude catalog path is invalid");
+    }
+    const resolved = resolve(path);
+    const key = process.platform === "win32" ? resolved.toLowerCase() : resolved;
+    if (
+      seen.has(key) ||
+      (!samePath(resolved, manifestPath) &&
+        !samePath(resolved, dirname(manifestPath)))
+    ) {
+      return invalid("Install state Claude catalog ownership is inconsistent");
+    }
+    seen.add(key);
+    createdPaths.push(resolved);
+  }
+  if (
+    value.changed !== value.createdFile ||
+    value.changed !== (createdPaths.length > 0) ||
+    (value.changed &&
+      !createdPaths.some((path) => samePath(path, manifestPath)))
+  ) {
+    return invalid("Install state Claude catalog ownership is invalid");
+  }
+  const cli = parseClaudeRegistrationEvidence(value.cli);
+  const activation = parseClaudeActivationEvidence(value.activation);
+  if (activation.version !== value.pluginVersion) {
+    return invalid("Claude activation version does not match its catalog");
+  }
+  return {
+    kind: "claude-local-marketplace",
+    marketplaceRoot,
+    manifestPath,
+    marketplaceName: "huaweicloud-mate-local",
+    pluginPath,
+    pluginName: "huaweicloud-mate",
+    pluginVersion: value.pluginVersion,
+    sourcePath: "./huaweicloud-mate",
+    changed: value.changed,
+    createdFile: value.createdFile,
+    installedSha256: value.installedSha256,
+    createdPaths,
+    cli,
+    activation,
+  };
+}
+
+function parseRegistrationEvidence(
+  value: unknown,
+): InstallStateRegistrationEvidence {
+  if (!isRecord(value)) {
+    return invalid("Install state registration evidence is not an object");
+  }
+  if (value.kind === "codex-personal-marketplace") {
+    return parseCodexRegistrationEvidence(value);
+  }
+  if (value.kind === "claude-local-marketplace") {
+    return parseClaudeMarketplaceEvidence(value);
+  }
+  return invalid("Install state registration kind is unsupported");
+}
+
 function parseHost(value: unknown): InstallStateHost {
   if (!isRecord(value)) {
     return invalid("Install state host is not an object");
@@ -568,12 +827,17 @@ function parseHost(value: unknown): InstallStateHost {
   }
   const asset = parseAssetEvidence(value.asset);
   const registration = hasRegistration
-    ? parseCodexRegistrationEvidence(value.registration)
+    ? parseRegistrationEvidence(value.registration)
     : undefined;
+  const expectsRegistration = value.id === "codex" || value.id === "claude";
   if (
     (value.mergeStrategy === "plugin-manifest") !== (asset.kind === "plugin") ||
     (value.mergeStrategy === "plugin-manifest") === hasConfig ||
-    (value.id === "codex") !== hasRegistration
+    expectsRegistration !== hasRegistration ||
+    (value.id === "codex" &&
+      registration?.kind !== "codex-personal-marketplace") ||
+    (value.id === "claude" &&
+      registration?.kind !== "claude-local-marketplace")
   ) {
     return invalid("Install state host transaction shape is invalid");
   }
@@ -587,7 +851,7 @@ function parseHost(value: unknown): InstallStateHost {
     registration !== undefined &&
     !samePath(registration.pluginPath, asset.targetPath)
   ) {
-    return invalid("Codex registration does not reference its plugin asset");
+    return invalid("Host registration does not reference its plugin asset");
   }
   return {
     id: value.id,
@@ -741,11 +1005,61 @@ function codexRegistrationEvidence(
   });
 }
 
+function claudeMarketplaceEvidence(
+  catalogChange: AppliedClaudeMarketplaceCatalogChange,
+  registrationChange: AppliedClaudeMarketplaceRegistration,
+  activationChange: AppliedClaudeActivationChange,
+): InstallStateClaudeMarketplaceEvidence {
+  return parseClaudeMarketplaceEvidence({
+    kind: "claude-local-marketplace",
+    marketplaceRoot: catalogChange.marketplaceRoot,
+    manifestPath: catalogChange.manifestPath,
+    marketplaceName: catalogChange.marketplaceName,
+    pluginPath: catalogChange.pluginPath,
+    pluginName: catalogChange.pluginName,
+    pluginVersion: catalogChange.pluginVersion,
+    sourcePath: catalogChange.sourcePath,
+    changed: catalogChange.changed,
+    createdFile: catalogChange.createdFile,
+    installedSha256: catalogChange.installedSha256,
+    createdPaths: [...catalogChange.createdPaths],
+    cli: {
+      kind: registrationChange.kind,
+      source: registrationChange.source,
+      installedEntryHash: registrationChange.installedEntryHash,
+      changed: registrationChange.changed,
+      registered: registrationChange.registered,
+    },
+    activation: {
+      kind: activationChange.kind,
+      pluginId: activationChange.pluginId,
+      pluginName: activationChange.pluginName,
+      marketplaceName: activationChange.marketplaceName,
+      version: activationChange.version,
+      scope: activationChange.scope,
+      installPath: activationChange.installPath,
+      installedEntryHash: activationChange.installedEntryHash,
+      changed: activationChange.changed,
+      installed: activationChange.installed,
+      enabled: activationChange.enabled,
+    },
+  });
+}
+
+function isClaudeRegistrationChange(
+  change:
+    | AppliedCodexMarketplaceChange
+    | AppliedClaudeMarketplaceRegistration,
+): change is AppliedClaudeMarketplaceRegistration {
+  return "kind" in change && change.kind === "claude-cli-marketplace";
+}
+
 function hostState(completed: CompletedHostInstallation): InstallStateHost {
   const {
     plan,
     assetChange,
     configChange,
+    catalogChange,
     registrationChange,
     activationChange,
   } = completed;
@@ -760,11 +1074,44 @@ function hostState(completed: CompletedHostInstallation): InstallStateHost {
     (!isPlugin && !samePath(plan.skillSourcePath, assetChange.sourcePath)) ||
     (isPlugin && !samePath(plan.pluginSourcePath ?? "", assetChange.sourcePath)) ||
     isPlugin !== (assetChange.kind === "plugin") ||
-    isPlugin === (configChange !== undefined) ||
-    (plan.id === "codex") !== (registrationChange !== undefined) ||
-    (plan.id === "codex") !== (activationChange !== undefined)
+    isPlugin === (configChange !== undefined)
   ) {
     return invalid("Completed host installation does not match its plan");
+  }
+  const claudeRegistration = registrationChange !== undefined &&
+      isClaudeRegistrationChange(registrationChange)
+    ? registrationChange
+    : undefined;
+  const codexRegistration = registrationChange !== undefined &&
+      !isClaudeRegistrationChange(registrationChange)
+    ? registrationChange
+    : undefined;
+  const claudeActivation = activationChange?.kind === "claude-cli-plugin"
+    ? activationChange
+    : undefined;
+  const codexActivation = activationChange?.kind === "codex-cli-plugin"
+    ? activationChange
+    : undefined;
+  if (
+    (plan.id === "codex" &&
+      (catalogChange !== undefined ||
+        codexRegistration === undefined ||
+        codexActivation === undefined ||
+        claudeRegistration !== undefined ||
+        claudeActivation !== undefined)) ||
+    (plan.id === "claude" &&
+      (catalogChange === undefined ||
+        claudeRegistration === undefined ||
+        claudeActivation === undefined ||
+        codexRegistration !== undefined ||
+        codexActivation !== undefined)) ||
+    (plan.id !== "codex" &&
+      plan.id !== "claude" &&
+      (catalogChange !== undefined ||
+        registrationChange !== undefined ||
+        activationChange !== undefined))
+  ) {
+    return invalid("Completed host lifecycle evidence does not match its plan");
   }
   if (
     configChange !== undefined &&
@@ -782,15 +1129,29 @@ function hostState(completed: CompletedHostInstallation): InstallStateHost {
     return invalid("Completed host config value hash does not match its plan");
   }
   if (
-    registrationChange !== undefined &&
-    (activationChange === undefined ||
-      !samePath(registrationChange.pluginPath, assetChange.targetPath) ||
-      registrationChange.pluginName !== "huaweicloud-mate" ||
-      registrationChange.sourcePath !== "./plugins/huaweicloud-mate" ||
-      activationChange.pluginName !== registrationChange.pluginName ||
-      activationChange.marketplaceName !== registrationChange.marketplaceName)
+    codexRegistration !== undefined &&
+    (codexActivation === undefined ||
+      !samePath(codexRegistration.pluginPath, assetChange.targetPath) ||
+      codexRegistration.pluginName !== "huaweicloud-mate" ||
+      codexRegistration.sourcePath !== "./plugins/huaweicloud-mate" ||
+      codexActivation.pluginName !== codexRegistration.pluginName ||
+      codexActivation.marketplaceName !== codexRegistration.marketplaceName)
   ) {
     return invalid("Completed Codex registration does not match its plan");
+  }
+  if (
+    catalogChange !== undefined &&
+    (claudeRegistration === undefined ||
+      claudeActivation === undefined ||
+      !samePath(catalogChange.pluginPath, assetChange.targetPath) ||
+      !samePath(
+        catalogChange.marketplaceRoot,
+        claudeRegistration.marketplaceRoot,
+      ) ||
+      catalogChange.pluginVersion !== claudeActivation.version ||
+      catalogChange.marketplaceName !== claudeActivation.marketplaceName)
+  ) {
+    return invalid("Completed Claude lifecycle does not match its plan");
   }
   return parseHost({
     id: plan.id,
@@ -800,12 +1161,21 @@ function hostState(completed: CompletedHostInstallation): InstallStateHost {
     installedValueHash: valueHash,
     approvalIssuerId,
     ...(configChange === undefined ? {} : { config: configEvidence(configChange) }),
-    ...(registrationChange === undefined
+    ...(codexRegistration === undefined
       ? {}
       : {
           registration: codexRegistrationEvidence(
-            registrationChange,
-            activationChange!,
+            codexRegistration,
+            codexActivation!,
+          ),
+        }),
+    ...(catalogChange === undefined
+      ? {}
+      : {
+          registration: claudeMarketplaceEvidence(
+            catalogChange,
+            claudeRegistration!,
+            claudeActivation!,
           ),
         }),
     asset: assetEvidence(assetChange),
