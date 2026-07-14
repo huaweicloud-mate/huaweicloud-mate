@@ -23,6 +23,7 @@ import {
 import { verifyCodexMarketplaceChange } from "./codex-marketplace.js";
 import { InstallerError } from "./errors.js";
 import {
+  expectedHostAssetTreeHash,
   materializeHostAssets,
   rollbackHostAssetChange,
   verifyHostAssetChange,
@@ -41,6 +42,12 @@ import {
   rollbackActiveRuntimeChange,
   type AppliedActiveRuntimeChange,
 } from "./runtime.js";
+import { recoverInterruptedCodexUpgrade } from "./codex-upgrade-recovery.js";
+import {
+  removeCodexUpgradeRecovery,
+  replaceCodexUpgradeRecovery,
+  type CodexUpgradeRecoverySnapshot,
+} from "./upgrade-recovery.js";
 
 export interface CodexUpgradeOptions {
   readonly runtimeRoot: string;
@@ -102,6 +109,7 @@ export async function upgradeCodex(
   const runtimeRoot = resolve(options.runtimeRoot);
   const runner = options.runner ?? new NodeHostCommandRunner();
   const homeDirectory = options.homeDirectory ?? homedir();
+  await recoverInterruptedCodexUpgrade(runtimeRoot, homeDirectory, runner);
   const snapshot = await readInstallState(runtimeRoot);
   if (snapshot === undefined) {
     return invalid("Managed Codex upgrade requires an existing install state");
@@ -170,6 +178,24 @@ export async function upgradeCodex(
     );
   }
 
+  const candidateAssetTreeHash = await expectedHostAssetTreeHash(plan, candidate);
+  let recoverySnapshot: CodexUpgradeRecoverySnapshot =
+    await replaceCodexUpgradeRecovery(
+      runtimeRoot,
+      {
+        schemaVersion: 1,
+        host: "codex",
+        oldStateSha256: snapshot.sha256,
+        oldPluginVersion: snapshot.state.pluginVersion,
+        oldInstallManifestSha256: snapshot.state.installManifestSha256,
+        oldActiveRuntimeSha256: activeBefore.sha256,
+        candidatePluginVersion: candidate.pluginVersion,
+        candidateInstallManifestSha256: candidate.installManifestSha256,
+        candidateAssetTreeHash,
+      },
+      null,
+    );
+
   let oldActivationRemoved = false;
   let oldAssetRemoved = false;
   let newAsset: AppliedHostAssetChange | undefined;
@@ -192,6 +218,18 @@ export async function upgradeCodex(
     if (!newActivation.changed) {
       return conflict("Candidate Codex activation was not installed by the upgrade");
     }
+    recoverySnapshot = await replaceCodexUpgradeRecovery(
+      runtimeRoot,
+      {
+        ...recoverySnapshot.recovery,
+        candidateActivation: {
+          pluginId: newActivation.pluginId,
+          version: newActivation.version,
+          installedEntryHash: newActivation.installedEntryHash,
+        },
+      },
+      recoverySnapshot.sha256,
+    );
     await verifyHostAssetChange(newAsset);
     await verifyCodexMarketplaceChange(bound.registrationChange);
     await verifyCodexPluginActivation(newActivation, runner);
@@ -200,6 +238,14 @@ export async function upgradeCodex(
     if (!activeChange.changed) {
       return conflict("Candidate active runtime did not change during upgrade");
     }
+    recoverySnapshot = await replaceCodexUpgradeRecovery(
+      runtimeRoot,
+      {
+        ...recoverySnapshot.recovery,
+        candidateActiveRuntimeSha256: activeChange.installedSha256,
+      },
+      recoverySnapshot.sha256,
+    );
     const completed: CompletedHostInstallation = {
       plan,
       assetChange: newAsset,
@@ -212,6 +258,11 @@ export async function upgradeCodex(
     })({ runtime: candidate, completedHosts: [completed] });
     const state = createInstallState(candidate, [completed]);
     await replaceInstallState(runtimeRoot, state, snapshot.sha256);
+    try {
+      await removeCodexUpgradeRecovery(runtimeRoot, recoverySnapshot.sha256);
+    } catch {
+      // install-state is the final commit; a verified stale marker is cleaned on retry.
+    }
     return {
       host: "codex",
       status: "upgraded",
@@ -277,6 +328,13 @@ export async function upgradeCodex(
           runner,
         );
         await verifyCodexPluginActivation(bound.activationChange, runner);
+      } catch (rollbackError) {
+        rollbackFailures.push(rollbackError);
+      }
+    }
+    if (rollbackFailures.length === 0) {
+      try {
+        await removeCodexUpgradeRecovery(runtimeRoot, recoverySnapshot.sha256);
       } catch (rollbackError) {
         rollbackFailures.push(rollbackError);
       }

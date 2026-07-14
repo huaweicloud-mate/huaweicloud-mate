@@ -18,7 +18,7 @@
   "scripts": {
     "build": "node scripts/clean.mjs && tsc -p tsconfig.json && node scripts/copy-contracts.mjs && node scripts/copy-host-assets.mjs && node scripts/bundle-runtime.mjs && node scripts/create-runtime-manifest.mjs && node scripts/create-install-manifest.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "npm run build && vitest run",
+    "test": "npm run build && vitest run --maxWorkers=4",
     "doctor": "npm run build && node dist/cli.js doctor --contracts-only",
     "mcp": "npm run build && node dist/cli.js mcp"
   },

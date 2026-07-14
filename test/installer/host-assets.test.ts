@@ -12,6 +12,7 @@ import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  expectedHostAssetTreeHash,
   materializeHostAssets,
   rollbackHostAssetChange,
   verifyHostAssetChange,
@@ -75,6 +76,7 @@ afterEach(async () => {
 describe("host asset materialization", () => {
   it("renders, validates, and atomically materializes a Codex plugin", async () => {
     const { runtime, plan } = await fixture("codex");
+    const expectedTreeHash = await expectedHostAssetTreeHash(plan, runtime);
     const change = await materializeHostAssets(plan, runtime);
     const mcp = JSON.parse(
       await readFile(resolve(change.targetPath, ".mcp.json"), "utf8"),
@@ -90,6 +92,7 @@ describe("host asset materialization", () => {
       changed: true,
     });
     expect(change.installedTreeHash).toMatch(/^sha256:[a-f0-9]{64}$/u);
+    expect(change.installedTreeHash).toBe(expectedTreeHash);
     expect(mcp.mcpServers["huaweicloud-agent"]).toEqual({
       command: process.execPath,
       args: [runtime.stableLauncherPath, "router", "--stdio"],

@@ -24,6 +24,7 @@ import {
 } from "./installer/install-state.js";
 import { defaultRuntimeRoot } from "./installer/paths.js";
 import { materializeStableRuntime } from "./installer/runtime.js";
+import { readCodexUpgradeRecovery } from "./installer/upgrade-recovery.js";
 import { runDevelopmentMcpServer } from "./mcp/stdio.js";
 
 const version = "0.0.0-development";
@@ -140,7 +141,15 @@ async function hasManagedInstallState(runtimeRoot: string): Promise<boolean> {
     }
     throw error;
   }
-  return (await readInstallState(runtimeRoot)) !== undefined;
+  const state = await readInstallState(runtimeRoot);
+  const recovery = await readCodexUpgradeRecovery(runtimeRoot);
+  if (state === undefined && recovery !== undefined) {
+    throw new InstallerError(
+      "UPGRADE_RECOVERY_CONFLICT",
+      "Codex upgrade recovery marker exists without an install state",
+    );
+  }
+  return state !== undefined;
 }
 
 async function runInstall(

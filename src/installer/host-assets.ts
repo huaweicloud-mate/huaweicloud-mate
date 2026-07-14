@@ -49,6 +49,13 @@ export interface AppliedHostAssetChange {
 
 export type HostAssetRollbackStatus = "installed" | "removed" | "unowned";
 
+interface PreparedHostAsset {
+  readonly paths: ReturnType<typeof assetPaths>;
+  readonly stagingPath: string;
+  readonly createdParents: readonly string[];
+  readonly desiredTreeHash: string;
+}
+
 function invalid(message: string): never {
   throw new InstallerError("HOST_ASSET_INVALID", message);
 }
@@ -471,10 +478,10 @@ function assetPaths(plan: HostInstallPlan, runtime: HostAssetRuntime): {
   };
 }
 
-export async function materializeHostAssets(
+async function prepareHostAsset(
   plan: HostInstallPlan,
   runtime: HostAssetRuntime,
-): Promise<AppliedHostAssetChange> {
+): Promise<PreparedHostAsset> {
   let stagingPath: string | undefined;
   let createdParents: string[] = [];
   try {
@@ -529,7 +536,56 @@ export async function materializeHostAssets(
       await validateStagedSkill(stagingPath);
     }
 
-    const desiredTreeHash = await treeHash(stagingPath);
+    return {
+      paths,
+      stagingPath,
+      createdParents,
+      desiredTreeHash: await treeHash(stagingPath),
+    };
+  } catch (error) {
+    if (stagingPath !== undefined) {
+      await rm(stagingPath, { recursive: true, force: true });
+    }
+    await cleanupEmptyDirectories(createdParents);
+    throw error;
+  }
+}
+
+export async function expectedHostAssetTreeHash(
+  plan: HostInstallPlan,
+  runtime: HostAssetRuntime,
+): Promise<string> {
+  let prepared: PreparedHostAsset | undefined;
+  try {
+    prepared = await prepareHostAsset(plan, runtime);
+    return prepared.desiredTreeHash;
+  } catch (error) {
+    if (error instanceof InstallerError) {
+      throw error;
+    }
+    throw new InstallerError(
+      "HOST_ASSET_WRITE_FAILED",
+      "Host asset evidence could not be prepared",
+    );
+  } finally {
+    if (prepared !== undefined) {
+      await rm(prepared.stagingPath, { recursive: true, force: true });
+      await cleanupEmptyDirectories(prepared.createdParents);
+    }
+  }
+}
+
+export async function materializeHostAssets(
+  plan: HostInstallPlan,
+  runtime: HostAssetRuntime,
+): Promise<AppliedHostAssetChange> {
+  let stagingPath: string | undefined;
+  let createdParents: string[] = [];
+  try {
+    const prepared = await prepareHostAsset(plan, runtime);
+    const { paths, desiredTreeHash } = prepared;
+    stagingPath = prepared.stagingPath;
+    createdParents = [...prepared.createdParents];
     const currentTreeHash = await existingTreeHash(paths.targetPath);
     if (currentTreeHash !== undefined) {
       await rm(stagingPath, { recursive: true, force: true });
