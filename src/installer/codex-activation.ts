@@ -25,6 +25,11 @@ export interface AppliedCodexActivationChange {
   readonly enabled: true;
 }
 
+export type CodexActivationRollbackStatus =
+  | "installed"
+  | "removed"
+  | "unowned";
+
 interface InstalledPlugin {
   readonly pluginId: string;
   readonly pluginName: "huaweicloud-mate";
@@ -377,4 +382,35 @@ export async function rollbackCodexPluginActivation(
   if (after !== undefined) {
     return rollbackConflict("Codex plugin remains installed after rollback");
   }
+}
+
+export async function inspectCodexPluginActivationRollback(
+  change: AppliedCodexActivationChange,
+  runner: HostCommandRunner = new NodeHostCommandRunner(),
+): Promise<CodexActivationRollbackStatus> {
+  validateChange(change);
+  if (!change.changed) {
+    return "unowned";
+  }
+  let current: InstalledPlugin | undefined;
+  try {
+    current = await queryInstalledPlugin(
+      change.executablePath,
+      change.marketplaceName,
+      runner,
+    );
+  } catch {
+    return rollbackConflict(
+      "Codex plugin state could not be inspected before rollback",
+    );
+  }
+  if (current === undefined) {
+    return "removed";
+  }
+  if (!sameInstalledPlugin(current, change)) {
+    return rollbackConflict(
+      "Codex plugin changed after installation; refusing to remove it",
+    );
+  }
+  return "installed";
 }

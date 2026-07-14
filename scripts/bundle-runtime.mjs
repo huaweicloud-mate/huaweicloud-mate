@@ -16,6 +16,7 @@ const common = {
   legalComments: "none",
   minify: false,
   treeShaking: true,
+  mainFields: ["module", "main"],
   logLevel: "warning",
 };
 

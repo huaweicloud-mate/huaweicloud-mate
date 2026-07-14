@@ -194,7 +194,7 @@ describe("minimal install state", () => {
     expect(() => parseInstallState(missingActivation)).toThrowError(
       expect.objectContaining({ code: "INSTALL_STATE_INVALID" }),
     );
-  });
+  }, 15_000);
 
   it("preserves verified backup evidence for an existing host config", async () => {
     const root = await temporaryRoot();

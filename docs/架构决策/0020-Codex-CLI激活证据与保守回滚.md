@@ -31,7 +31,7 @@ Codex 官方命令参考已明确 `codex plugin add/list/remove` 均支持 `--js
 
 list 前后取证无法消除另一个同账号进程在极短窗口内安装完全相同 identity/版本/source 的理论竞态；当前以精确 installed entry hash 和保守回滚约束影响，不引入 v0.2 式常驻协调服务或通用注册 SPI。
 
-本 ADR 只提供首装中的 Codex 激活及失败补偿。面向用户的 `install/uninstall` CLI 尚未完成；正式 uninstall 仍需读取并重新绑定 install-state、重新发现 Codex 可执行文件，并执行同等级别的 compare-before-remove 检查。
+本 ADR 只定义首装中的 Codex 激活及失败补偿；面向用户的入口、安全卸载和路径重新绑定已由 ADR-0021 补齐。
 
 ## 依据
 

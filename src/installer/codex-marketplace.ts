@@ -52,6 +52,11 @@ export interface AppliedCodexMarketplaceChange extends CodexMarketplacePlan {
   readonly backupSha256?: string;
 }
 
+export type CodexMarketplaceRollbackStatus =
+  | "installed"
+  | "restored"
+  | "unowned";
+
 function invalid(message: string): never {
   throw new InstallerError("CODEX_MARKETPLACE_INVALID", message);
 }
@@ -565,6 +570,16 @@ export async function rollbackCodexMarketplaceChange(
   try {
     validatePlan(change);
     const current = await readSnapshot(change.marketplacePath);
+    if (change.createdFile && !current.exists) {
+      return;
+    }
+    if (
+      !change.createdFile &&
+      current.exists &&
+      current.sha256 === change.beforeSha256
+    ) {
+      return;
+    }
     if (!current.exists || current.sha256 !== change.installedSha256) {
       return rollbackConflict(
         "Codex marketplace changed after installation; refusing to roll it back",
@@ -612,6 +627,78 @@ export async function rollbackCodexMarketplaceChange(
     throw new InstallerError(
       "CODEX_MARKETPLACE_WRITE_FAILED",
       "Codex marketplace rollback failed",
+    );
+  }
+}
+
+export async function inspectCodexMarketplaceRollback(
+  change: AppliedCodexMarketplaceChange,
+): Promise<CodexMarketplaceRollbackStatus> {
+  if (!change.changed) {
+    return "unowned";
+  }
+  try {
+    validatePlan(change);
+    if (
+      !digestPattern.test(change.installedSha256) ||
+      (change.createdFile && change.beforeSha256 !== undefined) ||
+      (!change.createdFile && !digestPattern.test(change.beforeSha256 ?? ""))
+    ) {
+      return rollbackConflict("Codex marketplace rollback evidence is invalid");
+    }
+    const current = await readSnapshot(change.marketplacePath);
+    if (change.createdFile && !current.exists) {
+      return "restored";
+    }
+    if (
+      !change.createdFile &&
+      current.exists &&
+      current.sha256 === change.beforeSha256
+    ) {
+      return "restored";
+    }
+    if (current.exists && current.sha256 === change.installedSha256) {
+      if (!change.createdFile) {
+        if (
+          change.backupPath === undefined ||
+          change.backupSha256 === undefined ||
+          change.beforeSha256 === undefined
+        ) {
+          return rollbackConflict(
+            "Codex marketplace rollback evidence is incomplete",
+          );
+        }
+        const backup = await readSnapshot(change.backupPath);
+        if (
+          !backup.exists ||
+          backup.sha256 !== change.backupSha256 ||
+          backup.sha256 !== change.beforeSha256
+        ) {
+          return rollbackConflict(
+            "Codex marketplace backup is missing or changed",
+          );
+        }
+      }
+      return "installed";
+    }
+    return rollbackConflict(
+      "Codex marketplace changed after installation; refusing to roll it back",
+    );
+  } catch (error) {
+    if (error instanceof InstallerError) {
+      if (
+        error.code === "CODEX_MARKETPLACE_CONFLICT" ||
+        error.code === "CODEX_MARKETPLACE_INVALID"
+      ) {
+        return rollbackConflict(
+          "Codex marketplace changed during rollback inspection",
+        );
+      }
+      throw error;
+    }
+    throw new InstallerError(
+      "CODEX_MARKETPLACE_WRITE_FAILED",
+      "Codex marketplace rollback inspection failed",
     );
   }
 }

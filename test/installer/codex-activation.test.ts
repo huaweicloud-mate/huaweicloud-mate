@@ -53,6 +53,9 @@ describe("Codex CLI plugin activation", () => {
     await expect(
       rollbackCodexPluginActivation(change, runner),
     ).resolves.toBeUndefined();
+    await expect(
+      rollbackCodexPluginActivation(change, runner),
+    ).resolves.toBeUndefined();
     expect(runner.installedEntry).toBeUndefined();
     expect(runner.invocations).toContain(
       "plugin remove huaweicloud-mate@personal --json",

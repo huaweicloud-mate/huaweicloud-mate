@@ -50,15 +50,20 @@ export class FakeCodexPluginRunner implements HostCommandRunner {
   readonly failingListCalls = new Set<number>();
   private listCallCount = 0;
 
-  constructor(root: string, installedEntry?: FakeCodexInstalledEntry) {
+  constructor(
+    root: string,
+    installedEntry?: FakeCodexInstalledEntry,
+    private readonly fallbackRunner?: HostCommandRunner,
+  ) {
     this.executablePath = resolve(root, "fake-bin", "codex.exe");
     this.installedEntry = installedEntry;
   }
 
   async resolveCommand(command: string): Promise<string | undefined> {
-    return command === "codex" && this.resolveAvailable
-      ? this.executablePath
-      : undefined;
+    if (command === "codex") {
+      return this.resolveAvailable ? this.executablePath : undefined;
+    }
+    return await this.fallbackRunner?.resolveCommand(command);
   }
 
   async run(
@@ -66,6 +71,9 @@ export class FakeCodexPluginRunner implements HostCommandRunner {
     args: readonly string[],
   ): Promise<HostCommandResult> {
     if (executablePath !== this.executablePath) {
+      if (this.fallbackRunner !== undefined) {
+        return await this.fallbackRunner.run(executablePath, args);
+      }
       throw new Error("Unexpected executable path");
     }
     const invocation = args.join(" ");
@@ -75,6 +83,17 @@ export class FakeCodexPluginRunner implements HostCommandRunner {
       if (this.failingListCalls.has(this.listCallCount)) {
         throw new Error("Injected list failure");
       }
+      return result(
+        0,
+        `${JSON.stringify({
+          installed: this.installedEntry === undefined
+            ? []
+            : [this.installedEntry],
+          available: [],
+        })}\n`,
+      );
+    }
+    if (invocation === "plugin list --json") {
       return result(
         0,
         `${JSON.stringify({

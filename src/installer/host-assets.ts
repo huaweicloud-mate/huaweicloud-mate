@@ -47,6 +47,8 @@ export interface AppliedHostAssetChange {
   readonly createdPaths: readonly string[];
 }
 
+export type HostAssetRollbackStatus = "installed" | "removed" | "unowned";
+
 function invalid(message: string): never {
   throw new InstallerError("HOST_ASSET_INVALID", message);
 }
@@ -595,6 +597,17 @@ export async function rollbackHostAssetChange(
       return rollbackConflict("Host asset rollback target is not absolute");
     }
     const currentTreeHash = await existingTreeHash(change.targetPath);
+    if (currentTreeHash === undefined) {
+      await cleanupEmptyDirectories(
+        change.createdPaths.filter(
+          (path) =>
+            isAbsolute(path) &&
+            !samePath(path, change.targetPath) &&
+            isContained(path, change.targetPath),
+        ),
+      );
+      return;
+    }
     if (currentTreeHash !== change.installedTreeHash) {
       return rollbackConflict(
         "Host asset changed after installation; refusing to remove it",
@@ -653,6 +666,45 @@ export async function rollbackHostAssetChange(
     throw new InstallerError(
       "HOST_ASSET_WRITE_FAILED",
       "Host asset rollback failed",
+    );
+  }
+}
+
+export async function inspectHostAssetRollback(
+  change: AppliedHostAssetChange,
+): Promise<HostAssetRollbackStatus> {
+  if (!change.changed) {
+    return "unowned";
+  }
+  try {
+    if (
+      !isAbsolute(change.targetPath) ||
+      !digestPattern.test(change.installedTreeHash)
+    ) {
+      return rollbackConflict("Host asset rollback evidence is invalid");
+    }
+    const currentTreeHash = await existingTreeHash(change.targetPath);
+    if (currentTreeHash === undefined) {
+      return "removed";
+    }
+    if (currentTreeHash !== change.installedTreeHash) {
+      return rollbackConflict(
+        "Host asset changed after installation; refusing to remove it",
+      );
+    }
+    return "installed";
+  } catch (error) {
+    if (error instanceof InstallerError) {
+      if (error.code === "HOST_ASSET_INVALID") {
+        return rollbackConflict(
+          "Host asset is invalid during rollback; refusing to remove it",
+        );
+      }
+      throw error;
+    }
+    throw new InstallerError(
+      "HOST_ASSET_WRITE_FAILED",
+      "Host asset rollback inspection failed",
     );
   }
 }

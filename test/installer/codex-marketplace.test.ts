@@ -110,6 +110,9 @@ describe("Codex personal marketplace transaction", () => {
     await verifyCodexMarketplaceChange(change);
     await rollbackCodexMarketplaceChange(change);
     expect(await pathExists(plan.marketplacePath)).toBe(false);
+    await expect(
+      rollbackCodexMarketplaceChange(change),
+    ).resolves.toBeUndefined();
   });
 
   it("appends without dropping marketplace metadata and restores exact bytes", async () => {
@@ -153,6 +156,9 @@ describe("Codex personal marketplace transaction", () => {
     await rollbackCodexMarketplaceChange(change);
     expect(await readFile(plan.marketplacePath, "utf8")).toBe(original);
     expect(await pathExists(change.backupPath!)).toBe(false);
+    await expect(
+      rollbackCodexMarketplaceChange(change),
+    ).resolves.toBeUndefined();
   });
 
   it("treats an identical entry as idempotent without rewriting", async () => {

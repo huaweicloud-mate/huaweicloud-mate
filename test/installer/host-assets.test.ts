@@ -116,6 +116,7 @@ describe("host asset materialization", () => {
     await rollbackHostAssetChange(change);
     expect(await pathExists(change.targetPath)).toBe(false);
     expect(await pathExists(resolve(runtime.runtimeRoot, "hosts"))).toBe(false);
+    await expect(rollbackHostAssetChange(change)).resolves.toBeUndefined();
   }, 15_000);
 
   it("materializes the canonical Skill for a config-based host", async () => {
