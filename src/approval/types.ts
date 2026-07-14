@@ -90,3 +90,7 @@ export interface ApprovalTerminal {
   write(message: string): void;
   readLine(prompt: string): Promise<string>;
 }
+
+export interface ApprovalReviewer {
+  review(context: ApprovalSigningContext): Promise<ApprovalReceipt | null>;
+}

@@ -2,6 +2,7 @@
 
 import { pathToFileURL } from "node:url";
 
+import { runApprovalDoctor } from "./doctor/approval-doctor.js";
 import { runContractDoctor } from "./doctor/contract-doctor.js";
 
 const version = "0.0.0-development";
@@ -10,34 +11,66 @@ function printUsage(): void {
   console.log(`huaweicloud-mate ${version}
 
 Usage:
-  huaweicloud-mate doctor [--contracts-only] [--json]
+  huaweicloud-mate doctor [--contracts-only | --approval-probe] [--json]
   huaweicloud-mate version
 
 This development build does not accept credentials or execute cloud operations.`);
 }
 
 async function runDoctor(args: readonly string[]): Promise<number> {
-  const allowedArguments = new Set(["--contracts-only", "--json"]);
+  const allowedArguments = new Set([
+    "--contracts-only",
+    "--approval-probe",
+    "--json",
+  ]);
   const unknownArgument = args.find((argument) => !allowedArguments.has(argument));
   if (unknownArgument !== undefined) {
     console.error(`Unknown doctor option: ${unknownArgument}`);
     return 2;
   }
+  if (
+    args.includes("--contracts-only") &&
+    args.includes("--approval-probe")
+  ) {
+    console.error("--contracts-only and --approval-probe cannot be used together");
+    return 2;
+  }
 
-  const report = await runContractDoctor();
+  const contractReport = await runContractDoctor();
+  const approvalProbe = args.includes("--approval-probe")
+    ? await runApprovalDoctor()
+    : undefined;
+  const ok = contractReport.ok && (approvalProbe?.ok ?? true);
   if (args.includes("--json")) {
-    console.log(JSON.stringify(report, null, 2));
+    console.log(
+      JSON.stringify(
+        approvalProbe === undefined
+          ? contractReport
+          : { ...contractReport, approvalProbe },
+        null,
+        2,
+      ),
+    );
   } else {
     console.log(
-      `Contract doctor: ${report.ok ? "PASS" : "FAIL"} (${report.schemaCount} schemas, ${report.vectorCount} schema vectors, ${report.deferredStateMachineVectorCount} runtime vectors deferred)`,
+      `Contract doctor: ${contractReport.ok ? "PASS" : "FAIL"} (${contractReport.schemaCount} schemas, ${contractReport.vectorCount} schema vectors, ${contractReport.deferredStateMachineVectorCount} runtime vectors deferred)`,
     );
-    for (const vector of report.vectors) {
+    for (const vector of contractReport.vectors) {
       console.log(
         `- ${vector.passed ? "PASS" : "FAIL"} ${vector.id}: expectation=${vector.expectation}, schemaValid=${String(vector.schemaValid)}`,
       );
     }
+    if (approvalProbe !== undefined) {
+      console.log(
+        `Approval companion probe: ${approvalProbe.ok ? "PASS" : "FAIL"} (${approvalProbe.status}, no cloud operation)`,
+      );
+      console.log(`- ${approvalProbe.message}`);
+      if (approvalProbe.errorCode !== undefined) {
+        console.log(`- errorCode=${approvalProbe.errorCode}`);
+      }
+    }
   }
-  return report.ok ? 0 : 1;
+  return ok ? 0 : 1;
 }
 
 export async function main(args: readonly string[]): Promise<number> {
