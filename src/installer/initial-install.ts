@@ -7,6 +7,13 @@ import {
   rollbackHostConfigChange,
   verifyHostConfigChange,
 } from "./config-transaction.js";
+import {
+  applyCodexMarketplaceChange,
+  type AppliedCodexMarketplaceChange,
+  createCodexMarketplacePlan,
+  rollbackCodexMarketplaceChange,
+  verifyCodexMarketplaceChange,
+} from "./codex-marketplace.js";
 import { InstallerError } from "./errors.js";
 import {
   type AppliedHostAssetChange,
@@ -28,6 +35,7 @@ interface PartialHostInstallation {
   readonly plan: HostInstallPlan;
   readonly assetChange: AppliedHostAssetChange;
   configChange?: AppliedHostConfigChange;
+  registrationChange?: AppliedCodexMarketplaceChange;
 }
 
 export interface InitialInstallVerificationContext {
@@ -107,6 +115,9 @@ function completed(
     ...(partial.configChange === undefined
       ? {}
       : { configChange: partial.configChange }),
+    ...(partial.registrationChange === undefined
+      ? {}
+      : { registrationChange: partial.registrationChange }),
   };
 }
 
@@ -115,6 +126,15 @@ async function rollbackPartialHosts(
 ): Promise<readonly unknown[]> {
   const failures: unknown[] = [];
   for (const partial of [...applied].reverse()) {
+    let preserveAsset = false;
+    if (partial.registrationChange !== undefined) {
+      try {
+        await rollbackCodexMarketplaceChange(partial.registrationChange);
+      } catch (error) {
+        failures.push(error);
+        preserveAsset = true;
+      }
+    }
     if (partial.configChange !== undefined) {
       try {
         await rollbackHostConfigChange(partial.configChange);
@@ -122,10 +142,12 @@ async function rollbackPartialHosts(
         failures.push(error);
       }
     }
-    try {
-      await rollbackHostAssetChange(partial.assetChange);
-    } catch (error) {
-      failures.push(error);
+    if (!preserveAsset) {
+      try {
+        await rollbackHostAssetChange(partial.assetChange);
+      } catch (error) {
+        failures.push(error);
+      }
     }
   }
   return failures;
@@ -139,6 +161,9 @@ async function verifyCompletedHosts(
       await verifyHostConfigChange(host.configChange);
     }
     await verifyHostAssetChange(host.assetChange);
+    if (host.registrationChange !== undefined) {
+      await verifyCodexMarketplaceChange(host.registrationChange);
+    }
   }
 }
 
@@ -165,6 +190,15 @@ export async function runInitialInstallTransaction(
         partial.configChange = await applyHostConfigChange(
           plan,
           resolve(options.runtime.runtimeRoot, "backups", plan.id),
+        );
+      }
+      if (plan.id === "codex") {
+        if (plan.pluginTargetPath === undefined) {
+          return invalid("Codex install plan is missing its plugin target");
+        }
+        partial.registrationChange = await applyCodexMarketplaceChange(
+          createCodexMarketplacePlan(plan.pluginTargetPath),
+          resolve(options.runtime.runtimeRoot, "backups", "codex-marketplace"),
         );
       }
     }

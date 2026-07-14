@@ -21,7 +21,7 @@ ADR-0012 把 Codex 插件先物化到 runtime 管理目录，ADR-0017 随后把�
 
 - Codex 插件目录与默认个人 marketplace 的固定 source path 一致，不需要维护第二份插件、junction 或 symlink。
 - marketplace 新建、追加、幂等、同名冲突、精确恢复、用户修改保护、重复字段和写入竞态都有自动化测试。
-- 当前事务是独立模块，尚未扩展 install-state，也尚未进入 ADR-0016 的首装编排；因此不会在开发或测试阶段写入真实用户 marketplace。
+- 本 ADR 完成时事务仍是独立模块；ADR-0019 已将其注册证据纳入 install-state 与首装回滚编排。自动化测试只写临时 home，不接触真实用户 marketplace。
 
 ## 安全边界与当前限制
 

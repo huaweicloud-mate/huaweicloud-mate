@@ -50,6 +50,10 @@ import { createHostInstallPlan } from "../../src/hosts/plan.js";
 import { HostTemplateRegistry } from "../../src/hosts/registry.js";
 import { materializeHostAssets } from "../../src/installer/host-assets.js";
 import {
+  applyCodexMarketplaceChange,
+  createCodexMarketplacePlan,
+} from "../../src/installer/codex-marketplace.js";
+import {
   createInstallState,
   installStatePath,
   replaceInstallState,
@@ -85,9 +89,15 @@ async function fixture() {
     resolve(root, "home"),
   );
   const assetChange = await materializeHostAssets(plan, runtime);
+  const registrationChange = await applyCodexMarketplaceChange(
+    createCodexMarketplacePlan(plan.pluginTargetPath!),
+    resolve(root, "backups", "codex-marketplace"),
+  );
   return {
     runtime,
-    state: createInstallState(runtime, [{ plan, assetChange }]),
+    state: createInstallState(runtime, [
+      { plan, assetChange, registrationChange },
+    ]),
   };
 }
 

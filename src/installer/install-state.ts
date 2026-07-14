@@ -21,6 +21,7 @@ import { approvalIssuerId } from "../approval/constants.js";
 import type { HostInstallPlan } from "../hosts/plan.js";
 import type { HostId } from "../hosts/types.js";
 import type { AppliedHostConfigChange } from "./config-transaction.js";
+import type { AppliedCodexMarketplaceChange } from "./codex-marketplace.js";
 import { InstallerError } from "./errors.js";
 import type { AppliedHostAssetChange } from "./host-assets.js";
 import {
@@ -57,6 +58,22 @@ export interface InstallStateAssetEvidence {
   readonly createdPaths: readonly string[];
 }
 
+export interface InstallStateCodexRegistrationEvidence {
+  readonly kind: "codex-personal-marketplace";
+  readonly marketplacePath: string;
+  readonly marketplaceName: string;
+  readonly pluginPath: string;
+  readonly pluginName: "huaweicloud-mate";
+  readonly sourcePath: "./plugins/huaweicloud-mate";
+  readonly changed: boolean;
+  readonly createdFile: boolean;
+  readonly installedSha256: string;
+  readonly installedEntryHash: string;
+  readonly beforeSha256?: string;
+  readonly backupPath?: string;
+  readonly backupSha256?: string;
+}
+
 export interface InstallStateHost {
   readonly id: HostId;
   readonly mergeStrategy: (typeof mergeStrategies)[number];
@@ -65,6 +82,7 @@ export interface InstallStateHost {
   readonly installedValueHash: string;
   readonly approvalIssuerId: typeof approvalIssuerId;
   readonly config?: InstallStateConfigEvidence;
+  readonly registration?: InstallStateCodexRegistrationEvidence;
   readonly asset: InstallStateAssetEvidence;
 }
 
@@ -81,6 +99,7 @@ export interface CompletedHostInstallation {
   readonly plan: HostInstallPlan;
   readonly assetChange: AppliedHostAssetChange;
   readonly configChange?: AppliedHostConfigChange;
+  readonly registrationChange?: AppliedCodexMarketplaceChange;
 }
 
 export interface InstallStateSnapshot {
@@ -354,11 +373,110 @@ function parseAssetEvidence(value: unknown): InstallStateAssetEvidence {
   };
 }
 
+function parseCodexRegistrationEvidence(
+  value: unknown,
+): InstallStateCodexRegistrationEvidence {
+  if (!isRecord(value)) {
+    return invalid("Install state Codex registration evidence is not an object");
+  }
+  const optionalKeys = ["beforeSha256", "backupPath", "backupSha256"].filter(
+    (key) => value[key] !== undefined,
+  );
+  if (
+    !exactKeys(value, [
+      "kind",
+      "marketplacePath",
+      "marketplaceName",
+      "pluginPath",
+      "pluginName",
+      "sourcePath",
+      "changed",
+      "createdFile",
+      "installedSha256",
+      "installedEntryHash",
+      ...optionalKeys,
+    ]) ||
+    value.kind !== "codex-personal-marketplace" ||
+    typeof value.marketplacePath !== "string" ||
+    !isAbsolute(value.marketplacePath) ||
+    typeof value.marketplaceName !== "string" ||
+    !/^[A-Za-z0-9._-]{1,64}$/u.test(value.marketplaceName) ||
+    typeof value.pluginPath !== "string" ||
+    !isAbsolute(value.pluginPath) ||
+    value.pluginName !== "huaweicloud-mate" ||
+    value.sourcePath !== "./plugins/huaweicloud-mate" ||
+    typeof value.changed !== "boolean" ||
+    typeof value.createdFile !== "boolean" ||
+    !isDigest(value.installedSha256) ||
+    !isDigest(value.installedEntryHash)
+  ) {
+    return invalid("Install state Codex registration evidence is invalid");
+  }
+  const marketplacePath = resolve(value.marketplacePath);
+  const pluginPath = resolve(value.pluginPath);
+  const homeDirectory = dirname(dirname(pluginPath));
+  if (
+    basename(pluginPath) !== "huaweicloud-mate" ||
+    basename(dirname(pluginPath)) !== "plugins" ||
+    !samePath(
+      marketplacePath,
+      resolve(homeDirectory, ".agents", "plugins", "marketplace.json"),
+    )
+  ) {
+    return invalid("Install state Codex registration paths are inconsistent");
+  }
+  const beforeSha256 = value.beforeSha256;
+  const backupPath = value.backupPath;
+  const backupSha256 = value.backupSha256;
+  if (!value.changed) {
+    if (
+      value.createdFile ||
+      beforeSha256 !== undefined ||
+      backupPath !== undefined ||
+      backupSha256 !== undefined
+    ) {
+      return invalid("Unchanged Codex registration claims transaction ownership");
+    }
+  } else if (value.createdFile) {
+    if (
+      beforeSha256 !== undefined ||
+      backupPath !== undefined ||
+      backupSha256 !== undefined
+    ) {
+      return invalid("New Codex registration contains an unexpected backup");
+    }
+  } else if (
+    !isDigest(beforeSha256) ||
+    typeof backupPath !== "string" ||
+    !isAbsolute(backupPath) ||
+    !isDigest(backupSha256) ||
+    beforeSha256 !== backupSha256
+  ) {
+    return invalid("Existing Codex registration is missing its verified backup");
+  }
+  return {
+    kind: "codex-personal-marketplace",
+    marketplacePath,
+    marketplaceName: value.marketplaceName,
+    pluginPath,
+    pluginName: "huaweicloud-mate",
+    sourcePath: "./plugins/huaweicloud-mate",
+    changed: value.changed,
+    createdFile: value.createdFile,
+    installedSha256: value.installedSha256,
+    installedEntryHash: value.installedEntryHash,
+    ...(beforeSha256 === undefined ? {} : { beforeSha256 }),
+    ...(backupPath === undefined ? {} : { backupPath: resolve(backupPath) }),
+    ...(backupSha256 === undefined ? {} : { backupSha256 }),
+  };
+}
+
 function parseHost(value: unknown): InstallStateHost {
   if (!isRecord(value)) {
     return invalid("Install state host is not an object");
   }
   const hasConfig = value.config !== undefined;
+  const hasRegistration = value.registration !== undefined;
   if (
     !exactKeys(value, [
       "id",
@@ -368,6 +486,7 @@ function parseHost(value: unknown): InstallStateHost {
       "installedValueHash",
       "approvalIssuerId",
       ...(hasConfig ? ["config"] : []),
+      ...(hasRegistration ? ["registration"] : []),
       "asset",
     ]) ||
     !isHostId(value.id) ||
@@ -381,9 +500,13 @@ function parseHost(value: unknown): InstallStateHost {
     return invalid("Install state host binding is invalid");
   }
   const asset = parseAssetEvidence(value.asset);
+  const registration = hasRegistration
+    ? parseCodexRegistrationEvidence(value.registration)
+    : undefined;
   if (
     (value.mergeStrategy === "plugin-manifest") !== (asset.kind === "plugin") ||
-    (value.mergeStrategy === "plugin-manifest") === hasConfig
+    (value.mergeStrategy === "plugin-manifest") === hasConfig ||
+    (value.id === "codex") !== hasRegistration
   ) {
     return invalid("Install state host transaction shape is invalid");
   }
@@ -393,6 +516,12 @@ function parseHost(value: unknown): InstallStateHost {
   ) {
     return invalid("Plugin install state config path is outside its asset tree");
   }
+  if (
+    registration !== undefined &&
+    !samePath(registration.pluginPath, asset.targetPath)
+  ) {
+    return invalid("Codex registration does not reference its plugin asset");
+  }
   return {
     id: value.id,
     mergeStrategy: value.mergeStrategy,
@@ -401,6 +530,7 @@ function parseHost(value: unknown): InstallStateHost {
     installedValueHash: value.installedValueHash,
     approvalIssuerId,
     ...(hasConfig ? { config: parseConfigEvidence(value.config) } : {}),
+    ...(registration === undefined ? {} : { registration }),
     asset,
   };
 }
@@ -508,8 +638,32 @@ function assetEvidence(change: AppliedHostAssetChange): InstallStateAssetEvidenc
   });
 }
 
+function codexRegistrationEvidence(
+  change: AppliedCodexMarketplaceChange,
+): InstallStateCodexRegistrationEvidence {
+  return parseCodexRegistrationEvidence({
+    kind: "codex-personal-marketplace",
+    marketplacePath: change.marketplacePath,
+    marketplaceName: change.marketplaceName,
+    pluginPath: change.pluginPath,
+    pluginName: change.pluginName,
+    sourcePath: change.sourcePath,
+    changed: change.changed,
+    createdFile: change.createdFile,
+    installedSha256: change.installedSha256,
+    installedEntryHash: change.installedEntryHash,
+    ...(change.changed && change.beforeSha256 !== undefined
+      ? { beforeSha256: change.beforeSha256 }
+      : {}),
+    ...(change.backupPath === undefined ? {} : { backupPath: change.backupPath }),
+    ...(change.backupSha256 === undefined
+      ? {}
+      : { backupSha256: change.backupSha256 }),
+  });
+}
+
 function hostState(completed: CompletedHostInstallation): InstallStateHost {
-  const { plan, assetChange, configChange } = completed;
+  const { plan, assetChange, configChange, registrationChange } = completed;
   const isPlugin = plan.mergeStrategy === "plugin-manifest";
   const expectedAssetTarget = isPlugin
     ? plan.pluginTargetPath
@@ -521,7 +675,8 @@ function hostState(completed: CompletedHostInstallation): InstallStateHost {
     (!isPlugin && !samePath(plan.skillSourcePath, assetChange.sourcePath)) ||
     (isPlugin && !samePath(plan.pluginSourcePath ?? "", assetChange.sourcePath)) ||
     isPlugin !== (assetChange.kind === "plugin") ||
-    isPlugin === (configChange !== undefined)
+    isPlugin === (configChange !== undefined) ||
+    (plan.id === "codex") !== (registrationChange !== undefined)
   ) {
     return invalid("Completed host installation does not match its plan");
   }
@@ -540,6 +695,14 @@ function hostState(completed: CompletedHostInstallation): InstallStateHost {
   ) {
     return invalid("Completed host config value hash does not match its plan");
   }
+  if (
+    registrationChange !== undefined &&
+    (!samePath(registrationChange.pluginPath, assetChange.targetPath) ||
+      registrationChange.pluginName !== "huaweicloud-mate" ||
+      registrationChange.sourcePath !== "./plugins/huaweicloud-mate")
+  ) {
+    return invalid("Completed Codex registration does not match its plan");
+  }
   return parseHost({
     id: plan.id,
     mergeStrategy: plan.mergeStrategy,
@@ -548,6 +711,9 @@ function hostState(completed: CompletedHostInstallation): InstallStateHost {
     installedValueHash: valueHash,
     approvalIssuerId,
     ...(configChange === undefined ? {} : { config: configEvidence(configChange) }),
+    ...(registrationChange === undefined
+      ? {}
+      : { registration: codexRegistrationEvidence(registrationChange) }),
     asset: assetEvidence(assetChange),
   });
 }

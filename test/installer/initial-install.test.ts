@@ -16,6 +16,7 @@ import { createHostInstallPlan } from "../../src/hosts/plan.js";
 import { HostTemplateRegistry } from "../../src/hosts/registry.js";
 import type { HostId } from "../../src/hosts/types.js";
 import { runInitialInstallTransaction } from "../../src/installer/initial-install.js";
+import { createCodexMarketplacePlan } from "../../src/installer/codex-marketplace.js";
 import {
   installStatePath,
   readInstallState,
@@ -73,6 +74,16 @@ function assetTarget(plan: Awaited<ReturnType<typeof fixture>>["plans"][number])
     : plan.skillTargetPath;
 }
 
+function codexMarketplacePath(
+  plans: Awaited<ReturnType<typeof fixture>>["plans"],
+): string {
+  const codex = plans.find((plan) => plan.id === "codex");
+  if (codex?.pluginTargetPath === undefined) {
+    throw new Error("Codex plan is missing");
+  }
+  return createCodexMarketplacePlan(codex.pluginTargetPath).marketplacePath;
+}
+
 afterEach(async () => {
   await Promise.all(
     temporaryRoots.splice(0).map((root) =>
@@ -95,6 +106,12 @@ describe("initial install transaction", () => {
         if (host.configChange !== undefined) {
           expect(await pathExists(host.configChange.configPath)).toBe(true);
         }
+        if (host.plan.id === "codex") {
+          expect(host.registrationChange).toBeDefined();
+          expect(
+            await pathExists(host.registrationChange!.marketplacePath),
+          ).toBe(true);
+        }
       }
     });
 
@@ -113,6 +130,13 @@ describe("initial install transaction", () => {
       "codearts",
       "codex",
     ]);
+    expect(result.state.hosts.find((host) => host.id === "codex")).toMatchObject({
+      registration: {
+        kind: "codex-personal-marketplace",
+        changed: true,
+        createdFile: true,
+      },
+    });
     expect(await readInstallState(runtime.runtimeRoot)).toEqual({
       state: result.state,
       sha256: result.stateChange.installedSha256,
@@ -160,6 +184,7 @@ describe("initial install transaction", () => {
 
     expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
     expect(await pathExists(codearts.configPath)).toBe(false);
+    expect(await pathExists(codexMarketplacePath(plans))).toBe(false);
     for (const plan of plans) {
       expect(await pathExists(assetTarget(plan))).toBe(false);
     }
@@ -181,6 +206,7 @@ describe("initial install transaction", () => {
 
     expect(await readFile(statePath, "utf8")).toBe("external state\n");
     expect(await pathExists(assetTarget(plans[0]!))).toBe(false);
+    expect(await pathExists(codexMarketplacePath(plans))).toBe(false);
   });
 
   it("preserves a conflicting config and rolls back earlier assets", async () => {
@@ -204,6 +230,7 @@ describe("initial install transaction", () => {
 
     expect(await readFile(opencode.configPath, "utf8")).toBe(conflicting);
     expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
+    expect(await pathExists(codexMarketplacePath(plans))).toBe(false);
     for (const plan of plans) {
       expect(await pathExists(assetTarget(plan))).toBe(false);
     }
@@ -232,6 +259,101 @@ describe("initial install transaction", () => {
 
     expect(await readFile(plan.configPath, "utf8")).toContain("user change");
     expect(await pathExists(assetTarget(plan))).toBe(false);
+    expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
+  });
+
+  it("preserves a Codex plugin when an edited marketplace cannot roll back", async () => {
+    const { runtime, plans } = await fixture(["codex", "codearts"]);
+    const marketplacePath = codexMarketplacePath(plans);
+    const codex = plans.find((plan) => plan.id === "codex")!;
+    const codearts = plans.find((plan) => plan.id === "codearts")!;
+
+    await expect(
+      runInitialInstallTransaction({
+        runtime,
+        plans,
+        verify: async () => {
+          const marketplace = JSON.parse(
+            await readFile(marketplacePath, "utf8"),
+          ) as Record<string, unknown>;
+          await writeFile(
+            marketplacePath,
+            `${JSON.stringify({ ...marketplace, userEdit: true }, null, 2)}\n`,
+            "utf8",
+          );
+          throw new Error("verification failed after marketplace edit");
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: "INSTALL_TRANSACTION_ROLLBACK_CONFLICT",
+    });
+
+    expect(await readFile(marketplacePath, "utf8")).toContain("userEdit");
+    expect(await pathExists(assetTarget(codex))).toBe(true);
+    expect(await pathExists(codearts.configPath)).toBe(false);
+    expect(await pathExists(assetTarget(codearts))).toBe(false);
+    expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
+  }, 15_000);
+
+  it("records a pre-existing identical marketplace entry without ownership", async () => {
+    const { runtime, plans } = await fixture(["codex"]);
+    const marketplacePath = codexMarketplacePath(plans);
+    await mkdir(dirname(marketplacePath), { recursive: true });
+    await writeFile(
+      marketplacePath,
+      `${JSON.stringify({
+        name: "personal",
+        interface: { displayName: "Personal" },
+        plugins: [
+          {
+            name: "huaweicloud-mate",
+            source: {
+              source: "local",
+              path: "./plugins/huaweicloud-mate",
+            },
+            policy: {
+              installation: "AVAILABLE",
+              authentication: "ON_INSTALL",
+            },
+            category: "Productivity",
+          },
+        ],
+      }, null, 2)}\n`,
+      "utf8",
+    );
+
+    const result = await runInitialInstallTransaction({ runtime, plans });
+
+    expect(result.state.hosts[0]?.registration).toMatchObject({
+      changed: false,
+      createdFile: false,
+    });
+    expect(result.state.hosts[0]?.registration).not.toHaveProperty("backupPath");
+  }, 15_000);
+
+  it("preserves a conflicting Codex marketplace and rolls back its new asset", async () => {
+    const { runtime, plans } = await fixture(["codex"]);
+    const marketplacePath = codexMarketplacePath(plans);
+    const conflicting = `${JSON.stringify({
+      name: "personal",
+      plugins: [
+        {
+          name: "huaweicloud-mate",
+          source: { source: "local", path: "./plugins/other" },
+          policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" },
+          category: "Productivity",
+        },
+      ],
+    }, null, 2)}\n`;
+    await mkdir(dirname(marketplacePath), { recursive: true });
+    await writeFile(marketplacePath, conflicting, "utf8");
+
+    await expect(
+      runInitialInstallTransaction({ runtime, plans }),
+    ).rejects.toMatchObject({ code: "CODEX_MARKETPLACE_CONFLICT" });
+
+    expect(await readFile(marketplacePath, "utf8")).toBe(conflicting);
+    expect(await pathExists(assetTarget(plans[0]!))).toBe(false);
     expect(await readInstallState(runtime.runtimeRoot)).toBeUndefined();
   });
 });

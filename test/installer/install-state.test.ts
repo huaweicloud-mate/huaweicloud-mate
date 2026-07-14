@@ -14,6 +14,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { applyHostConfigChange } from "../../src/installer/config-transaction.js";
 import {
+  applyCodexMarketplaceChange,
+  createCodexMarketplacePlan,
+} from "../../src/installer/codex-marketplace.js";
+import {
   createInstallState,
   installStatePath,
   parseInstallState,
@@ -52,6 +56,13 @@ async function completedHost(
     resolve(root, "home"),
   );
   const assetChange = await materializeHostAssets(plan, runtime);
+  if (id === "codex") {
+    const registrationChange = await applyCodexMarketplaceChange(
+      createCodexMarketplacePlan(plan.pluginTargetPath!),
+      resolve(root, "backups", "codex-marketplace"),
+    );
+    return { plan, assetChange, registrationChange };
+  }
   if (plan.mergeStrategy === "plugin-manifest") {
     return { plan, assetChange };
   }
@@ -107,6 +118,14 @@ describe("minimal install state", () => {
     expect(state.hosts[1]).toMatchObject({
       id: "codex",
       asset: { kind: "plugin", changed: true },
+      registration: {
+        kind: "codex-personal-marketplace",
+        marketplaceName: "personal",
+        pluginName: "huaweicloud-mate",
+        sourcePath: "./plugins/huaweicloud-mate",
+        changed: true,
+        createdFile: true,
+      },
     });
     expect(state.hosts[1]).not.toHaveProperty("config");
 
@@ -137,6 +156,17 @@ describe("minimal install state", () => {
     };
     inconsistent.hosts[0]!.asset.changed = false;
     expect(() => parseInstallState(inconsistent)).toThrowError(
+      expect.objectContaining({ code: "INSTALL_STATE_INVALID" }),
+    );
+
+    const { runtime: codexRuntime, completed: codexCompleted } = await fixture([
+      "codex",
+    ]);
+    const missingRegistration = structuredClone(
+      createInstallState(codexRuntime, codexCompleted),
+    ) as unknown as { hosts: Array<{ registration?: unknown }> };
+    delete missingRegistration.hosts[0]!.registration;
+    expect(() => parseInstallState(missingRegistration)).toThrowError(
       expect.objectContaining({ code: "INSTALL_STATE_INVALID" }),
     );
   });
