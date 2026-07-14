@@ -50,7 +50,9 @@ export async function runApprovalCompanionProcess(): Promise<number> {
         let sessionId = "unavailable_abcdefghijklmnopqrstuvwxyz0123456789";
         try {
           const review = parseApprovalReviewMessage(rawMessage);
-          const companion = await TrustedApprovalCompanion.create();
+          const companion = await TrustedApprovalCompanion.create(
+            new URL("../contracts/schema/", import.meta.url),
+          );
           sessionId = companion.binding.sessionId;
           await sendToParent(
             createApprovalSessionReadyMessage(companion.binding),

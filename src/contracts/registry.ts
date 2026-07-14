@@ -1,11 +1,11 @@
 import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 
 import {
   Ajv2020,
   type ErrorObject,
   type ValidateFunction,
 } from "ajv/dist/2020.js";
+import * as addFormatsModule from "ajv-formats";
 import type { FormatsPlugin } from "ajv-formats";
 
 import {
@@ -16,8 +16,11 @@ import {
 
 type JsonSchema = Record<string, unknown>;
 
-const require = createRequire(import.meta.url);
-const addFormats = require("ajv-formats") as FormatsPlugin;
+const addFormats = (
+  "default" in addFormatsModule
+    ? addFormatsModule.default
+    : addFormatsModule
+) as unknown as FormatsPlugin;
 
 export interface ContractValidationResult {
   readonly valid: boolean;

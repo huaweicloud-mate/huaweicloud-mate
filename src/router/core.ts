@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
-import { createRequire } from "node:module";
 
 import { Ajv2020 } from "ajv/dist/2020.js";
+import * as addFormatsModule from "ajv-formats";
 import type { FormatsPlugin } from "ajv-formats";
 
 import { createExpectedApprovalBinding } from "../approval/binding.js";
@@ -40,8 +40,11 @@ import type {
   RouterIdentityContext,
 } from "./types.js";
 
-const require = createRequire(import.meta.url);
-const addFormats = require("ajv-formats") as FormatsPlugin;
+const addFormats = (
+  "default" in addFormatsModule
+    ? addFormatsModule.default
+    : addFormatsModule
+) as unknown as FormatsPlugin;
 
 interface PendingPreview {
   state: "pending" | "consumed";

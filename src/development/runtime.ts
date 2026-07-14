@@ -22,17 +22,18 @@ export interface DevelopmentRuntimeOptions {
 export async function createDevelopmentRuntime(
   options: DevelopmentRuntimeOptions = {},
 ): Promise<DevelopmentRuntime> {
+  const contractDirectory =
+    options.contractDirectory ??
+    new URL("../contracts/schema/", import.meta.url);
   const catalog = await StaticCapabilityCatalog.create(
     developmentCapabilityRegistrations,
-    options.contractDirectory,
+    contractDirectory,
   );
   const router = await RouterCore.create({
     capabilities: catalog.registrations,
     adapters: [new DevelopmentReferenceExecutor()],
     identityProvider: async () => structuredClone(developmentIdentity),
-    ...(options.contractDirectory === undefined
-      ? {}
-      : { contractDirectory: options.contractDirectory }),
+    contractDirectory,
     ...(options.approvalManifestUrl === undefined
       ? {}
       : { approvalManifestUrl: options.approvalManifestUrl }),

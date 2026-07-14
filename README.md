@@ -20,9 +20,10 @@
 - [M0 契约说明](docs/契约/README.md)
 - [ADR-0009：参考 Provider 与统一受信审批 Companion](docs/架构决策/0009-参考Provider与统一受信审批Companion.md)
 - [ADR-0010：Router 内部审批回执交接](docs/架构决策/0010-Router内部审批回执交接.md)
+- [ADR-0011：版本化运行时与稳定 Launcher](docs/架构决策/0011-版本化运行时与稳定Launcher.md)
 
 ## 当前限制
 
-当前工程已包含契约注册表、CLI doctor、stdio MCP 三工具服务、静态开发态 capability catalog、最小 Router `preview/execute` 状态机和受信审批 companion 核心。开发态 reference executor 只返回确定性本地数据，不读取凭证、不访问华为云；Router 在结果进入 Agent 前执行 output schema、大小和 JSON Pointer 敏感路径脱敏。`doctor --approval-probe` 可执行一次无云副作用的真实交互探测；审批只需点击批准或拒绝，不要求输入密码。
+当前工程已包含契约注册表、CLI doctor、stdio MCP 三工具服务、静态开发态 capability catalog、最小 Router `preview/execute` 状态机、受信审批 companion 核心，以及完整安装清单、版本化运行时物化和稳定 launcher。开发态 reference executor 只返回确定性本地数据，不读取凭证、不访问华为云；Router 在结果进入 Agent 前执行 output schema、大小和 JSON Pointer 敏感路径脱敏。`doctor --approval-probe` 可执行一次无云副作用的真实交互探测；审批只需点击批准或拒绝，不要求输入密码。
 
-开发服务可通过 `npm run mcp` 启动。三工具 Draft 已冻结开发态危险流程：第二次 `execute` 只提交原输入和 `previewId`，Router 内部完成浏览器审批、回执验签、凭证复核与原子 dispatch；不增加第四个 Tool，也不要求密码。它仍不是可安装的正式插件：真实产品 MCP、KooCLI、账号身份校验、稳定安装目录、runtime manifest 真实性和四宿主进程/loopback 隔离仍是发布门禁。请勿提供真实 AK/SK。
+开发服务可通过 `npm run mcp` 启动。三工具 Draft 已冻结开发态危险流程：第二次 `execute` 只提交原输入和 `previewId`，Router 内部完成浏览器审批、回执验签、凭证复核与原子 dispatch；不增加第四个 Tool，也不要求密码。稳定 launcher 已能从固定版本目录启动自包含 Router，并在启动前校验完整制品清单。它仍不是可安装的正式插件：`install/uninstall`、真实宿主配置合并、Canonical Skills、install-state、真实产品 MCP、KooCLI、账号身份校验和四宿主隔离仍是发布门禁。请勿提供真实 AK/SK。

@@ -13,6 +13,7 @@ function printUsage(): void {
 
 Usage:
   huaweicloud-mate doctor [--contracts-only | --approval-probe] [--json]
+  huaweicloud-mate router --stdio
   huaweicloud-mate mcp
   huaweicloud-mate version
 
@@ -83,6 +84,16 @@ export async function main(args: readonly string[]): Promise<number> {
     case "mcp":
       if (commandArguments.length > 0) {
         console.error(`Unknown mcp option: ${String(commandArguments[0])}`);
+        return 2;
+      }
+      await runDevelopmentMcpServer();
+      return 0;
+    case "router":
+      if (
+        commandArguments.length !== 1 ||
+        commandArguments[0] !== "--stdio"
+      ) {
+        console.error("Router requires exactly --stdio");
         return 2;
       }
       await runDevelopmentMcpServer();

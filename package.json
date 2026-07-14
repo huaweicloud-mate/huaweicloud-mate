@@ -16,7 +16,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "node scripts/clean.mjs && tsc -p tsconfig.json && node scripts/copy-contracts.mjs && node scripts/create-runtime-manifest.mjs",
+    "build": "node scripts/clean.mjs && tsc -p tsconfig.json && node scripts/copy-contracts.mjs && node scripts/bundle-runtime.mjs && node scripts/create-runtime-manifest.mjs && node scripts/create-install-manifest.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "npm run build && vitest run",
     "doctor": "npm run build && node dist/cli.js doctor --contracts-only",
@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@types/node": "24.13.3",
+    "esbuild": "0.28.1",
     "typescript": "7.0.2",
     "vitest": "4.1.10"
   }

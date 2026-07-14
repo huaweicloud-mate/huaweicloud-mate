@@ -2,7 +2,7 @@
 
 状态：Draft for M0
 
-本目录保存 Proposed v0.3-lite 的机器可读契约和测试向量。契约以 ADR-0007、ADR-0008、ADR-0009 和 ADR-0010 为决策基线。
+本目录保存 Proposed v0.3-lite 的机器可读契约和测试向量。契约以 ADR-0007、ADR-0008、ADR-0009、ADR-0010 和 ADR-0011 为决策基线。
 
 ## 契约文件
 
