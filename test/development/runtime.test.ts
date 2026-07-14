@@ -36,16 +36,10 @@ describe("development reference runtime", () => {
     if (preview.status !== "confirmation_required") {
       throw new Error("Expected a development approval preview");
     }
-    const receipt = await runtime.router.reviewPendingPreview(preview.previewId);
-    if (receipt === null) {
-      throw new Error("Expected the test companion to approve");
-    }
-
     await expect(
       runtime.router.execute({
         ...input,
         previewId: preview.previewId,
-        approvalReceipt: receipt,
       }),
     ).resolves.toMatchObject({
       status: "completed",

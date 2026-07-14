@@ -100,18 +100,13 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["schemaVersion", "capabilityId", "arguments", "scope"],
-      "dependentRequired": {
-        "previewId": ["approvalReceipt"],
-        "approvalReceipt": ["previewId"]
-      },
       "properties": {
         "schemaVersion": {"const": "huaweicloud-agent-execute-input/v1-lite"},
         "capabilityId": {"type": "string", "minLength": 1, "maxLength": 160},
         "arguments": {"type": "object"},
         "scope": {"$ref": "#/$defs/scope"},
         "executorPreference": {"$ref": "#/$defs/executor"},
-        "previewId": {"type": "string", "pattern": "^[A-Za-z0-9_-]{32,256}$"},
-        "approvalReceipt": {"$ref": "urn:huaweicloud:agent-plugin:approval:v1#/$defs/approvalReceipt"}
+        "previewId": {"type": "string", "pattern": "^[A-Za-z0-9_-]{32,256}$"}
       }
     },
     "executeOutput": {

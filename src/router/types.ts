@@ -3,7 +3,6 @@ import type { ValidateFunction } from "ajv";
 import type {
   ApprovalAccountIdentity,
   ApprovalExecutor,
-  ApprovalReceipt,
   ApprovalRequest,
   ApprovalReviewer,
   ApprovalRiskTag,
@@ -64,7 +63,6 @@ export interface RouterExecuteInput {
   readonly scope: ApprovalScope;
   readonly executorPreference?: ApprovalExecutor;
   readonly previewId?: string;
-  readonly approvalReceipt?: ApprovalReceipt;
 }
 
 export interface RouterIdentityContext {

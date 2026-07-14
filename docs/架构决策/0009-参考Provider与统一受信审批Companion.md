@@ -1,6 +1,6 @@
 # ADR-0009：开发态参考 Provider 与统一受信审批 Companion
 
-状态：Accepted
+状态：Accepted；公开 Tool 与内部回执的交接方式由 [ADR-0010](0010-Router内部审批回执交接.md) 修订
 
 日期：2026-07-13
 
@@ -42,7 +42,7 @@ Codex、Claude Code、OpenCode 和华为云码道统一绑定 npm 内置的本�
 
 开发态 TypeScript 核心已实现一次审批一次的内存 Ed25519 密钥、严格 ready/result message、`approvalSessionId` 绑定、构建时完整运行时制品摘要清单、启动前逐文件 SHA-256/symlink 校验、最小环境和空 `execArgv`、Node 私有父子 IPC、受限本地浏览器审批页、receipt 签发、Router 验签、最长五分钟时效和进程内原子一次性消费。最小 Router `preview/execute` 状态机默认使用该固定 launcher，并实现参数、scope、执行器、账号与凭证代次绑定、并发消费及结果未知不回退；`doctor --approval-probe` 已提供无凭证、无云副作用的显式交互探测。测试覆盖非交互、拒绝、Host/Origin/CSRF/CSP、UI 控制字符、错误制品摘要、上下文不进入 argv/env、错误 session 公钥、篡改、过期、重放、并发消费和 `OUTCOME_UNKNOWN`。
 
-该实现仍不是正式安全边界：stdio MCP 已固定只暴露三个工具，并接入开发态 catalog、普通 read 和危险 preview；但 Draft schema 尚未定义内部 companion receipt 如何交回第二次 Tool 调用，安装器和真实执行器也未实现。runtime manifest 自身真实性、摘要校验到进程启动间的替换窗口、同账号调试/注入、loopback 端口与浏览器自动化威胁仍需四宿主验证。自动化测试只验证 probe 协议，发布前仍须由用户在四宿主实际运行交互 probe。无法证明隔离的宿主不得宣称强制审批。
+stdio MCP 已固定只暴露三个工具，并接入开发态 catalog、普通 read 和危险两阶段调用。依据 ADR-0010，第二次调用只携带 `previewId`，Router 在内部启动 companion、验证回执、复核凭证并原子 dispatch，回执不进入 Agent 上下文。该实现仍不是正式安全边界：安装器和真实执行器尚未实现，runtime manifest 自身真实性、摘要校验到进程启动间的替换窗口、同账号调试/注入、loopback 端口与浏览器自动化威胁仍需四宿主验证。自动化测试只验证 fixture 协议，发布前仍须由用户在四宿主实际运行交互 probe。无法证明隔离的宿主不得宣称强制审批。
 
 ### 3. 当前工程与发布边界
 

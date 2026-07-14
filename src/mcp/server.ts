@@ -132,7 +132,7 @@ export function createRouterMcpServer(runtime: DevelopmentRuntime): McpServer {
     {
       title: "Execute a Huawei Cloud capability",
       description:
-        "Execute an ordinary read or run the frozen two-stage preview/receipt protocol for risky operations.",
+        "Execute an ordinary read or run risky operations in two stages. The first call returns a preview; the second repeats the input with previewId while Router handles trusted approval internally.",
       inputSchema: actionExecuteInputSchema,
       annotations: {
         readOnlyHint: false,

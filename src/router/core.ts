@@ -13,6 +13,7 @@ import {
   maxApprovalClockSkewMs,
   maxApprovalReceiptTtlMs,
 } from "../approval/constants.js";
+import { ApprovalError } from "../approval/errors.js";
 import { ApprovalCompanionLauncher } from "../approval/launcher.js";
 import type {
   ApprovalExecutor,
@@ -256,17 +257,10 @@ export class RouterCore {
     assertScope(capability.registration.definition, input.scope);
 
     if (input.previewId !== undefined) {
-      if (input.approvalReceipt === undefined) {
-        throw new RouterError(
-          "APPROVAL_INVALID",
-          "A preview ID and approval receipt must be supplied together",
-        );
-      }
-      return this.#executeApproved(
+      return this.#reviewAndExecute(
         {
           ...input,
           previewId: input.previewId,
-          approvalReceipt: input.approvalReceipt,
         },
         capability,
       );
@@ -289,10 +283,7 @@ export class RouterCore {
     return this.#createPreview(input, capability, adapter, identity);
   }
 
-  /**
-   * Trusted Router/host path. This method is never registered as an MCP tool.
-   */
-  async reviewPendingPreview(
+  async #reviewPendingPreview(
     previewId: string,
   ): Promise<ApprovalReceipt | null> {
     const pending = this.#previews.get(previewId);
@@ -364,10 +355,9 @@ export class RouterCore {
     return structuredClone(receipt);
   }
 
-  async #executeApproved(
+  async #reviewAndExecute(
     input: RouterExecuteInput & {
       readonly previewId: string;
-      readonly approvalReceipt: ApprovalReceipt;
     },
     capability: CompiledRouterCapability,
   ): Promise<RouterExecuteOutput> {
@@ -406,24 +396,51 @@ export class RouterCore {
       );
     }
 
+    const identityBeforeReview = await this.#options.identityProvider();
+    this.#assertPendingIdentity(pending, identityBeforeReview);
+    if (pending.state !== "pending") {
+      throw new RouterError(
+        "APPROVAL_REPLAYED",
+        "The approval preview has already been consumed",
+      );
+    }
+    let receipt: ApprovalReceipt | null;
+    try {
+      receipt = await this.#reviewPendingPreview(input.previewId);
+    } catch (error) {
+      if (error instanceof RouterError) {
+        throw error;
+      }
+      if (error instanceof ApprovalError) {
+        if (error.code === "APPROVAL_EXPIRED") {
+          throw new RouterError("APPROVAL_EXPIRED", "Trusted approval expired");
+        }
+        throw new RouterError(
+          "APPROVAL_INVALID",
+          "Trusted approval companion failed",
+          error.code === "APPROVAL_PROCESS_FAILED" ||
+            error.code === "APPROVAL_PROCESS_TIMEOUT" ||
+            error.code === "APPROVAL_UI_FAILED",
+        );
+      }
+      throw new RouterError("APPROVAL_INVALID", "Trusted approval failed");
+    }
+    if (receipt === null) {
+      if (pending.state !== "pending") {
+        throw new RouterError(
+          "APPROVAL_REPLAYED",
+          "The approval preview has already been consumed",
+        );
+      }
+      pending.state = "consumed";
+      throw new RouterError(
+        "APPROVAL_INVALID",
+        "Trusted approval was rejected by the user",
+      );
+    }
+
     const identity = await this.#options.identityProvider();
-    if (
-      identity.credentialGeneration !== pending.context.credentialGeneration
-    ) {
-      throw new RouterError(
-        "AUTH_SESSION_EXPIRED",
-        "Credential generation changed after preview creation",
-      );
-    }
-    if (
-      digestAccountIdentity(identity.accountIdentity) !==
-      digestAccountIdentity(pending.context.accountIdentity)
-    ) {
-      throw new RouterError(
-        "ACCOUNT_MISMATCH",
-        "Account identity changed after preview creation",
-      );
-    }
+    this.#assertPendingIdentity(pending, identity);
     if (pending.state !== "pending") {
       throw new RouterError(
         "APPROVAL_REPLAYED",
@@ -432,14 +449,14 @@ export class RouterCore {
     }
     if (
       pending.approvedReceipt === undefined ||
-      !sameCanonicalValue(pending.approvedReceipt, input.approvalReceipt)
+      !sameCanonicalValue(pending.approvedReceipt, receipt)
     ) {
       throw new RouterError(
         "APPROVAL_INVALID",
-        "Receipt was not issued for this pending preview",
+        "Trusted receipt was not retained for this pending preview",
       );
     }
-    this.#assertReceiptFresh(input.approvalReceipt);
+    this.#assertReceiptFresh(receipt);
 
     // Synchronous transition before the first dispatch await makes consumption
     // atomic inside this Router process. Errors never restore pending state.
@@ -451,6 +468,31 @@ export class RouterCore {
       pending.scope,
       identity,
     );
+  }
+
+  #assertPendingIdentity(
+    pending: PendingPreview,
+    identity: RouterIdentityContext,
+  ): void {
+    if (
+      identity.credentialGeneration !== pending.context.credentialGeneration
+    ) {
+      pending.state = "consumed";
+      throw new RouterError(
+        "AUTH_SESSION_EXPIRED",
+        "Credential generation changed after preview creation",
+      );
+    }
+    if (
+      digestAccountIdentity(identity.accountIdentity) !==
+      digestAccountIdentity(pending.context.accountIdentity)
+    ) {
+      pending.state = "consumed";
+      throw new RouterError(
+        "ACCOUNT_MISMATCH",
+        "Account identity changed after preview creation",
+      );
+    }
   }
 
   #createPreview(

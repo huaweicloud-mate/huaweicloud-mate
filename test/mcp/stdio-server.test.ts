@@ -24,6 +24,13 @@ describe("development stdio MCP server", () => {
         "cloud_capabilities_search",
         "cloud_capability_describe",
       ]);
+      const executeTool = tools.tools.find(
+        (tool) => tool.name === "cloud_action_execute",
+      );
+      expect(executeTool?.inputSchema.properties).toHaveProperty("previewId");
+      expect(executeTool?.inputSchema.properties).not.toHaveProperty(
+        "approvalReceipt",
+      );
 
       const search = await client.callTool({
         name: "cloud_capabilities_search",

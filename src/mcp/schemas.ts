@@ -7,32 +7,12 @@ const riskTagSchema = z.enum([
   "sensitive-read",
 ]);
 const executorSchema = z.enum(["provider-mcp", "koocli"]);
-const digestSchema = z.string().regex(/^sha256:[a-f0-9]{64}$/u);
 const opaqueIdSchema = z.string().regex(/^[A-Za-z0-9_-]{32,256}$/u);
 
 const scopeSchema = z
   .object({
     region: z.string().min(1).max(128).optional(),
     project: z.string().min(1).max(256).optional(),
-  })
-  .strict();
-
-const approvalReceiptSchema = z
-  .object({
-    schemaVersion: z.literal("huaweicloud-agent-approval-receipt/v1"),
-    issuerId: z.string().regex(/^[a-z0-9.-]+$/u),
-    approvalSessionId: opaqueIdSchema,
-    previewId: opaqueIdSchema,
-    challengeDigest: digestSchema,
-    parameterDigest: digestSchema,
-    executor: executorSchema,
-    credentialGeneration: z.uuid(),
-    accountIdentityDigest: digestSchema,
-    scopeDigest: digestSchema,
-    approvedAt: z.iso.datetime(),
-    expiresAt: z.iso.datetime(),
-    signatureAlgorithm: z.literal("ed25519"),
-    signature: opaqueIdSchema,
   })
   .strict();
 
@@ -63,14 +43,5 @@ export const actionExecuteInputSchema = z
     scope: scopeSchema,
     executorPreference: executorSchema.optional(),
     previewId: opaqueIdSchema.optional(),
-    approvalReceipt: approvalReceiptSchema.optional(),
   })
-  .strict()
-  .refine(
-    (value) =>
-      (value.previewId === undefined) ===
-      (value.approvalReceipt === undefined),
-    {
-      message: "previewId and approvalReceipt must be supplied together",
-    },
-  );
+  .strict();

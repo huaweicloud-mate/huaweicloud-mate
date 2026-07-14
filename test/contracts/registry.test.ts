@@ -25,7 +25,7 @@ describe("M0 contract registry", () => {
 
     expect(report.ok).toBe(true);
     expect(report.schemaCount).toBe(7);
-    expect(report.vectorCount).toBe(7);
+    expect(report.vectorCount).toBe(9);
     expect(report.deferredStateMachineVectorCount).toBe(3);
     expect(report.vectors.every((vector) => vector.passed)).toBe(true);
   });

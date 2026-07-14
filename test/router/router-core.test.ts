@@ -7,6 +7,7 @@ import {
   ApprovalCompanionLauncher,
   sha256File,
 } from "../../src/approval/launcher.js";
+import { ApprovalError } from "../../src/approval/errors.js";
 import type { ApprovalReviewer } from "../../src/approval/types.js";
 import { RouterCore } from "../../src/router/core.js";
 import { RouterError } from "../../src/router/errors.js";
@@ -185,16 +186,12 @@ async function createRouter(options: {
   });
 }
 
-async function previewAndReview(router: RouterCore) {
+async function createPreview(router: RouterCore) {
   const preview = await router.execute(dangerousInput);
   if (preview.status !== "confirmation_required") {
     throw new Error("Expected a confirmation preview");
   }
-  const receipt = await router.reviewPendingPreview(preview.previewId);
-  if (receipt === null) {
-    throw new Error("Expected the test companion to approve");
-  }
-  return { preview, receipt };
+  return preview;
 }
 
 describe("minimal Router approval state machine", () => {
@@ -241,12 +238,11 @@ describe("minimal Router approval state machine", () => {
 
   it("binds a companion receipt and consumes it once before dispatch", async () => {
     const router = await createRouter();
-    const { preview, receipt } = await previewAndReview(router);
+    const preview = await createPreview(router);
 
     const output = await router.execute({
       ...dangerousInput,
       previewId: preview.previewId,
-      approvalReceipt: receipt,
     });
 
     expect(output).toMatchObject({
@@ -257,21 +253,27 @@ describe("minimal Router approval state machine", () => {
       router.execute({
         ...dangerousInput,
         previewId: preview.previewId,
-        approvalReceipt: receipt,
       }),
     ).rejects.toMatchObject({ code: "APPROVAL_REPLAYED" });
   });
 
   it("rejects changed parameters and executor after preview", async () => {
-    const router = await createRouter();
-    const { preview, receipt } = await previewAndReview(router);
+    let reviewCount = 0;
+    const router = await createRouter({
+      reviewer: {
+        review: async () => {
+          reviewCount += 1;
+          return null;
+        },
+      },
+    });
+    const preview = await createPreview(router);
 
     await expect(
       router.execute({
         ...dangerousInput,
         arguments: { name: "changed-server" },
         previewId: preview.previewId,
-        approvalReceipt: receipt,
       }),
     ).rejects.toMatchObject({ code: "APPROVAL_INVALID" });
     await expect(
@@ -279,24 +281,9 @@ describe("minimal Router approval state machine", () => {
         ...dangerousInput,
         executorPreference: "koocli",
         previewId: preview.previewId,
-        approvalReceipt: receipt,
       }),
     ).rejects.toMatchObject({ code: "EXECUTOR_LOCKED" });
-    const firstSignatureCharacter = receipt.signature[0];
-    if (firstSignatureCharacter === undefined) {
-      throw new Error("Expected a receipt signature");
-    }
-    const tamperedReceipt = {
-      ...receipt,
-      signature: `${firstSignatureCharacter === "A" ? "B" : "A"}${receipt.signature.slice(1)}`,
-    };
-    await expect(
-      router.execute({
-        ...dangerousInput,
-        previewId: preview.previewId,
-        approvalReceipt: tamperedReceipt,
-      }),
-    ).rejects.toMatchObject({ code: "APPROVAL_INVALID" });
+    expect(reviewCount).toBe(0);
   });
 
   it("allows only one concurrent dispatch for the same preview", async () => {
@@ -316,11 +303,10 @@ describe("minimal Router approval state machine", () => {
       };
     });
     const router = await createRouter({ provider });
-    const { preview, receipt } = await previewAndReview(router);
+    const preview = await createPreview(router);
     const approvedInput = {
       ...dangerousInput,
       previewId: preview.previewId,
-      approvalReceipt: receipt,
     };
 
     const first = router.execute(approvedInput);
@@ -355,11 +341,10 @@ describe("minimal Router approval state machine", () => {
       };
     });
     const router = await createRouter({ provider, koocli });
-    const { preview, receipt } = await previewAndReview(router);
+    const preview = await createPreview(router);
     const approvedInput = {
       ...dangerousInput,
       previewId: preview.previewId,
-      approvalReceipt: receipt,
     };
 
     await expect(router.execute(approvedInput)).rejects.toMatchObject({
@@ -376,7 +361,7 @@ describe("minimal Router approval state machine", () => {
     const router = await createRouter({
       identityProvider: async () => structuredClone(identity),
     });
-    const { preview, receipt } = await previewAndReview(router);
+    const preview = await createPreview(router);
     identity = {
       ...identity,
       credentialGeneration: "7cecf2cb-2a11-40ef-899a-7290e6ad66c5",
@@ -386,9 +371,90 @@ describe("minimal Router approval state machine", () => {
       router.execute({
         ...dangerousInput,
         previewId: preview.previewId,
-        approvalReceipt: receipt,
       }),
     ).rejects.toMatchObject({ code: "AUTH_SESSION_EXPIRED" });
+    await expect(
+      router.execute({ ...dangerousInput, previewId: preview.previewId }),
+    ).rejects.toMatchObject({ code: "APPROVAL_REPLAYED" });
+  });
+
+  it("invalidates the preview when the user rejects approval", async () => {
+    let reviewCount = 0;
+    const router = await createRouter({
+      reviewer: {
+        review: async () => {
+          reviewCount += 1;
+          return null;
+        },
+      },
+    });
+    const preview = await createPreview(router);
+    const secondInput = { ...dangerousInput, previewId: preview.previewId };
+
+    await expect(router.execute(secondInput)).rejects.toMatchObject({
+      code: "APPROVAL_INVALID",
+      message: "Trusted approval was rejected by the user",
+    });
+    await expect(router.execute(secondInput)).rejects.toMatchObject({
+      code: "APPROVAL_REPLAYED",
+    });
+    expect(reviewCount).toBe(1);
+  });
+
+  it("keeps an unexpired preview retryable after a companion process failure", async () => {
+    let reviewCount = 0;
+    const launcher = await trustedReviewer();
+    const router = await createRouter({
+      reviewer: {
+        review: async (context) => {
+          reviewCount += 1;
+          if (reviewCount === 1) {
+            throw new ApprovalError(
+              "APPROVAL_PROCESS_FAILED",
+              "Fixture companion failed before approval",
+            );
+          }
+          return launcher.review(context);
+        },
+      },
+    });
+    const preview = await createPreview(router);
+    const secondInput = { ...dangerousInput, previewId: preview.previewId };
+
+    await expect(router.execute(secondInput)).rejects.toMatchObject({
+      code: "APPROVAL_INVALID",
+      retryable: true,
+    });
+    await expect(router.execute(secondInput)).resolves.toMatchObject({
+      status: "completed",
+    });
+    expect(reviewCount).toBe(2);
+  });
+
+  it("rechecks credential generation after the user approves", async () => {
+    let identity = structuredClone(baseIdentity);
+    const launcher = await trustedReviewer();
+    const router = await createRouter({
+      identityProvider: async () => structuredClone(identity),
+      reviewer: {
+        review: async (context) => {
+          const receipt = await launcher.review(context);
+          identity = {
+            ...identity,
+            credentialGeneration: "7cecf2cb-2a11-40ef-899a-7290e6ad66c5",
+          };
+          return receipt;
+        },
+      },
+    });
+    const preview = await createPreview(router);
+
+    await expect(
+      router.execute({ ...dangerousInput, previewId: preview.previewId }),
+    ).rejects.toMatchObject({ code: "AUTH_SESSION_EXPIRED" });
+    await expect(
+      router.execute({ ...dangerousInput, previewId: preview.previewId }),
+    ).rejects.toMatchObject({ code: "APPROVAL_REPLAYED" });
   });
 
   it("redacts declared sensitive output paths before returning to the Agent", async () => {

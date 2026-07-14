@@ -2,7 +2,7 @@
 
 状态：Draft for M0
 
-本目录保存 Proposed v0.3-lite 的机器可读契约和测试向量。契约以 ADR-0007、ADR-0008 和 ADR-0009 为决策基线。
+本目录保存 Proposed v0.3-lite 的机器可读契约和测试向量。契约以 ADR-0007、ADR-0008、ADR-0009 和 ADR-0010 为决策基线。
 
 ## 契约文件
 
@@ -23,8 +23,8 @@
 2. Agent、Prompt、Skill、workspace 和普通 Tool 参数均不能覆盖 endpoint、可执行路径、审批签发器或凭证位置。
 3. 未知 schema 版本、未知风险、Provider 契约失配、输出结构失配均 fail closed。
 4. capability 内嵌 schema 禁止远程 `$ref`、动态引用和自定义可执行关键字，并受深度、节点数和正则复杂度限制。
-5. 只有普通 read 可以直接执行；所有 write、复合风险和敏感读取必须获得可信 `approvalReceipt`。
-6. `previewId` 与 receipt 在 dispatch 前原子消费；失败、超时和 `OUTCOME_UNKNOWN` 不恢复为可重试状态。
+5. 只有普通 read 可以直接执行；所有 write、复合风险和敏感读取必须由 Router 内部获得并验证可信 `approvalReceipt`。公开 Tool 输入不接受 receipt。
+6. 第二次危险 `execute` 只额外携带 `previewId`；Router 内部在 dispatch 前原子消费 preview 与 receipt，失败、超时和 `OUTCOME_UNKNOWN` 不恢复为可重试状态。
 7. v1 摘要和签名载荷使用 RFC 8785 JCS，摘要使用 SHA-256；receipt 最长有效 300 秒，允许时钟偏差最长 30 秒。
 8. session 最长 900 秒，只在 Provider 实例内存中保存；数据面使用 `Hwc-Credential-Session` 和 `Hwc-Session-Route`，后者保证请求命中创建实例。
 9. `npx` 仅为安装入口，宿主长期配置只指向用户目录下的稳定 launcher。
@@ -37,17 +37,19 @@
 2026-07-13 使用仓库外临时安装的 `python-jsonschema 4.25.1`、`Draft202012Validator` 与离线 `referencing Registry` 完成校验：
 
 - 7 个 schema 均通过 Draft 2020-12 元 schema 检查；
-- 7 个测试向量的 schema 层结果均与声明一致；
+- 当时的 7 个测试向量的 schema 层结果均与声明一致；
 - `provider-handshake-digest-mismatch-rejected` 与 `approval-receipt-accepted-once` 按设计先通过结构校验，分别留给运行时握手语义和单次消费状态机验证；
 - 3 个状态机向量已纳入契约，但必须在后续运行时实现中执行，不能由 JSON Schema 单独判定；
 - 所有 schema 通过显式本地 registry 解析，校验过程未获取远程 `$ref`。
 
-2026-07-13 工程注册表进一步使用 `Ajv 8.20.0` strict mode 编译全部 7 个 schema，并执行 7 个 schema 层测试向量。该检查修正了条件分支缺少显式类型以及 URN schema 使用相对跨文件 `$ref` 的问题；`npm test` 和 `huaweicloud-mate doctor --contracts-only` 均通过。
+2026-07-13 工程注册表进一步使用 `Ajv 8.20.0` strict mode 编译全部 7 个 schema，并执行最初 7 个 schema 层测试向量。该检查修正了条件分支缺少显式类型以及 URN schema 使用相对跨文件 `$ref` 的问题。
+
+2026-07-14 依据 ADR-0010 增加第二阶段只携带 `previewId` 的正例，以及 Agent 提交 `approvalReceipt` 必须被拒绝的反例；当前共 9 个 schema 层向量，`npm test` 和 `huaweicloud-mate doctor --contracts-only` 均须通过。
 
 ## M0 尚未绑定的外部输入
 
 - 公共 npm scope 与发布身份；
-- 统一受信审批 companion 的实现验证、私钥权限和责任人；
+- 统一受信审批 companion 的稳定安装目录真实性、四宿主隔离验证和责任人；
 - `auth set` 使用的固定只读账号身份校验能力；
 - 首发产品 MCP 清单、同源 endpoint、版本范围和 capability digest；
 - KooCLI 兼容范围、固定版本、下载 URL 与 SHA-256；

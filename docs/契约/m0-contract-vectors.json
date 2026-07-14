@@ -174,6 +174,59 @@
       }
     },
     {
+      "id": "router-second-stage-preview-id-only-accepted",
+      "targetSchema": "router-tools-v1-lite.schema.json",
+      "expectation": "accept",
+      "instance": {
+        "schemaVersion": "huaweicloud-agent-execute-input/v1-lite",
+        "capabilityId": "huaweicloud.ecs.server.create.v1",
+        "arguments": {
+          "name": "example-server",
+          "flavor": "s6.small.1"
+        },
+        "scope": {
+          "region": "cn-north-4",
+          "project": "project-1"
+        },
+        "previewId": "preview_abcdefghijklmnopqrstuvwxyz0123456789"
+      }
+    },
+    {
+      "id": "router-agent-supplied-receipt-rejected",
+      "targetSchema": "router-tools-v1-lite.schema.json",
+      "expectation": "reject",
+      "expectedRule": "公开 execute input 不接受 approvalReceipt；审批回执只在 Router 内部流转",
+      "instance": {
+        "schemaVersion": "huaweicloud-agent-execute-input/v1-lite",
+        "capabilityId": "huaweicloud.ecs.server.create.v1",
+        "arguments": {
+          "name": "example-server",
+          "flavor": "s6.small.1"
+        },
+        "scope": {
+          "region": "cn-north-4",
+          "project": "project-1"
+        },
+        "previewId": "preview_abcdefghijklmnopqrstuvwxyz0123456789",
+        "approvalReceipt": {
+          "schemaVersion": "huaweicloud-agent-approval-receipt/v1",
+          "issuerId": "huaweicloud-mate.local-approval",
+          "approvalSessionId": "approval_session_abcdefghijklmnopqrstuvwxyz0123456789",
+          "previewId": "preview_abcdefghijklmnopqrstuvwxyz0123456789",
+          "challengeDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "parameterDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          "executor": "provider-mcp",
+          "credentialGeneration": "9d9b8dd6-4698-4a1a-b3ae-3cc52d7c41e4",
+          "accountIdentityDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "scopeDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+          "approvedAt": "2026-07-13T13:00:00Z",
+          "expiresAt": "2026-07-13T13:05:00Z",
+          "signatureAlgorithm": "ed25519",
+          "signature": "signature_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        }
+      }
+    },
+    {
       "id": "koocli-sha256-malformed-rejected",
       "targetSchema": "koocli-policy-v1-lite.schema.json",
       "expectation": "reject",
