@@ -110,6 +110,9 @@ describe("versioned stable runtime", () => {
       reusedVersion: false,
       nodePath: process.execPath,
     });
+    expect(installed.installManifestSha256).toMatch(
+      /^sha256:[a-f0-9]{64}$/u,
+    );
     expect((await lstat(installed.versionDirectory)).isDirectory()).toBe(true);
     expect((await lstat(installed.stableLauncherPath)).isFile()).toBe(true);
     const result = await launch(installed.stableLauncherPath, ["version"]);

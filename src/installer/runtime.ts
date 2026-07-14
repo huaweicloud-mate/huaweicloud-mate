@@ -30,6 +30,7 @@ export interface MaterializeRuntimeOptions {
 
 export interface MaterializedRuntime {
   readonly pluginVersion: string;
+  readonly installManifestSha256: string;
   readonly runtimeRoot: string;
   readonly versionDirectory: string;
   readonly stableLauncherPath: string;
@@ -296,6 +297,7 @@ export async function materializeStableRuntime(
 
   return {
     pluginVersion: source.manifest.pluginVersion,
+    installManifestSha256: source.manifestSha256,
     runtimeRoot,
     versionDirectory,
     stableLauncherPath,
