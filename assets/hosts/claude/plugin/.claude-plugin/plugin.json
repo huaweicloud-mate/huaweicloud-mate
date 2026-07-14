@@ -1,0 +1,15 @@
+{
+  "name": "huaweicloud-mate",
+  "version": "0.0.0-development",
+  "description": "Guarded Huawei Cloud capability discovery, previews, and execution through a local MCP Router.",
+  "author": {
+    "name": "hd-vector",
+    "url": "https://github.com/hd-vector"
+  },
+  "homepage": "https://github.com/hd-vector/huaweicloud-mate",
+  "repository": "https://github.com/hd-vector/huaweicloud-mate",
+  "license": "MIT",
+  "keywords": ["huaweicloud", "cloud", "mcp", "agent"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}

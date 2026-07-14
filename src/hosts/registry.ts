@@ -71,6 +71,15 @@ export class HostTemplateRegistry {
     return new HostTemplateRegistry(templates);
   }
 
+  static async loadBuiltIn(
+    contractDirectory?: URL,
+  ): Promise<HostTemplateRegistry> {
+    return HostTemplateRegistry.load(
+      new URL("./templates/", import.meta.url),
+      contractDirectory,
+    );
+  }
+
   list(): readonly HostTemplate[] {
     return requiredHostIds.map((id) => this.get(id));
   }

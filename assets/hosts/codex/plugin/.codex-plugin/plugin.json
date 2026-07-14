@@ -1,0 +1,30 @@
+{
+  "name": "huaweicloud-mate",
+  "version": "0.0.0-development",
+  "description": "Guarded Huawei Cloud capability discovery, previews, and execution through a local MCP Router.",
+  "author": {
+    "name": "hd-vector",
+    "url": "https://github.com/hd-vector"
+  },
+  "homepage": "https://github.com/hd-vector/huaweicloud-mate",
+  "repository": "https://github.com/hd-vector/huaweicloud-mate",
+  "license": "MIT",
+  "keywords": ["huaweicloud", "cloud", "mcp", "agent"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Huawei Cloud Mate",
+    "shortDescription": "Operate Huawei Cloud through a guarded local Router.",
+    "longDescription": "Discovers supported Huawei Cloud capabilities, validates exact schemas, previews risky changes, and routes approved operations through a local three-tool MCP boundary.",
+    "developerName": "hd-vector",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/hd-vector/huaweicloud-mate",
+    "defaultPrompt": [
+      "Find the supported way to inspect my Huawei Cloud resources.",
+      "Preview a supported Huawei Cloud change before applying it.",
+      "Explain which Huawei Cloud capabilities are currently available."
+    ],
+    "brandColor": "#C7000B"
+  }
+}

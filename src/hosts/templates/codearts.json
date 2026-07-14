@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "huaweicloud-agent-host-template/v1-lite",
+  "id": "codearts",
+  "displayName": "Huawei Cloud CodeArts",
+  "detect": {
+    "commands": ["codearts"],
+    "paths": ["{userConfig}/codearts_cli.jsonc"]
+  },
+  "mcp": {
+    "configPath": "{userConfig}/codearts_cli.jsonc",
+    "entryKey": "huaweicloud-agent",
+    "mergeStrategy": "jsonc-object",
+    "launcher": {
+      "ref": "stable-runtime",
+      "args": ["router", "--stdio"]
+    }
+  },
+  "skills": {
+    "source": "canonical",
+    "targetPath": "{userConfig}/skills/huaweicloud"
+  },
+  "approval": {
+    "mode": "bundled-trusted-companion",
+    "issuerId": "huaweicloud-mate.local-approval",
+    "verifierKeyId": "local-approval-ed25519-v1"
+  },
+  "verify": {
+    "type": "config-process-skill",
+    "requiresTrustedApprovalProbe": true
+  }
+}

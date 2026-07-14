@@ -62,6 +62,44 @@ afterEach(async () => {
 });
 
 describe("declarative host template registry", () => {
+  it("loads the four official built-in host bindings", async () => {
+    const registry = await HostTemplateRegistry.loadBuiltIn(contractDirectory);
+
+    expect(
+      registry.list().map(({ id, mcp, skills }) => ({
+        id,
+        configPath: mcp.configPath,
+        mergeStrategy: mcp.mergeStrategy,
+        skillTargetPath: skills.targetPath,
+      })),
+    ).toEqual([
+      {
+        id: "codex",
+        configPath: "{pluginRoot}/.mcp.json",
+        mergeStrategy: "plugin-manifest",
+        skillTargetPath: "{pluginRoot}/skills/huaweicloud",
+      },
+      {
+        id: "claude",
+        configPath: "{pluginRoot}/.mcp.json",
+        mergeStrategy: "plugin-manifest",
+        skillTargetPath: "{pluginRoot}/skills/huaweicloud",
+      },
+      {
+        id: "opencode",
+        configPath: "{userConfig}/opencode.json",
+        mergeStrategy: "json-object",
+        skillTargetPath: "{userConfig}/skills/huaweicloud",
+      },
+      {
+        id: "codearts",
+        configPath: "{userConfig}/codearts_cli.jsonc",
+        mergeStrategy: "jsonc-object",
+        skillTargetPath: "{userConfig}/skills/huaweicloud",
+      },
+    ]);
+  });
+
   it("requires the exact four-host set and fixed launcher/approval bindings", async () => {
     const directory = await templateDirectory();
     const registry = await HostTemplateRegistry.load(

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "huaweicloud-agent-host-template/v1-lite",
+  "id": "codex",
+  "displayName": "Codex",
+  "detect": {
+    "commands": ["codex"],
+    "paths": ["{userConfig}/config.toml"]
+  },
+  "mcp": {
+    "configPath": "{pluginRoot}/.mcp.json",
+    "entryKey": "huaweicloud-agent",
+    "mergeStrategy": "plugin-manifest",
+    "launcher": {
+      "ref": "stable-runtime",
+      "args": ["router", "--stdio"]
+    }
+  },
+  "skills": {
+    "source": "canonical",
+    "targetPath": "{pluginRoot}/skills/huaweicloud"
+  },
+  "approval": {
+    "mode": "bundled-trusted-companion",
+    "issuerId": "huaweicloud-mate.local-approval",
+    "verifierKeyId": "local-approval-ed25519-v1"
+  },
+  "verify": {
+    "type": "config-process-skill",
+    "requiresTrustedApprovalProbe": true
+  }
+}

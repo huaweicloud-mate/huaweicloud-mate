@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "huaweicloud-agent": {
+      "command": "{nodePath}",
+      "args": ["{stableLauncherPath}", "router", "--stdio"]
+    }
+  }
+}
