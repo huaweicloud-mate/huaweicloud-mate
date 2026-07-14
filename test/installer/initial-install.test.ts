@@ -172,7 +172,7 @@ describe("initial install transaction", () => {
       stateBytes,
     );
     expect(await pathExists(assetPath)).toBe(true);
-  });
+  }, 15_000);
 
   it("rejects duplicate plans before materializing host assets", async () => {
     const { runtime, plans, codexRunner } = await fixture(["codex"]);

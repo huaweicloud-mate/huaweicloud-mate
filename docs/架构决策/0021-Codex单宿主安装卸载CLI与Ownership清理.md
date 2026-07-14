@@ -31,7 +31,7 @@ ADR-0018 至 ADR-0020 已完成 Codex 插件资产、个人 marketplace、CLI �
 
 ## 安全边界与当前限制
 
-当前 `install` 仍是首装事务；存在 install-state 时会要求后续受管升级实现，尚不支持通过重跑 install 原子升级。当前 uninstall 只处理 Codex 单宿主状态，不清理 runtime cache、credentials、日志、KooCLI 或其他宿主资源。
+存在 install-state 时的同版本重装和跨版本受管升级已由 ADR-0022 补齐。当前 uninstall 仍只处理 Codex 单宿主状态，不清理 runtime cache、credentials、日志、KooCLI 或其他宿主资源。
 
 同账号恶意进程理论上仍可在预检和删除之间制造竞态；实际删除原语继续使用 compare-before-remove、结构化后置检查、原子替换或 quarantine 复核来 fail closed。本方案不引入全局锁或常驻 daemon。
 

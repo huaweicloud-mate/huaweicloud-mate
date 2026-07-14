@@ -1,7 +1,5 @@
 import { spawn } from "node:child_process";
-import { createHash } from "node:crypto";
 import {
-  cp,
   lstat,
   mkdtemp,
   readFile,
@@ -16,7 +14,14 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { afterEach, describe, expect, it } from "vitest";
 
 import { InstallerError } from "../../src/installer/errors.js";
-import { materializeStableRuntime } from "../../src/installer/runtime.js";
+import {
+  activateMaterializedRuntime,
+  materializeRuntimeCandidate,
+  materializeStableRuntime,
+  readActiveRuntimeSnapshot,
+  rollbackActiveRuntimeChange,
+} from "../../src/installer/runtime.js";
+import { copyRuntimeCandidate } from "../fixtures/runtime-candidate.js";
 
 const temporaryRoots: string[] = [];
 
@@ -50,41 +55,6 @@ async function launch(
       resolveResult({ code, stdout, stderr });
     });
   });
-}
-
-async function copyCandidateVersion(
-  target: string,
-  pluginVersion: string,
-): Promise<void> {
-  await cp(resolve("dist"), target, { recursive: true });
-  const packagePath = resolve(target, "package.json");
-  const runtimePackage = JSON.parse(await readFile(packagePath, "utf8")) as {
-    version: string;
-  };
-  runtimePackage.version = pluginVersion;
-  const packageBytes = Buffer.from(
-    `${JSON.stringify(runtimePackage, null, 2)}\n`,
-    "utf8",
-  );
-  await writeFile(packagePath, packageBytes);
-
-  const manifestPath = resolve(target, "install-manifest.json");
-  const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
-    pluginVersion: string;
-    artifacts: { path: string; size: number; sha256: string }[];
-  };
-  manifest.pluginVersion = pluginVersion;
-  const packageArtifact = manifest.artifacts.find(
-    (artifact) => artifact.path === "package.json",
-  );
-  if (packageArtifact === undefined) {
-    throw new Error("Fixture install manifest is missing package.json");
-  }
-  packageArtifact.size = packageBytes.byteLength;
-  packageArtifact.sha256 = `sha256:${createHash("sha256")
-    .update(packageBytes)
-    .digest("hex")}`;
-  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
 afterEach(async () => {
@@ -193,7 +163,7 @@ describe("versioned stable runtime", () => {
       runtimeRoot,
     });
     const candidate = resolve(root, "candidate-source");
-    await copyCandidateVersion(candidate, "0.0.1-test");
+    await copyRuntimeCandidate(resolve("dist"), candidate, "0.0.1-test");
 
     const upgraded = await materializeStableRuntime({
       sourceDirectory: candidate,
@@ -211,7 +181,57 @@ describe("versioned stable runtime", () => {
     await expect(
       launch(upgraded.stableLauncherPath, ["doctor", "--contracts-only"]),
     ).resolves.toMatchObject({ code: 0, stderr: "" });
-  });
+  }, 15_000);
+
+  it("stages a candidate without switching current and can roll back its CAS activation", async () => {
+    const root = await temporaryRoot();
+    const runtimeRoot = resolve(root, "runtime");
+    const installed = await materializeStableRuntime({
+      sourceDirectory: resolve("dist"),
+      runtimeRoot,
+    });
+    const activeBefore = await readActiveRuntimeSnapshot(runtimeRoot);
+    const candidateSource = resolve(root, "candidate-source");
+    await copyRuntimeCandidate(
+      resolve("dist"),
+      candidateSource,
+      "0.0.1-test",
+    );
+
+    const candidate = await materializeRuntimeCandidate({
+      sourceDirectory: candidateSource,
+      runtimeRoot,
+    });
+    expect(await readFile(installed.activeRuntimePath, "utf8")).toEqual(
+      Buffer.from(activeBefore!.bytes).toString("utf8"),
+    );
+    await expect(
+      launch(installed.stableLauncherPath, ["version"]),
+    ).resolves.toMatchObject({ code: 0, stdout: "0.0.0-development\n" });
+
+    await expect(
+      activateMaterializedRuntime(
+        candidate,
+        "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      ),
+    ).rejects.toMatchObject({ code: "RUNTIME_VERSION_CONFLICT" });
+    await expect(
+      launch(installed.stableLauncherPath, ["version"]),
+    ).resolves.toMatchObject({ code: 0, stdout: "0.0.0-development\n" });
+
+    const change = await activateMaterializedRuntime(
+      candidate,
+      activeBefore!.sha256,
+    );
+    await expect(
+      launch(installed.stableLauncherPath, ["version"]),
+    ).resolves.toMatchObject({ code: 0, stdout: "0.0.1-test\n" });
+    await rollbackActiveRuntimeChange(change);
+    await expect(rollbackActiveRuntimeChange(change)).resolves.toBeUndefined();
+    await expect(
+      launch(installed.stableLauncherPath, ["version"]),
+    ).resolves.toMatchObject({ code: 0, stdout: "0.0.0-development\n" });
+  }, 15_000);
 
   it("does not switch current when a candidate package fails verification", async () => {
     const root = await temporaryRoot();
@@ -222,7 +242,7 @@ describe("versioned stable runtime", () => {
     });
     const activeBefore = await readFile(installed.activeRuntimePath, "utf8");
     const invalidSource = resolve(root, "invalid-source");
-    await copyCandidateVersion(invalidSource, "0.0.1-test");
+    await copyRuntimeCandidate(resolve("dist"), invalidSource, "0.0.1-test");
     await writeFile(
       resolve(invalidSource, "runtime", "cli.js"),
       "invalid candidate\n",

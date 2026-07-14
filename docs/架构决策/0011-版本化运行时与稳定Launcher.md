@@ -33,4 +33,4 @@ Proposed v0.3-lite 要求 `npx` 只作为安装入口，四宿主长期运行的
 
 - 已完成完整安装清单、版本化物化、稳定 launcher、active pointer、重复安装复用、已验证新版本切换并保留旧目录、同版本冲突、候选失败不切换、篡改 fail closed，以及从稳定路径启动 stdio MCP 三工具的自动化测试。
 - 已完成 host template 注册表的严格四宿主集合与固定 launcher/approval 绑定校验器。
-- 尚未公开 `install/uninstall` 命令，也未写入真实宿主配置、Canonical Skills 或 install-state；四宿主具体配置路径和 merge 实现需要在绑定后进入下一切片。
+- 后续 ADR-0021 已公开 Codex 单宿主 `install/uninstall`，ADR-0022 又把候选版本落盘与 active pointer 提交拆开，并为受管升级增加 pointer CAS 与安全回滚；其他宿主仍待各自注册流程接入。

@@ -15,6 +15,7 @@ import { createHostInstallPlan } from "./hosts/plan.js";
 import { HostTemplateRegistry } from "./hosts/registry.js";
 import { createInitialHostVerificationHook } from "./hosts/verification.js";
 import { uninstallCodex } from "./installer/codex-uninstall.js";
+import { upgradeCodex } from "./installer/codex-upgrade.js";
 import { InstallerError } from "./installer/errors.js";
 import { runInitialInstallTransaction } from "./installer/initial-install.js";
 import {
@@ -119,7 +120,7 @@ async function defaultApprovalProbe(): Promise<void> {
   }
 }
 
-async function assertInitialInstallStateAbsent(runtimeRoot: string): Promise<void> {
+async function hasManagedInstallState(runtimeRoot: string): Promise<boolean> {
   try {
     const entry = await lstat(runtimeRoot);
     if (!entry.isDirectory() || entry.isSymbolicLink()) {
@@ -135,16 +136,11 @@ async function assertInitialInstallStateAbsent(runtimeRoot: string): Promise<voi
       "code" in error &&
       error.code === "ENOENT"
     ) {
-      return;
+      return false;
     }
     throw error;
   }
-  if ((await readInstallState(runtimeRoot)) !== undefined) {
-    throw new InstallerError(
-      "INSTALL_TRANSACTION_CONFLICT",
-      "Install state already exists; managed upgrade is required",
-    );
-  }
+  return (await readInstallState(runtimeRoot)) !== undefined;
 }
 
 async function runInstall(
@@ -156,7 +152,37 @@ async function runInstall(
     return 2;
   }
   const runtimeRoot = cliRuntimeRoot(dependencies);
-  await assertInitialInstallStateAbsent(runtimeRoot);
+  const runner = dependencies.runner ?? new NodeHostCommandRunner();
+  const approvalProbe = dependencies.approvalProbe ?? defaultApprovalProbe;
+  if (await hasManagedInstallState(runtimeRoot)) {
+    const result = await upgradeCodex({
+      runtimeRoot,
+      ...(dependencies.sourceDirectory === undefined
+        ? {}
+        : { sourceDirectory: dependencies.sourceDirectory }),
+      ...(dependencies.homeDirectory === undefined
+        ? {}
+        : { homeDirectory: dependencies.homeDirectory }),
+      runner,
+      approvalProbe,
+    });
+    const report = {
+      ...result,
+      statePath: installStatePath(runtimeRoot),
+      nextStep: "Start a new Codex task to load the plugin.",
+    } as const;
+    if (parsed.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else if (result.status === "unchanged") {
+      console.log(`Codex plugin is already current (${result.pluginVersion}).`);
+    } else {
+      console.log(
+        `Codex plugin upgraded from ${result.previousVersion} to ${result.pluginVersion}.`,
+      );
+      console.log(report.nextStep);
+    }
+    return 0;
+  }
   const runtime = await materializeStableRuntime({
     ...(dependencies.sourceDirectory === undefined
       ? {}
@@ -170,14 +196,13 @@ async function runInstall(
     process.platform as "win32" | "darwin" | "linux",
     dependencies.homeDirectory ?? homedir(),
   );
-  const runner = dependencies.runner ?? new NodeHostCommandRunner();
   const result = await runInitialInstallTransaction({
     runtime,
     plans: [plan],
     codexRunner: runner,
     verify: createInitialHostVerificationHook({
       runner,
-      approvalProbe: dependencies.approvalProbe ?? defaultApprovalProbe,
+      approvalProbe,
     }),
   });
   const report = {
