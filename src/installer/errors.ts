@@ -19,6 +19,10 @@ export const installerErrorCodes = [
   "INSTALL_TRANSACTION_CONFLICT",
   "INSTALL_TRANSACTION_FAILED",
   "INSTALL_TRANSACTION_ROLLBACK_CONFLICT",
+  "HOST_VERIFICATION_INVALID",
+  "HOST_DISCOVERY_FAILED",
+  "HOST_REGISTRATION_MISSING",
+  "HOST_VERIFICATION_FAILED",
 ] as const;
 
 export type InstallerErrorCode = (typeof installerErrorCodes)[number];
