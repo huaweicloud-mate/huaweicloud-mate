@@ -112,6 +112,19 @@ async function responseObjectContent(response: Response, maxBytes: number): Prom
   };
 }
 
+async function responseCopyResult(response: Response): Promise<unknown> {
+  if (!response.ok) return responseBody(response);
+  const body = await response.text();
+  const etag = body.match(/<ETag>([^<]+)<\/ETag>/)?.[1];
+  if (!etag) throw new Error("OBS CopyObject did not return an ETag in its response body.");
+  return {
+    status: response.status,
+    requestId: response.headers.get("x-obs-request-id") ?? response.headers.get("x-request-id") ?? undefined,
+    etag,
+    body,
+  };
+}
+
 function region(input: JsonObject): string {
   const value = input.region ?? process.env.HUAWEICLOUD_REGION;
   if (typeof value !== "string" || !value) throw new Error("region is required. Provide input.region or HUAWEICLOUD_REGION.");
@@ -289,6 +302,19 @@ export async function putObsObject(input: JsonObject): Promise<unknown> {
   requestBody.set(body);
   const response = await fetch(url, { method: "PUT", headers, body: requestBody });
   return responseMetadata(response);
+}
+
+export async function copyObsObject(input: JsonObject): Promise<unknown> {
+  for (const name of ["bucket", "key", "sourceBucket", "sourceKey"] as const) if (typeof input[name] !== "string" || !input[name]) throw new Error(`${name} is required.`);
+  if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket as string) || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.sourceBucket as string)) throw new Error("bucket and sourceBucket must be valid OBS bucket names.");
+  if (input.sourceVersionId !== undefined && typeof input.sourceVersionId !== "string") throw new Error("sourceVersionId must be a string.");
+  const targetPath = (input.key as string).split("/").map(encode).join("/");
+  const sourcePath = (input.sourceKey as string).split("/").map(encode).join("/");
+  const sourceVersion = typeof input.sourceVersionId === "string" ? `?versionId=${encode(input.sourceVersionId)}` : "";
+  const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/${targetPath}`);
+  const headers = signObsRequest("PUT", url, { "x-obs-copy-source": `/${input.sourceBucket}/${sourcePath}${sourceVersion}` });
+  const response = await fetch(url, { method: "PUT", headers });
+  return responseCopyResult(response);
 }
 
 export async function listObsObjects(input: JsonObject): Promise<unknown> {

@@ -105,6 +105,32 @@ test("OBS object reads use a bounded Range request and return base64", { concurr
   }
 });
 
+test("OBS server-side copies sign the encoded source header and require confirmation", { concurrency: false }, async () => {
+  setCredentials();
+  const gateway = require("../build/gateway.js");
+  const originalFetch = global.fetch;
+  let request;
+  global.fetch = async (url, options) => {
+    request = { url: String(url), options };
+    return new Response("<CopyObjectResult><ETag>copied-etag</ETag></CopyObjectResult>", { status: 200, headers: { "x-obs-request-id": "copy-request" } });
+  };
+  try {
+    const input = { bucket: "target-bucket", key: "archive/copy.txt", sourceBucket: "source-bucket", sourceKey: "reports/source file.txt", sourceVersionId: "version-1" };
+    const pending = await gateway.call("obs", "copy_object", input);
+    assert.equal(pending.status, "confirmation_required");
+    assert.equal(request, undefined);
+    const result = await gateway.call("obs", "copy_object", input, pending.confirmationToken);
+    assert.equal(result.etag, "copied-etag");
+    assert.equal(result.requestId, "copy-request");
+    assert.equal(request.url, "https://target-bucket.obs.cn-north-4.myhuaweicloud.com/archive/copy.txt");
+    assert.equal(request.options.method, "PUT");
+    assert.equal(request.options.headers["x-obs-copy-source"], "/source-bucket/reports/source%20file.txt?versionId=version-1");
+    assert.match(request.options.headers.authorization, /^OBS test-ak:/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("ECS availability-zone discovery uses the documented project endpoint", { concurrency: false }, async () => {
   setCredentials();
   const { listEcsAvailabilityZones } = require("../build/openapi.js");

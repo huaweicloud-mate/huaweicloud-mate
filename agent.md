@@ -30,5 +30,5 @@
 
 - 主 MCP 路由层只管理 ECS、OBS 两个按需加载的子 MCP；KooCLI 是共享 fallback 执行器，不是第三个业务子 MCP。
 - 对两个子 MCP 暂未覆盖的产品，可调用主工具的 `service: "koocli"`、`operation: "run"`；必须将命令拆为字符串数组，禁止传入 AK/SK 参数，且必须等待用户二次确认。
-- ECS 已提供 `list_availability_zones`、`list_flavors`、`list_servers`、`get_server`、`get_job` 与受二次确认保护的 `start_servers`、`stop_servers`、`reboot_servers`、`delete_servers`；OBS 已提供 `list_buckets`、`get_bucket_metadata`、`get_bucket_location`、`list_objects`、`get_object_metadata`、最多读取 1 MiB 的 `get_object`，以及受二次确认保护的 `create_bucket`、`put_object`、`append_object`、`delete_object`、`delete_bucket`。完整 OpenAPI catalog 仍未导入，不能声称已覆盖 API 全量。
+- ECS 已提供 `list_availability_zones`、`list_flavors`、`list_servers`、`get_server`、`get_job` 与受二次确认保护的 `start_servers`、`stop_servers`、`reboot_servers`、`delete_servers`；OBS 已提供 `list_buckets`、`get_bucket_metadata`、`get_bucket_location`、`list_objects`、`get_object_metadata`、最多读取 1 MiB 的 `get_object`，以及受二次确认保护的 `create_bucket`、`put_object`、`copy_object`、`append_object`、`delete_object`、`delete_bucket`。完整 OpenAPI catalog 仍未导入，不能声称已覆盖 API 全量。
 - 后续产品部提供正式 MCP 时，应以相同服务 id 替换对应 adapter，而不改变 Agent 的 discover/provision/call 调用方式。
