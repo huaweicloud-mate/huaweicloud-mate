@@ -77,6 +77,20 @@ test("ECS availability-zone discovery uses the documented project endpoint", { c
   }
 });
 
+test("stdio MCP gateway exposes only the dynamic discovery, provision, and call tools", { concurrency: false }, async () => {
+  const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
+  const { StdioClientTransport } = await import("@modelcontextprotocol/sdk/client/stdio.js");
+  const transport = new StdioClientTransport({ command: process.execPath, args: ["build/server.js"], cwd: process.cwd(), stderr: "pipe" });
+  const client = new Client({ name: "huaweicloud-mate-test", version: "1.0.0" });
+  try {
+    await client.connect(transport);
+    const { tools } = await client.listTools();
+    assert.deepEqual(tools.map((tool) => tool.name).sort(), ["huaweicloud_call", "huaweicloud_discover", "huaweicloud_provision"]);
+  } finally {
+    await client.close();
+  }
+});
+
 test("catalog returns an API Explorer source URL for every ECS and OBS operation", { concurrency: false }, () => {
   const { provision } = require("../build/gateway.js");
   for (const service of ["ecs", "obs"]) {
