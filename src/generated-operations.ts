@@ -49,7 +49,7 @@ function sourceUrl(service: "ECS" | "OBS", apiName: string): string {
 }
 
 function isReadOnly(method: string): boolean {
-  return method === "GET" || method === "HEAD";
+  return method === "GET" || method === "HEAD" || method === "OPTIONS";
 }
 
 function generatedSchema(names: string[], required: string[], bodySchema?: JsonObject, propertySchemas: Record<string, JsonObject> = {}): JsonObject {
