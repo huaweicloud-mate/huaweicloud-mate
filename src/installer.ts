@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createWriteStream, existsSync, mkdirSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { get } from "node:https";
@@ -18,6 +18,19 @@ function agentFrom(args: string[]): AgentName | undefined {
 
 function koocliRoot(): string {
   return join(process.env.LOCALAPPDATA ?? process.env.APPDATA ?? process.cwd(), "huaweicloud-mate", "koocli");
+}
+
+async function existingKooCli(): Promise<string | undefined> {
+  const localExecutable = join(koocliRoot(), "hcloud.exe");
+  const candidates = [process.env.HUAWEICLOUD_KOOCLI_PATH, existsSync(localExecutable) ? localExecutable : undefined, "hcloud.exe", "hcloud"];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      await execFileAsync(candidate, ["version"]);
+      return candidate;
+    } catch { /* Try the next candidate. */ }
+  }
+  return undefined;
 }
 
 async function download(url: string, filePath: string): Promise<void> {
@@ -44,9 +57,10 @@ async function download(url: string, filePath: string): Promise<void> {
 
 async function ensureWindowsKooCli(): Promise<string> {
   if (process.platform !== "win32") throw new Error("Automatic KooCLI installation is supported on Windows only in this release.");
+  const existing = await existingKooCli();
+  if (existing) return existing;
   const root = koocliRoot();
   const executable = join(root, "hcloud.exe");
-  if (existsSync(executable)) return executable;
   mkdirSync(root, { recursive: true });
   const archive = join(root, "koocli.zip");
   const extracted = join(root, "extracted");
@@ -67,9 +81,17 @@ function configurationCommand(agent: AgentName): string {
   return `Add to opencode.json: { "mcp": { "huaweicloud-mate": { "type": "local", "command": ["npx", "-y", "${PACKAGE_NAME}"] } } }`;
 }
 
+async function configureKooCli(executable: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(executable, ["configure", "init"], { shell: false, stdio: "inherit", windowsHide: false });
+    child.once("error", reject);
+    child.once("close", (code) => code === 0 ? resolve() : reject(new Error(`KooCLI configuration exited with code ${code ?? "unknown"}.`)));
+  });
+}
+
 export async function runInstaller(args: string[]): Promise<void> {
   if (args.includes("--help") || args.includes("-h")) {
-    process.stdout.write("Usage: huaweicloud-mate install --agent codex|claude-code|opencode\n");
+    process.stdout.write("Usage: huaweicloud-mate install --agent codex|claude-code|opencode [--configure-koocli]\n");
     return;
   }
   const agent = agentFrom(args);
@@ -77,6 +99,8 @@ export async function runInstaller(args: string[]): Promise<void> {
   const executable = await ensureWindowsKooCli();
   await execFileAsync(executable, ["version"]);
   process.stdout.write(`KooCLI is ready at ${executable}.\n`);
+  if (args.includes("--configure-koocli")) await configureKooCli(executable);
   process.stdout.write(`Configure ${agent}:\n${configurationCommand(agent)}\n`);
-  process.stdout.write("Run `hcloud configure init` in a user-visible terminal to enter AK/SK and a default Region.\n");
+  process.stdout.write("KooCLI fallback uses its local profile. To configure it now, add --configure-koocli; otherwise run `hcloud configure init` in a user-visible terminal.\n");
+  process.stdout.write("The self-built ECS/OBS adapter separately reads HUAWEICLOUD_AK, HUAWEICLOUD_SK, HUAWEICLOUD_REGION, and HUAWEICLOUD_PROJECT_ID from the MCP server environment. Do not put these values in project or Agent configuration files.\n");
 }

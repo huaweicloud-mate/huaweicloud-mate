@@ -7,9 +7,9 @@
 ## 安装与凭证
 
 1. Agent 需要安装时，可执行 `npx -y @hd_vector/huaweicloud-meta install --agent <codex|claude-code|opencode>`。
-2. 安装器自动下载 KooCLI，并输出当前 Agent 的 MCP 配置命令或配置内容。
-3. AK/SK 与默认 Region 必须由用户在可见终端执行 `hcloud configure init` 时输入；不得要求用户把 AK/SK 贴到对话、项目配置、命令行参数或日志中。
-4. 不读取、复制或展示 KooCLI 的本地凭证文件。KooCLI fallback 使用其本地 profile；将来的 ECS/OBS OpenAPI adapter 使用受控的运行时凭证提供器。
+2. 安装器自动下载 KooCLI，并输出当前 Agent 的 MCP 配置命令或配置内容。用户同意后，Agent 可使用 `--configure-koocli` 打开 KooCLI 的交互配置。
+3. KooCLI fallback 的 AK/SK 与默认 Region 必须由用户在可见终端执行 `hcloud configure init` 时输入；不得要求用户把 AK/SK 贴到对话、项目配置、命令行参数或日志中。
+4. 不读取、复制或展示 KooCLI 的加密本地凭证文件。自研 ECS/OBS OpenAPI adapter 从 MCP 运行时环境读取 `HUAWEICLOUD_AK`、`HUAWEICLOUD_SK`、`HUAWEICLOUD_REGION` 和 `HUAWEICLOUD_PROJECT_ID`；这些值不得持久化到项目或 Agent 配置。
 
 ## MCP 工作流
 
@@ -29,5 +29,5 @@
 ## 当前实现边界
 
 - KooCLI fallback 已实现为网关运行时能力。
-- ECS/OBS 仅完成 OpenAPI catalog 的注册接口和动态发现占位；完整 OpenAPI 定义、签名和操作 catalog 是下一阶段工作，不能声称已覆盖 API 全量。
+- ECS 已提供 `list_servers`、`get_server` 与受二次确认保护的 `start_servers`；OBS 已提供 `list_buckets`、`list_objects`。完整 OpenAPI catalog 仍未导入，不能声称已覆盖 API 全量。
 - 后续产品部提供正式 MCP 时，应以相同服务 id 替换对应 adapter，而不改变 Agent 的 discover/provision/call 调用方式。

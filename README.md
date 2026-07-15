@@ -6,8 +6,8 @@
 
 - 固定暴露 `huaweicloud_discover`、`huaweicloud_provision`、`huaweicloud_call` 三个 MCP 工具，避免一次性向 Agent 注入全量服务 schema。
 - 已提供 KooCLI fallback：以非 shell 的结构化命令调用其他华为云服务，并强制二次确认。
-- 已预留 ECS、OBS 的 OpenAPI 服务模块和动态 catalog 接入点。
-- ECS、OBS 的完整 OpenAPI catalog、签名适配和正式产品 MCP 尚未实现；本仓库不会将其误标为已支持。
+- ECS/OBS 已有独立的官方 AK/SK 签名器与首批动态 catalog 操作：ECS 查询/单机详情/批量启动、OBS 列桶/列对象。
+- ECS、OBS 的完整 OpenAPI catalog 和正式产品 MCP 尚未实现；本仓库不会将当前少量操作误标为全量 API 支持。
 - 自动安装仅支持 Windows。
 
 ## 安装
@@ -16,13 +16,15 @@
 npx -y @hd_vector/huaweicloud-meta install --agent codex
 ```
 
-将 `codex` 改为 `claude-code` 或 `opencode` 可得到对应配置。安装器把 KooCLI 安装到当前用户目录，并输出 Agent 的 MCP 配置命令或 JSON。AK/SK 不由本插件处理；请在用户可见的终端中运行：
+将 `codex` 改为 `claude-code` 或 `opencode` 可得到对应配置。安装器把 KooCLI 安装到当前用户目录，并输出 Agent 的 MCP 配置命令或 JSON。若希望立即进行 KooCLI 交互配置，可额外传入 `--configure-koocli`；也可以在用户可见的终端中运行：
 
 ```powershell
 hcloud configure init
 ```
 
-KooCLI 将交互收集 AK、SK 和默认 Region。不要在项目文件、Agent 配置、日志或命令行参数中保存密钥。
+KooCLI 将交互收集 AK、SK 和默认 Region，并加密保存在其本地 profile 中；它供 KooCLI fallback 使用。
+
+自研 ECS/OBS OpenAPI adapter 不会解密或复制 KooCLI profile。请将 `HUAWEICLOUD_AK`、`HUAWEICLOUD_SK`、`HUAWEICLOUD_REGION` 和（ECS 所需的）`HUAWEICLOUD_PROJECT_ID` 仅注入启动 MCP server 的运行时环境。不要把密钥放入项目文件、Agent 配置、日志或命令行参数。
 
 ## Agent 配置
 
