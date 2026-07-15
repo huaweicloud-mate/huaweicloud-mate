@@ -1,4 +1,5 @@
 import { appendObsObject, callObsOpenApi, copyObsObject, createObsBucket, deleteObsBucket, deleteObsObject, getObsBucketLocation, getObsBucketMetadata, getObsObject, getObsObjectMetadata, listObsBuckets, listObsObjects, putObsObject } from "../openapi";
+import { generatedObsOperations } from "../generated-operations";
 import type { SubMcp } from "./types";
 
 export const subMcp: SubMcp = {
@@ -20,5 +21,6 @@ export const subMcp: SubMcp = {
     { id: "append_object", description: "Append base64-encoded content to an OBS appendable object at an explicit byte position. This operation always requires explicit user confirmation.", isReadOnly: false, inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" }, key: { type: "string" }, position: { type: "integer", minimum: 0 }, contentBase64: { type: "string", format: "base64" }, contentType: { type: "string" } }, required: ["bucket", "key", "position", "contentBase64"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=AppendObject", execute: appendObsObject },
     { id: "delete_object", description: "Delete one OBS object or one object version. This operation always requires explicit user confirmation.", isReadOnly: false, inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" }, key: { type: "string" }, versionId: { type: "string" } }, required: ["bucket", "key"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=DeleteObject", execute: deleteObsObject },
     { id: "delete_bucket", description: "Delete one empty OBS bucket. This operation always requires explicit user confirmation.", isReadOnly: false, inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" } }, required: ["bucket"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=DeleteBucket", execute: deleteObsBucket },
+    ...generatedObsOperations(),
   ],
 };

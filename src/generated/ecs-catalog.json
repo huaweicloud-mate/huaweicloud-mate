@@ -1,0 +1,1926 @@
+[
+  {
+    "id": "api_accept_scheduled_event",
+    "apiName": "AcceptScheduledEvent",
+    "method": "POST",
+    "path": "/v3/{project_id}/instance-scheduled-events/{id}/actions/accept",
+    "description": "ECS API Explorer operation AcceptScheduledEvent.",
+    "required": [
+      "id",
+      "body"
+    ],
+    "pathParameters": {
+      "id": "id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_add_server_group_member",
+    "apiName": "AddServerGroupMember",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/os-server-groups/{server_group_id}/action",
+    "description": "ECS API Explorer operation AddServerGroupMember.",
+    "required": [
+      "server_group_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_group_id": "server_group_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_group_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_associate_server_virtual_ip",
+    "apiName": "AssociateServerVirtualIp",
+    "method": "PUT",
+    "path": "/v1/{project_id}/cloudservers/nics/{nic_id}",
+    "description": "ECS API Explorer operation AssociateServerVirtualIp.",
+    "required": [
+      "nic_id",
+      "body"
+    ],
+    "pathParameters": {
+      "nic_id": "nic_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "nic_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_attach_server_volume",
+    "apiName": "AttachServerVolume",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/attachvolume",
+    "description": "ECS API Explorer operation AttachServerVolume.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_add_server_group_member",
+    "apiName": "BatchAddServerGroupMember",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/os-server-groups/{server_group_id}/add_members",
+    "description": "ECS API Explorer operation BatchAddServerGroupMember.",
+    "required": [
+      "server_group_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_group_id": "server_group_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_group_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_add_server_nics",
+    "apiName": "BatchAddServerNics",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/nics",
+    "description": "ECS API Explorer operation BatchAddServerNics.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_attach_sharable_volumes",
+    "apiName": "BatchAttachSharableVolumes",
+    "method": "POST",
+    "path": "/v1/{project_id}/batchaction/attachvolumes/{volume_id}",
+    "description": "ECS API Explorer operation BatchAttachSharableVolumes.",
+    "required": [
+      "volume_id",
+      "body"
+    ],
+    "pathParameters": {
+      "volume_id": "volume_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "volume_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_create_server_tags",
+    "apiName": "BatchCreateServerTags",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/tags/action",
+    "description": "ECS API Explorer operation BatchCreateServerTags.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_delete_server_group_member",
+    "apiName": "BatchDeleteServerGroupMember",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/os-server-groups/{server_group_id}/remove_members",
+    "description": "ECS API Explorer operation BatchDeleteServerGroupMember.",
+    "required": [
+      "server_group_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_group_id": "server_group_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_group_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_delete_server_nics",
+    "apiName": "BatchDeleteServerNics",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/nics/delete",
+    "description": "ECS API Explorer operation BatchDeleteServerNics.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_delete_server_tags",
+    "apiName": "BatchDeleteServerTags",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/tags/action",
+    "description": "ECS API Explorer operation BatchDeleteServerTags.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_detach_volumes",
+    "apiName": "BatchDetachVolumes",
+    "method": "POST",
+    "path": "/v1/{project_id}/batchaction/detachvolumes/{volume_id}",
+    "description": "ECS API Explorer operation BatchDetachVolumes.",
+    "required": [
+      "volume_id",
+      "body"
+    ],
+    "pathParameters": {
+      "volume_id": "volume_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "volume_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_reboot_servers",
+    "apiName": "BatchRebootServers",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/action",
+    "description": "ECS API Explorer operation BatchRebootServers.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_reset_servers_password",
+    "apiName": "BatchResetServersPassword",
+    "method": "PUT",
+    "path": "/v1/{project_id}/cloudservers/os-reset-passwords",
+    "description": "ECS API Explorer operation BatchResetServersPassword.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_resize_servers",
+    "apiName": "BatchResizeServers",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/batch-resize",
+    "description": "ECS API Explorer operation BatchResizeServers.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_start_servers",
+    "apiName": "BatchStartServers",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/action",
+    "description": "ECS API Explorer operation BatchStartServers.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_stop_servers",
+    "apiName": "BatchStopServers",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/action",
+    "description": "ECS API Explorer operation BatchStopServers.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_batch_update_servers_name",
+    "apiName": "BatchUpdateServersName",
+    "method": "PUT",
+    "path": "/v1/{project_id}/cloudservers/server-name",
+    "description": "ECS API Explorer operation BatchUpdateServersName.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_change_server_charge_mode",
+    "apiName": "ChangeServerChargeMode",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/actions/change-charge-mode",
+    "description": "ECS API Explorer operation ChangeServerChargeMode.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_change_server_network_interface",
+    "apiName": "ChangeServerNetworkInterface",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/os-interface/{port_id}/change-network-interface",
+    "description": "ECS API Explorer operation ChangeServerNetworkInterface.",
+    "required": [
+      "port_id",
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "port_id": "port_id",
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "port_id",
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_change_server_os_with_cloud_init",
+    "apiName": "ChangeServerOsWithCloudInit",
+    "method": "POST",
+    "path": "/v2/{project_id}/cloudservers/{server_id}/changeos",
+    "description": "ECS API Explorer operation ChangeServerOsWithCloudInit.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_change_server_os_without_cloud_init",
+    "apiName": "ChangeServerOsWithoutCloudInit",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/changeos",
+    "description": "ECS API Explorer operation ChangeServerOsWithoutCloudInit.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_change_vpc",
+    "apiName": "ChangeVpc",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/changevpc",
+    "description": "ECS API Explorer operation ChangeVpc.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_create_launch_template",
+    "apiName": "CreateLaunchTemplate",
+    "method": "POST",
+    "path": "/v3/{project_id}/launch-templates",
+    "description": "ECS API Explorer operation CreateLaunchTemplate.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_create_post_paid_servers",
+    "apiName": "CreatePostPaidServers",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers",
+    "description": "ECS API Explorer operation CreatePostPaidServers.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_create_server_group",
+    "apiName": "CreateServerGroup",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/os-server-groups",
+    "description": "ECS API Explorer operation CreateServerGroup.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_create_servers",
+    "apiName": "CreateServers",
+    "method": "POST",
+    "path": "/v1.1/{project_id}/cloudservers",
+    "description": "ECS API Explorer operation CreateServers.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_delete_launch_templates",
+    "apiName": "DeleteLaunchTemplates",
+    "method": "DELETE",
+    "path": "/v3/{project_id}/launch-templates/{launch_template_id}",
+    "description": "ECS API Explorer operation DeleteLaunchTemplates.",
+    "required": [
+      "launch_template_id"
+    ],
+    "pathParameters": {
+      "launch_template_id": "launch_template_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "launch_template_id"
+    ]
+  },
+  {
+    "id": "api_delete_recycle_bin_server",
+    "apiName": "DeleteRecycleBinServer",
+    "method": "DELETE",
+    "path": "/v1/{project_id}/recycle-bin/cloudservers/{server_id}",
+    "description": "ECS API Explorer operation DeleteRecycleBinServer.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_delete_server_group",
+    "apiName": "DeleteServerGroup",
+    "method": "DELETE",
+    "path": "/v1/{project_id}/cloudservers/os-server-groups/{server_group_id}",
+    "description": "ECS API Explorer operation DeleteServerGroup.",
+    "required": [
+      "server_group_id"
+    ],
+    "pathParameters": {
+      "server_group_id": "server_group_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_group_id"
+    ]
+  },
+  {
+    "id": "api_delete_server_group_member",
+    "apiName": "DeleteServerGroupMember",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/os-server-groups/{server_group_id}/action",
+    "description": "ECS API Explorer operation DeleteServerGroupMember.",
+    "required": [
+      "server_group_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_group_id": "server_group_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_group_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_delete_server_metadata",
+    "apiName": "DeleteServerMetadata",
+    "method": "DELETE",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/metadata/{key}",
+    "description": "ECS API Explorer operation DeleteServerMetadata.",
+    "required": [
+      "key",
+      "server_id"
+    ],
+    "pathParameters": {
+      "key": "key",
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "key",
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_delete_server_password",
+    "apiName": "DeleteServerPassword",
+    "method": "DELETE",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/os-server-password",
+    "description": "ECS API Explorer operation DeleteServerPassword.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_delete_servers",
+    "apiName": "DeleteServers",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/delete",
+    "description": "ECS API Explorer operation DeleteServers.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_detach_server_volume",
+    "apiName": "DetachServerVolume",
+    "method": "DELETE",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/detachvolume/{volume_id}",
+    "description": "ECS API Explorer operation DetachServerVolume.",
+    "required": [
+      "server_id",
+      "volume_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id",
+      "volume_id": "volume_id"
+    },
+    "queryParameters": {
+      "delete_flag": "delete_flag"
+    },
+    "inputNames": [
+      "server_id",
+      "volume_id",
+      "delete_flag"
+    ]
+  },
+  {
+    "id": "api_disassociate_server_virtual_ip",
+    "apiName": "DisassociateServerVirtualIp",
+    "method": "PUT",
+    "path": "/v1/{project_id}/cloudservers/nics/{nic_id}",
+    "description": "ECS API Explorer operation DisassociateServerVirtualIp.",
+    "required": [
+      "nic_id",
+      "body"
+    ],
+    "pathParameters": {
+      "nic_id": "nic_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "nic_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_execute_server_dump",
+    "apiName": "ExecuteServerDump",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/actions/trigger-crash-dump",
+    "description": "ECS API Explorer operation ExecuteServerDump.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_execute_server_redeploy",
+    "apiName": "ExecuteServerRedeploy",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/actions/redeploy",
+    "description": "ECS API Explorer operation ExecuteServerRedeploy.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_list_cloud_servers",
+    "apiName": "ListCloudServers",
+    "method": "GET",
+    "path": "/v1.1/{project_id}/cloudservers/detail",
+    "description": "ECS API Explorer operation ListCloudServers.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "id": "id",
+      "name": "name",
+      "status": "status",
+      "in_recycle_bin": "in_recycle_bin",
+      "spod_id": "spod_id",
+      "flavor_name": "flavor_name",
+      "image_id": "image_id",
+      "metadata": "metadata",
+      "metadata-key": "metadata-key",
+      "tags": "tags",
+      "not-tags": "not-tags",
+      "availability_zone": "availability_zone",
+      "availability_zone_eq": "availability_zone_eq",
+      "charging_mode": "charging_mode",
+      "key_name": "key_name",
+      "launched_since": "launched_since",
+      "enterprise_project_id": "enterprise_project_id",
+      "expect-fields": "expect-fields",
+      "limit": "limit",
+      "marker": "marker"
+    },
+    "inputNames": [
+      "id",
+      "name",
+      "status",
+      "in_recycle_bin",
+      "spod_id",
+      "flavor_name",
+      "image_id",
+      "metadata",
+      "metadata-key",
+      "tags",
+      "not-tags",
+      "availability_zone",
+      "availability_zone_eq",
+      "charging_mode",
+      "key_name",
+      "launched_since",
+      "enterprise_project_id",
+      "expect-fields",
+      "limit",
+      "marker"
+    ]
+  },
+  {
+    "id": "api_list_flavor_sell_policies",
+    "apiName": "ListFlavorSellPolicies",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/flavor-sell-policies",
+    "description": "ECS API Explorer operation ListFlavorSellPolicies.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "flavor_id": "flavor_id",
+      "sell_status": "sell_status",
+      "sell_mode": "sell_mode",
+      "availability_zone_id": "availability_zone_id",
+      "longest_spot_duration_hours_gt": "longest_spot_duration_hours_gt",
+      "largest_spot_duration_count_gt": "largest_spot_duration_count_gt",
+      "longest_spot_duration_hours": "longest_spot_duration_hours",
+      "largest_spot_duration_count": "largest_spot_duration_count",
+      "interruption_policy": "interruption_policy",
+      "limit": "limit",
+      "marker": "marker"
+    },
+    "inputNames": [
+      "flavor_id",
+      "sell_status",
+      "sell_mode",
+      "availability_zone_id",
+      "longest_spot_duration_hours_gt",
+      "largest_spot_duration_count_gt",
+      "longest_spot_duration_hours",
+      "largest_spot_duration_count",
+      "interruption_policy",
+      "limit",
+      "marker"
+    ]
+  },
+  {
+    "id": "api_list_flavors",
+    "apiName": "ListFlavors",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/flavors",
+    "description": "ECS API Explorer operation ListFlavors.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "availability_zone": "availability_zone",
+      "flavor_id": "flavor_id",
+      "limit": "limit",
+      "marker": "marker"
+    },
+    "inputNames": [
+      "availability_zone",
+      "flavor_id",
+      "limit",
+      "marker"
+    ]
+  },
+  {
+    "id": "api_list_launch_template_versions",
+    "apiName": "ListLaunchTemplateVersions",
+    "method": "GET",
+    "path": "/v3/{project_id}/launch-template-versions",
+    "description": "ECS API Explorer operation ListLaunchTemplateVersions.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "limit": "limit",
+      "marker": "marker",
+      "launch_template_id": "launch_template_id",
+      "image_id": "image_id",
+      "flavor_id": "flavor_id",
+      "version": "version"
+    },
+    "inputNames": [
+      "limit",
+      "marker",
+      "launch_template_id",
+      "image_id",
+      "flavor_id",
+      "version"
+    ]
+  },
+  {
+    "id": "api_list_recycle_bin_servers",
+    "apiName": "ListRecycleBinServers",
+    "method": "GET",
+    "path": "/v1/{project_id}/recycle-bin/cloudservers",
+    "description": "ECS API Explorer operation ListRecycleBinServers.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "all_tenants": "all_tenants",
+      "availability_zone": "availability_zone",
+      "expect-fields": "expect-fields",
+      "ip_address": "ip_address",
+      "limit": "limit",
+      "marker": "marker",
+      "name": "name",
+      "offset": "offset",
+      "tags": "tags",
+      "tags_key": "tags_key"
+    },
+    "inputNames": [
+      "all_tenants",
+      "availability_zone",
+      "expect-fields",
+      "ip_address",
+      "limit",
+      "marker",
+      "name",
+      "offset",
+      "tags",
+      "tags_key"
+    ]
+  },
+  {
+    "id": "api_list_resize_flavors",
+    "apiName": "ListResizeFlavors",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/resize_flavors",
+    "description": "ECS API Explorer operation ListResizeFlavors.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "instance_uuid": "instance_uuid",
+      "limit": "limit",
+      "marker": "marker",
+      "sort_dir": "sort_dir",
+      "sort_key": "sort_key",
+      "source_flavor_id": "source_flavor_id",
+      "source_flavor_name": "source_flavor_name"
+    },
+    "inputNames": [
+      "instance_uuid",
+      "limit",
+      "marker",
+      "sort_dir",
+      "sort_key",
+      "source_flavor_id",
+      "source_flavor_name"
+    ]
+  },
+  {
+    "id": "api_list_scheduled_events",
+    "apiName": "ListScheduledEvents",
+    "method": "GET",
+    "path": "/v3/{project_id}/instance-scheduled-events",
+    "description": "ECS API Explorer operation ListScheduledEvents.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "marker": "marker",
+      "id": "id",
+      "instance_id": "instance_id",
+      "type": "type",
+      "state": "state",
+      "publish_since": "publish_since",
+      "publish_until": "publish_until",
+      "limit": "limit"
+    },
+    "inputNames": [
+      "marker",
+      "id",
+      "instance_id",
+      "type",
+      "state",
+      "publish_since",
+      "publish_until",
+      "limit"
+    ]
+  },
+  {
+    "id": "api_list_server_block_devices",
+    "apiName": "ListServerBlockDevices",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/block_device",
+    "description": "ECS API Explorer operation ListServerBlockDevices.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_list_server_groups",
+    "apiName": "ListServerGroups",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/os-server-groups",
+    "description": "ECS API Explorer operation ListServerGroups.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "limit": "limit",
+      "marker": "marker"
+    },
+    "inputNames": [
+      "limit",
+      "marker"
+    ]
+  },
+  {
+    "id": "api_list_server_interfaces",
+    "apiName": "ListServerInterfaces",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/os-interface",
+    "description": "ECS API Explorer operation ListServerInterfaces.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_list_server_volume_attachments",
+    "apiName": "ListServerVolumeAttachments",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/os-volume_attachments",
+    "description": "ECS API Explorer operation ListServerVolumeAttachments.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_list_servers_by_tag",
+    "apiName": "ListServersByTag",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/resource_instances/action",
+    "description": "ECS API Explorer operation ListServersByTag.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_list_servers_details",
+    "apiName": "ListServersDetails",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/detail",
+    "description": "ECS API Explorer operation ListServersDetails.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "enterprise_project_id": "enterprise_project_id",
+      "flavor": "flavor",
+      "ip": "ip",
+      "limit": "limit",
+      "name": "name",
+      "not-tags": "not-tags",
+      "offset": "offset",
+      "reservation_id": "reservation_id",
+      "status": "status",
+      "tags": "tags",
+      "ip_eq": "ip_eq",
+      "server_id": "server_id",
+      "marker": "marker"
+    },
+    "inputNames": [
+      "enterprise_project_id",
+      "flavor",
+      "ip",
+      "limit",
+      "name",
+      "not-tags",
+      "offset",
+      "reservation_id",
+      "status",
+      "tags",
+      "ip_eq",
+      "server_id",
+      "marker"
+    ]
+  },
+  {
+    "id": "api_list_templates",
+    "apiName": "ListTemplates",
+    "method": "GET",
+    "path": "/v3/{project_id}/launch-templates",
+    "description": "ECS API Explorer operation ListTemplates.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "limit": "limit",
+      "marker": "marker",
+      "launch_template_id": "launch_template_id",
+      "name": "name"
+    },
+    "inputNames": [
+      "limit",
+      "marker",
+      "launch_template_id",
+      "name"
+    ]
+  },
+  {
+    "id": "api_migrate_server",
+    "apiName": "MigrateServer",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/migrate",
+    "description": "ECS API Explorer operation MigrateServer.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_nova_associate_security_group",
+    "apiName": "NovaAssociateSecurityGroup",
+    "method": "POST",
+    "path": "/v2.1/{project_id}/servers/{server_id}/action",
+    "description": "ECS API Explorer operation NovaAssociateSecurityGroup.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_nova_attach_interface",
+    "apiName": "NovaAttachInterface",
+    "method": "POST",
+    "path": "/v2.1/{project_id}/servers/{server_id}/os-interface",
+    "description": "ECS API Explorer operation NovaAttachInterface.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_nova_create_keypair",
+    "apiName": "NovaCreateKeypair",
+    "method": "POST",
+    "path": "/v2.1/{project_id}/os-keypairs",
+    "description": "ECS API Explorer operation NovaCreateKeypair.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_nova_create_servers",
+    "apiName": "NovaCreateServers",
+    "method": "POST",
+    "path": "/v2.1/{project_id}/servers",
+    "description": "ECS API Explorer operation NovaCreateServers.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_nova_delete_keypair",
+    "apiName": "NovaDeleteKeypair",
+    "method": "DELETE",
+    "path": "/v2.1/{project_id}/os-keypairs/{keypair_name}",
+    "description": "ECS API Explorer operation NovaDeleteKeypair.",
+    "required": [
+      "keypair_name"
+    ],
+    "pathParameters": {
+      "keypair_name": "keypair_name"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "keypair_name"
+    ]
+  },
+  {
+    "id": "api_nova_delete_server",
+    "apiName": "NovaDeleteServer",
+    "method": "DELETE",
+    "path": "/v2.1/{project_id}/servers/{server_id}",
+    "description": "ECS API Explorer operation NovaDeleteServer.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_nova_disassociate_security_group",
+    "apiName": "NovaDisassociateSecurityGroup",
+    "method": "POST",
+    "path": "/v2.1/{project_id}/servers/{server_id}/action",
+    "description": "ECS API Explorer operation NovaDisassociateSecurityGroup.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_nova_list_keypairs",
+    "apiName": "NovaListKeypairs",
+    "method": "GET",
+    "path": "/v2.1/{project_id}/os-keypairs",
+    "description": "ECS API Explorer operation NovaListKeypairs.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "limit": "limit",
+      "marker": "marker"
+    },
+    "inputNames": [
+      "limit",
+      "marker"
+    ]
+  },
+  {
+    "id": "api_nova_list_server_security_groups",
+    "apiName": "NovaListServerSecurityGroups",
+    "method": "GET",
+    "path": "/v2.1/{project_id}/servers/{server_id}/os-security-groups",
+    "description": "ECS API Explorer operation NovaListServerSecurityGroups.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_nova_list_servers",
+    "apiName": "NovaListServers",
+    "method": "GET",
+    "path": "/v2.1/{project_id}/servers",
+    "description": "ECS API Explorer operation NovaListServers.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "changes-since": "changes-since",
+      "flavor": "flavor",
+      "host": "host",
+      "image": "image",
+      "ip": "ip",
+      "limit": "limit",
+      "marker": "marker",
+      "name": "name",
+      "not-tags": "not-tags",
+      "reservation_id": "reservation_id",
+      "sort_key": "sort_key",
+      "status": "status",
+      "tags": "tags"
+    },
+    "inputNames": [
+      "changes-since",
+      "flavor",
+      "host",
+      "image",
+      "ip",
+      "limit",
+      "marker",
+      "name",
+      "not-tags",
+      "reservation_id",
+      "sort_key",
+      "status",
+      "tags"
+    ]
+  },
+  {
+    "id": "api_nova_list_servers_details",
+    "apiName": "NovaListServersDetails",
+    "method": "GET",
+    "path": "/v2.1/{project_id}/servers/detail",
+    "description": "ECS API Explorer operation NovaListServersDetails.",
+    "required": [],
+    "pathParameters": {},
+    "queryParameters": {
+      "changes-since": "changes-since",
+      "flavor": "flavor",
+      "image": "image",
+      "ip": "ip",
+      "limit": "limit",
+      "marker": "marker",
+      "name": "name",
+      "not-tags": "not-tags",
+      "reservation_id": "reservation_id",
+      "sort_key": "sort_key",
+      "status": "status",
+      "tags": "tags"
+    },
+    "inputNames": [
+      "changes-since",
+      "flavor",
+      "image",
+      "ip",
+      "limit",
+      "marker",
+      "name",
+      "not-tags",
+      "reservation_id",
+      "sort_key",
+      "status",
+      "tags"
+    ]
+  },
+  {
+    "id": "api_nova_show_flavor_extra_specs",
+    "apiName": "NovaShowFlavorExtraSpecs",
+    "method": "GET",
+    "path": "/v2.1/{project_id}/flavors/{flavor_id}/os-extra_specs",
+    "description": "ECS API Explorer operation NovaShowFlavorExtraSpecs.",
+    "required": [
+      "flavor_id"
+    ],
+    "pathParameters": {
+      "flavor_id": "flavor_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "flavor_id"
+    ]
+  },
+  {
+    "id": "api_nova_show_keypair",
+    "apiName": "NovaShowKeypair",
+    "method": "GET",
+    "path": "/v2.1/{project_id}/os-keypairs/{keypair_name}",
+    "description": "ECS API Explorer operation NovaShowKeypair.",
+    "required": [
+      "keypair_name"
+    ],
+    "pathParameters": {
+      "keypair_name": "keypair_name"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "keypair_name"
+    ]
+  },
+  {
+    "id": "api_nova_show_server",
+    "apiName": "NovaShowServer",
+    "method": "GET",
+    "path": "/v2.1/{project_id}/servers/{server_id}",
+    "description": "ECS API Explorer operation NovaShowServer.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_nova_show_server_interface",
+    "apiName": "NovaShowServerInterface",
+    "method": "GET",
+    "path": "/v2.1/{project_id}/servers/{server_id}/os-interface/{port_id}",
+    "description": "ECS API Explorer operation NovaShowServerInterface.",
+    "required": [
+      "port_id",
+      "server_id"
+    ],
+    "pathParameters": {
+      "port_id": "port_id",
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "port_id",
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_register_server_monitor",
+    "apiName": "RegisterServerMonitor",
+    "method": "POST",
+    "path": "/v1.0/servers/{server_id}/action",
+    "description": "ECS API Explorer operation RegisterServerMonitor.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_reinstall_server_with_cloud_init",
+    "apiName": "ReinstallServerWithCloudInit",
+    "method": "POST",
+    "path": "/v2/{project_id}/cloudservers/{server_id}/reinstallos",
+    "description": "ECS API Explorer operation ReinstallServerWithCloudInit.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_reinstall_server_without_cloud_init",
+    "apiName": "ReinstallServerWithoutCloudInit",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/reinstallos",
+    "description": "ECS API Explorer operation ReinstallServerWithoutCloudInit.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_reset_server_password",
+    "apiName": "ResetServerPassword",
+    "method": "PUT",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/os-reset-password",
+    "description": "ECS API Explorer operation ResetServerPassword.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_resize_post_paid_server",
+    "apiName": "ResizePostPaidServer",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/resize",
+    "description": "ECS API Explorer operation ResizePostPaidServer.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_resize_server",
+    "apiName": "ResizeServer",
+    "method": "POST",
+    "path": "/v1.1/{project_id}/cloudservers/{server_id}/resize",
+    "description": "ECS API Explorer operation ResizeServer.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_revert_recycle_bin_server",
+    "apiName": "RevertRecycleBinServer",
+    "method": "POST",
+    "path": "/v1/{project_id}/recycle-bin/cloudservers/{server_id}/actions/revert",
+    "description": "ECS API Explorer operation RevertRecycleBinServer.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_show_appendable_volume_quota",
+    "apiName": "ShowAppendableVolumeQuota",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/appendvolumequota",
+    "description": "ECS API Explorer operation ShowAppendableVolumeQuota.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_show_flavor_capacity",
+    "apiName": "ShowFlavorCapacity",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/flavors/{flavor_id}/resources",
+    "description": "ECS API Explorer operation ShowFlavorCapacity.",
+    "required": [
+      "flavor_id"
+    ],
+    "pathParameters": {
+      "flavor_id": "flavor_id"
+    },
+    "queryParameters": {
+      "count": "count",
+      "region_ids": "region_ids"
+    },
+    "inputNames": [
+      "flavor_id",
+      "count",
+      "region_ids"
+    ]
+  },
+  {
+    "id": "api_show_metadata_options",
+    "apiName": "ShowMetadataOptions",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/metadata-options",
+    "description": "ECS API Explorer operation ShowMetadataOptions.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_show_reset_password_flag",
+    "apiName": "ShowResetPasswordFlag",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/os-resetpwd-flag",
+    "description": "ECS API Explorer operation ShowResetPasswordFlag.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_show_serial_console_actions",
+    "apiName": "ShowSerialConsoleActions",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/actions/serial-console",
+    "description": "ECS API Explorer operation ShowSerialConsoleActions.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_show_server",
+    "apiName": "ShowServer",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/{server_id}",
+    "description": "ECS API Explorer operation ShowServer.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_show_server_attachable_nic_num",
+    "apiName": "ShowServerAttachableNicNum",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/os-interface_extension",
+    "description": "ECS API Explorer operation ShowServerAttachableNicNum.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_show_server_block_device",
+    "apiName": "ShowServerBlockDevice",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/block_device/{volume_id}",
+    "description": "ECS API Explorer operation ShowServerBlockDevice.",
+    "required": [
+      "server_id",
+      "volume_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id",
+      "volume_id": "volume_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "volume_id"
+    ]
+  },
+  {
+    "id": "api_show_server_group",
+    "apiName": "ShowServerGroup",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/os-server-groups/{server_group_id}",
+    "description": "ECS API Explorer operation ShowServerGroup.",
+    "required": [
+      "server_group_id"
+    ],
+    "pathParameters": {
+      "server_group_id": "server_group_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_group_id"
+    ]
+  },
+  {
+    "id": "api_show_server_password",
+    "apiName": "ShowServerPassword",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/os-server-password",
+    "description": "ECS API Explorer operation ShowServerPassword.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_show_server_remote_console",
+    "apiName": "ShowServerRemoteConsole",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/remote_console",
+    "description": "ECS API Explorer operation ShowServerRemoteConsole.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_show_server_tags",
+    "apiName": "ShowServerTags",
+    "method": "GET",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/tags",
+    "description": "ECS API Explorer operation ShowServerTags.",
+    "required": [
+      "server_id"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id"
+    ]
+  },
+  {
+    "id": "api_update_metadata_options",
+    "apiName": "UpdateMetadataOptions",
+    "method": "PUT",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/metadata-options",
+    "description": "ECS API Explorer operation UpdateMetadataOptions.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_update_recycle_bin",
+    "apiName": "UpdateRecycleBin",
+    "method": "PUT",
+    "path": "/v1/{project_id}/recycle-bin",
+    "description": "ECS API Explorer operation UpdateRecycleBin.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_update_recycle_bin_policy",
+    "apiName": "UpdateRecycleBinPolicy",
+    "method": "PUT",
+    "path": "/v1/{project_id}/recycle-bin/policy",
+    "description": "ECS API Explorer operation UpdateRecycleBinPolicy.",
+    "required": [
+      "body"
+    ],
+    "pathParameters": {},
+    "queryParameters": {},
+    "inputNames": [
+      "body"
+    ]
+  },
+  {
+    "id": "api_update_scheduled_event",
+    "apiName": "UpdateScheduledEvent",
+    "method": "PUT",
+    "path": "/v3/{project_id}/instance-scheduled-events/{id}",
+    "description": "ECS API Explorer operation UpdateScheduledEvent.",
+    "required": [
+      "id",
+      "body"
+    ],
+    "pathParameters": {
+      "id": "id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_update_serial_console_options",
+    "apiName": "UpdateSerialConsoleOptions",
+    "method": "PUT",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/serial-console-options",
+    "description": "ECS API Explorer operation UpdateSerialConsoleOptions.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_update_server",
+    "apiName": "UpdateServer",
+    "method": "PUT",
+    "path": "/v1/{project_id}/cloudservers/{server_id}",
+    "description": "ECS API Explorer operation UpdateServer.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_update_server_auto_terminate_time",
+    "apiName": "UpdateServerAutoTerminateTime",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/actions/update-auto-terminate-time",
+    "description": "ECS API Explorer operation UpdateServerAutoTerminateTime.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_update_server_block_device",
+    "apiName": "UpdateServerBlockDevice",
+    "method": "PUT",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/block_device/{volume_id}",
+    "description": "ECS API Explorer operation UpdateServerBlockDevice.",
+    "required": [
+      "server_id",
+      "volume_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id",
+      "volume_id": "volume_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "volume_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_update_server_interface",
+    "apiName": "UpdateServerInterface",
+    "method": "PUT",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/os-interface/{port_id}",
+    "description": "ECS API Explorer operation UpdateServerInterface.",
+    "required": [
+      "server_id",
+      "port_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id",
+      "port_id": "port_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "port_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_update_server_metadata",
+    "apiName": "UpdateServerMetadata",
+    "method": "POST",
+    "path": "/v1/{project_id}/cloudservers/{server_id}/metadata",
+    "description": "ECS API Explorer operation UpdateServerMetadata.",
+    "required": [
+      "server_id",
+      "body"
+    ],
+    "pathParameters": {
+      "server_id": "server_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "server_id",
+      "body"
+    ]
+  },
+  {
+    "id": "api_nova_show_version",
+    "apiName": "NovaShowVersion",
+    "method": "GET",
+    "path": "/{api_version}",
+    "description": "ECS API Explorer operation NovaShowVersion.",
+    "required": [
+      "api_version"
+    ],
+    "pathParameters": {
+      "api_version": "api_version"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "api_version"
+    ]
+  },
+  {
+    "id": "api_show_job",
+    "apiName": "ShowJob",
+    "method": "GET",
+    "path": "/v1/{project_id}/jobs/{job_id}",
+    "description": "ECS API Explorer operation ShowJob.",
+    "required": [
+      "job_id"
+    ],
+    "pathParameters": {
+      "job_id": "job_id"
+    },
+    "queryParameters": {},
+    "inputNames": [
+      "job_id"
+    ]
+  }
+]

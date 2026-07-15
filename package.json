@@ -15,6 +15,7 @@
   ],
   "scripts": {
     "build": "node scripts/clean-build.cjs && tsc",
+    "generate:catalog": "node scripts/generate-catalog.cjs",
     "test": "npm run build && node --test test/*.test.cjs",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build"

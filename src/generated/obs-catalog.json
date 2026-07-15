@@ -1,0 +1,3117 @@
+[
+  {
+    "id": "api_create_bucket",
+    "apiName": "CreateBucket",
+    "method": "PUT",
+    "description": "OBS API Explorer operation CreateBucket.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "ACL": {
+        "location": "header",
+        "sentAs": "acl",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "StorageClass": {
+        "location": "header",
+        "sentAs": "storage-class",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "Location": {
+        "location": "xml",
+        "sentAs": "Location"
+      },
+      "GrantRead": {
+        "location": "header",
+        "sentAs": "grant-read",
+        "withPrefix": true
+      },
+      "GrantWrite": {
+        "location": "header",
+        "sentAs": "grant-write",
+        "withPrefix": true
+      },
+      "GrantReadAcp": {
+        "location": "header",
+        "sentAs": "grant-read-acp",
+        "withPrefix": true
+      },
+      "GrantWriteAcp": {
+        "location": "header",
+        "sentAs": "grant-write-acp",
+        "withPrefix": true
+      },
+      "GrantFullControl": {
+        "location": "header",
+        "sentAs": "grant-full-control",
+        "withPrefix": true
+      },
+      "GrantReadDelivered": {
+        "location": "header",
+        "sentAs": "grant-read-delivered",
+        "withPrefix": true
+      },
+      "GrantFullControlDelivered": {
+        "location": "header",
+        "sentAs": "grant-full-control-delivered",
+        "withPrefix": true
+      },
+      "AzRedundancy": {
+        "location": "header",
+        "sentAs": "x-obs-az-redundancy"
+      },
+      "MultiEnterprise": {
+        "location": "header",
+        "sentAs": "epid",
+        "withPrefix": true
+      },
+      "FileInterface": {
+        "location": "header",
+        "sentAs": "fs-file-interface",
+        "withPrefix": true
+      }
+    },
+    "data": {
+      "xmlRoot": "CreateBucketConfiguration"
+    }
+  },
+  {
+    "id": "api_list_buckets",
+    "apiName": "ListBuckets",
+    "method": "GET",
+    "description": "OBS API Explorer operation ListBuckets.",
+    "parameters": {
+      "BucketType": {
+        "location": "header",
+        "sentAs": "bucket-type",
+        "withPrefix": true
+      },
+      "Marker": {
+        "location": "urlPath",
+        "sentAs": "marker"
+      },
+      "MaxKeys": {
+        "type": "number",
+        "location": "urlPath",
+        "sentAs": "max-keys"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_head_bucket",
+    "apiName": "HeadBucket",
+    "method": "HEAD",
+    "description": "OBS API Explorer operation HeadBucket.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_head_api_version",
+    "apiName": "HeadApiVersion",
+    "method": "HEAD",
+    "description": "OBS API Explorer operation HeadApiVersion.",
+    "parameters": {
+      "Bucket": {
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_get_bucket_metadata",
+    "apiName": "GetBucketMetadata",
+    "method": "HEAD",
+    "description": "OBS API Explorer operation GetBucketMetadata.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Origin": {
+        "location": "header",
+        "sentAs": "Origin"
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      },
+      "RequestHeader": {
+        "location": "header",
+        "sentAs": "Access-Control-Request-Headers"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_bucket",
+    "apiName": "DeleteBucket",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteBucket.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_list_objects",
+    "apiName": "ListObjects",
+    "method": "GET",
+    "description": "OBS API Explorer operation ListObjects.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Prefix": {
+        "location": "urlPath",
+        "sentAs": "prefix"
+      },
+      "Marker": {
+        "location": "urlPath",
+        "sentAs": "marker"
+      },
+      "MaxKeys": {
+        "type": "number",
+        "location": "urlPath",
+        "sentAs": "max-keys"
+      },
+      "Delimiter": {
+        "location": "urlPath",
+        "sentAs": "delimiter"
+      },
+      "AccessKeyId": {
+        "location": "urlPath",
+        "sentAs": "AccessKeyId"
+      },
+      "Signature": {
+        "location": "urlPath",
+        "sentAs": "Signature"
+      },
+      "Policy": {
+        "location": "urlPath",
+        "sentAs": "Policy"
+      },
+      "SecurityToken": {
+        "location": "urlPath",
+        "sentAs": "x-obs-security-token"
+      },
+      "FsClient": {
+        "location": "header",
+        "sentAs": "x-hws-fs-client"
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      },
+      "EncodingType": {
+        "location": "urlPath",
+        "sentAs": "encoding-type"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_list_versions",
+    "apiName": "ListVersions",
+    "method": "GET",
+    "description": "OBS API Explorer operation ListVersions.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Prefix": {
+        "location": "urlPath",
+        "sentAs": "prefix"
+      },
+      "KeyMarker": {
+        "location": "urlPath",
+        "sentAs": "key-marker"
+      },
+      "MaxKeys": {
+        "type": "number",
+        "location": "urlPath",
+        "sentAs": "max-keys"
+      },
+      "Delimiter": {
+        "location": "urlPath",
+        "sentAs": "delimiter"
+      },
+      "VersionIdMarker": {
+        "location": "urlPath",
+        "sentAs": "version-id-marker"
+      },
+      "EncodingType": {
+        "location": "urlPath",
+        "sentAs": "encoding-type"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_get_bucket_location",
+    "apiName": "GetBucketLocation",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketLocation.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_get_bucket_storage_info",
+    "apiName": "GetBucketStorageInfo",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketStorageInfo.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_quota",
+    "apiName": "SetBucketQuota",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketQuota.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "StorageQuota": {
+        "required": true,
+        "location": "xml",
+        "sentAs": "StorageQuota"
+      }
+    },
+    "data": {
+      "xmlRoot": "Quota"
+    }
+  },
+  {
+    "id": "api_get_bucket_quota",
+    "apiName": "GetBucketQuota",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketQuota.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_acl",
+    "apiName": "SetBucketAcl",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketAcl.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "ACL": {
+        "location": "header",
+        "sentAs": "acl",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "Owner": {
+        "type": "object",
+        "location": "xml",
+        "sentAs": "Owner",
+        "parameters": {
+          "ID": {
+            "sentAs": "ID"
+          }
+        }
+      },
+      "Grants": {
+        "type": "array",
+        "location": "xml",
+        "wrapper": "AccessControlList",
+        "sentAs": "Grant",
+        "items": {
+          "type": "object",
+          "parameters": {
+            "Grantee": {
+              "type": "object",
+              "sentAs": "Grantee",
+              "parameters": {
+                "Type": {
+                  "type": "ignore"
+                },
+                "ID": {
+                  "sentAs": "ID",
+                  "notAllowEmpty": true
+                },
+                "URI": {
+                  "sentAs": "Canned",
+                  "type": "adapter",
+                  "notAllowEmpty": true
+                }
+              }
+            },
+            "Permission": {
+              "sentAs": "Permission"
+            },
+            "Delivered": {
+              "sentAs": "Delivered"
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "xmlRoot": "AccessControlPolicy"
+    }
+  },
+  {
+    "id": "api_get_bucket_acl",
+    "apiName": "GetBucketAcl",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketAcl.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_logging_configuration",
+    "apiName": "SetBucketLoggingConfiguration",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketLoggingConfiguration.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Agency": {
+        "location": "xml",
+        "sentAs": "Agency"
+      },
+      "LoggingEnabled": {
+        "type": "object",
+        "location": "xml",
+        "sentAs": "LoggingEnabled",
+        "parameters": {
+          "TargetBucket": {
+            "sentAs": "TargetBucket"
+          },
+          "TargetPrefix": {
+            "sentAs": "TargetPrefix"
+          },
+          "TargetGrants": {
+            "type": "array",
+            "wrapper": "TargetGrants",
+            "sentAs": "Grant",
+            "items": {
+              "type": "object",
+              "parameters": {
+                "Grantee": {
+                  "type": "object",
+                  "sentAs": "Grantee",
+                  "parameters": {
+                    "Type": {
+                      "type": "ignore"
+                    },
+                    "ID": {
+                      "sentAs": "ID"
+                    },
+                    "URI": {
+                      "sentAs": "Canned",
+                      "type": "adapter"
+                    }
+                  }
+                },
+                "Permission": {
+                  "sentAs": "Permission"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "xmlRoot": "BucketLoggingStatus",
+      "xmlAllowEmpty": true
+    }
+  },
+  {
+    "id": "api_get_bucket_logging_configuration",
+    "apiName": "GetBucketLoggingConfiguration",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketLoggingConfiguration.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_policy",
+    "apiName": "SetBucketPolicy",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketPolicy.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Policy": {
+        "required": true,
+        "location": "body"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_get_bucket_policy",
+    "apiName": "GetBucketPolicy",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketPolicy.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_bucket_policy",
+    "apiName": "DeleteBucketPolicy",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteBucketPolicy.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_lifecycle_configuration",
+    "apiName": "SetBucketLifecycleConfiguration",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketLifecycleConfiguration.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Rules": {
+        "required": true,
+        "type": "array",
+        "location": "xml",
+        "sentAs": "Rule",
+        "items": {
+          "type": "object",
+          "parameters": {
+            "ID": {
+              "sentAs": "ID"
+            },
+            "Prefix": {
+              "sentAs": "Prefix"
+            },
+            "Status": {
+              "sentAs": "Status"
+            },
+            "Transitions": {
+              "type": "array",
+              "sentAs": "Transition",
+              "items": {
+                "type": "object",
+                "parameters": {
+                  "StorageClass": {
+                    "sentAs": "StorageClass",
+                    "type": "adapter"
+                  },
+                  "Date": {
+                    "sentAs": "Date"
+                  },
+                  "Days": {
+                    "type": "number",
+                    "sentAs": "Days"
+                  }
+                }
+              }
+            },
+            "Expiration": {
+              "type": "object",
+              "sentAs": "Expiration",
+              "parameters": {
+                "Date": {
+                  "sentAs": "Date"
+                },
+                "Days": {
+                  "type": "number",
+                  "sentAs": "Days"
+                }
+              }
+            },
+            "NoncurrentVersionTransitions": {
+              "type": "array",
+              "sentAs": "NoncurrentVersionTransition",
+              "items": {
+                "type": "object",
+                "parameters": {
+                  "StorageClass": {
+                    "sentAs": "StorageClass",
+                    "type": "adapter"
+                  },
+                  "NoncurrentDays": {
+                    "type": "number",
+                    "sentAs": "NoncurrentDays"
+                  }
+                }
+              }
+            },
+            "NoncurrentVersionExpiration": {
+              "type": "object",
+              "sentAs": "NoncurrentVersionExpiration",
+              "parameters": {
+                "NoncurrentDays": {
+                  "type": "number",
+                  "sentAs": "NoncurrentDays"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "xmlRoot": "LifecycleConfiguration",
+      "md5": true
+    }
+  },
+  {
+    "id": "api_get_bucket_lifecycle_configuration",
+    "apiName": "GetBucketLifecycleConfiguration",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketLifecycleConfiguration.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_bucket_lifecycle_configuration",
+    "apiName": "DeleteBucketLifecycleConfiguration",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteBucketLifecycleConfiguration.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_website_configuration",
+    "apiName": "SetBucketWebsiteConfiguration",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketWebsiteConfiguration.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "RedirectAllRequestsTo": {
+        "type": "object",
+        "location": "xml",
+        "sentAs": "RedirectAllRequestsTo",
+        "parameters": {
+          "HostName": {
+            "sentAs": "HostName"
+          },
+          "Protocol": {
+            "sentAs": "Protocol"
+          }
+        }
+      },
+      "IndexDocument": {
+        "type": "object",
+        "location": "xml",
+        "sentAs": "IndexDocument",
+        "parameters": {
+          "Suffix": {
+            "sentAs": "Suffix"
+          }
+        }
+      },
+      "ErrorDocument": {
+        "type": "object",
+        "location": "xml",
+        "sentAs": "ErrorDocument",
+        "parameters": {
+          "Key": {
+            "sentAs": "Key"
+          }
+        }
+      },
+      "RoutingRules": {
+        "type": "array",
+        "wrapper": "RoutingRules",
+        "location": "xml",
+        "sentAs": "RoutingRule",
+        "items": {
+          "type": "object",
+          "parameters": {
+            "Condition": {
+              "type": "object",
+              "sentAs": "Condition",
+              "parameters": {
+                "HttpErrorCodeReturnedEquals": {
+                  "sentAs": "HttpErrorCodeReturnedEquals"
+                },
+                "KeyPrefixEquals": {
+                  "sentAs": "KeyPrefixEquals"
+                }
+              }
+            },
+            "Redirect": {
+              "type": "object",
+              "sentAs": "Redirect",
+              "parameters": {
+                "HostName": {
+                  "sentAs": "HostName"
+                },
+                "HttpRedirectCode": {
+                  "sentAs": "HttpRedirectCode"
+                },
+                "Protocol": {
+                  "sentAs": "Protocol"
+                },
+                "ReplaceKeyPrefixWith": {
+                  "sentAs": "ReplaceKeyPrefixWith"
+                },
+                "ReplaceKeyWith": {
+                  "sentAs": "ReplaceKeyWith"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "xmlRoot": "WebsiteConfiguration"
+    }
+  },
+  {
+    "id": "api_get_bucket_website_configuration",
+    "apiName": "GetBucketWebsiteConfiguration",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketWebsiteConfiguration.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_bucket_website_configuration",
+    "apiName": "DeleteBucketWebsiteConfiguration",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteBucketWebsiteConfiguration.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_versioning_configuration",
+    "apiName": "SetBucketVersioningConfiguration",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketVersioningConfiguration.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "VersionStatus": {
+        "required": true,
+        "location": "xml",
+        "sentAs": "Status"
+      }
+    },
+    "data": {
+      "xmlRoot": "VersioningConfiguration"
+    }
+  },
+  {
+    "id": "api_get_bucket_versioning_configuration",
+    "apiName": "GetBucketVersioningConfiguration",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketVersioningConfiguration.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_cors",
+    "apiName": "SetBucketCors",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketCors.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "CorsRules": {
+        "required": true,
+        "type": "array",
+        "location": "xml",
+        "sentAs": "CORSRule",
+        "items": {
+          "type": "object",
+          "parameters": {
+            "ID": {
+              "sentAs": "ID"
+            },
+            "AllowedMethod": {
+              "type": "array",
+              "sentAs": "AllowedMethod",
+              "items": {
+                "type": "string"
+              }
+            },
+            "AllowedOrigin": {
+              "type": "array",
+              "sentAs": "AllowedOrigin",
+              "items": {
+                "type": "string"
+              }
+            },
+            "AllowedHeader": {
+              "type": "array",
+              "sentAs": "AllowedHeader",
+              "items": {
+                "type": "string"
+              }
+            },
+            "MaxAgeSeconds": {
+              "type": "number",
+              "sentAs": "MaxAgeSeconds"
+            },
+            "ExposeHeader": {
+              "type": "array",
+              "sentAs": "ExposeHeader",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "xmlRoot": "CORSConfiguration",
+      "md5": true
+    }
+  },
+  {
+    "id": "api_get_bucket_cors",
+    "apiName": "GetBucketCors",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketCors.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_bucket_cors",
+    "apiName": "DeleteBucketCors",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteBucketCors.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_notification",
+    "apiName": "SetBucketNotification",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketNotification.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "TopicConfigurations": {
+        "type": "array",
+        "location": "xml",
+        "sentAs": "TopicConfiguration",
+        "items": {
+          "type": "object",
+          "location": "xml",
+          "parameters": {
+            "ID": {
+              "sentAs": "Id"
+            },
+            "Filter": {
+              "type": "object",
+              "parameters": {
+                "FilterRules": {
+                  "wrapper": "Object",
+                  "type": "array",
+                  "sentAs": "FilterRule",
+                  "items": {
+                    "type": "object",
+                    "parameters": {
+                      "Name": {},
+                      "Value": {}
+                    }
+                  }
+                }
+              }
+            },
+            "Topic": {},
+            "Event": {
+              "type": "array",
+              "items": {
+                "type": "adapter"
+              }
+            }
+          }
+        }
+      },
+      "FunctionGraphConfigurations": {
+        "type": "array",
+        "location": "xml",
+        "sentAs": "FunctionGraphConfiguration",
+        "items": {
+          "type": "object",
+          "location": "xml",
+          "parameters": {
+            "ID": {
+              "sentAs": "Id"
+            },
+            "Filter": {
+              "type": "object",
+              "parameters": {
+                "FilterRules": {
+                  "wrapper": "Object",
+                  "type": "array",
+                  "sentAs": "FilterRule",
+                  "items": {
+                    "type": "object",
+                    "parameters": {
+                      "Name": {},
+                      "Value": {}
+                    }
+                  }
+                }
+              }
+            },
+            "FunctionGraph": {},
+            "Event": {
+              "type": "array",
+              "items": {
+                "type": "adapter"
+              }
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "xmlRoot": "NotificationConfiguration",
+      "xmlAllowEmpty": true
+    }
+  },
+  {
+    "id": "api_get_bucket_notification",
+    "apiName": "GetBucketNotification",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketNotification.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_options_bucket",
+    "apiName": "OptionsBucket",
+    "method": "OPTIONS",
+    "description": "OBS API Explorer operation OptionsBucket.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Origin": {
+        "required": true,
+        "location": "header",
+        "sentAs": "Origin"
+      },
+      "AccessControlRequestMethods": {
+        "required": true,
+        "type": "array",
+        "location": "header",
+        "sentAs": "Access-Control-Request-Method",
+        "items": {
+          "type": "string"
+        }
+      },
+      "AccessControlRequestHeaders": {
+        "type": "array",
+        "location": "header",
+        "sentAs": "Access-Control-Request-Headers",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_tagging",
+    "apiName": "SetBucketTagging",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketTagging.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Tags": {
+        "required": true,
+        "type": "array",
+        "location": "xml",
+        "wrapper": "TagSet",
+        "sentAs": "Tag",
+        "items": {
+          "type": "object",
+          "parameters": {
+            "Key": {
+              "sentAs": "Key"
+            },
+            "Value": {
+              "sentAs": "Value"
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "xmlRoot": "Tagging",
+      "md5": true
+    }
+  },
+  {
+    "id": "api_get_bucket_tagging",
+    "apiName": "GetBucketTagging",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketTagging.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_bucket_tagging",
+    "apiName": "DeleteBucketTagging",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteBucketTagging.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_storage_policy",
+    "apiName": "SetBucketStoragePolicy",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketStoragePolicy.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "StorageClass": {
+        "required": true,
+        "location": "xml",
+        "type": "adapter",
+        "sentAs": "StorageClass"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_get_bucket_storage_policy",
+    "apiName": "GetBucketStoragePolicy",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketStoragePolicy.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_replication",
+    "apiName": "SetBucketReplication",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketReplication.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Agency": {
+        "location": "xml",
+        "sentAs": "Agency"
+      },
+      "Rules": {
+        "required": true,
+        "type": "array",
+        "location": "xml",
+        "sentAs": "Rule",
+        "items": {
+          "type": "object",
+          "parameters": {
+            "ID": {
+              "sentAs": "ID"
+            },
+            "Prefix": {
+              "sentAs": "Prefix"
+            },
+            "Status": {
+              "sentAs": "Status"
+            },
+            "Destination": {
+              "type": "object",
+              "sentAs": "Destination",
+              "parameters": {
+                "Bucket": {
+                  "sentAs": "Bucket",
+                  "type": "adapter"
+                },
+                "StorageClass": {
+                  "sentAs": "StorageClass",
+                  "type": "adapter"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "xmlRoot": "ReplicationConfiguration",
+      "md5": true
+    }
+  },
+  {
+    "id": "api_get_bucket_replication",
+    "apiName": "GetBucketReplication",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketReplication.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_bucket_replication",
+    "apiName": "DeleteBucketReplication",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteBucketReplication.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_get_bucket_requester_payment",
+    "apiName": "GetBucketRequesterPayment",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketRequesterPayment.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_requester_payment",
+    "apiName": "SetBucketRequesterPayment",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketRequesterPayment.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Payer": {
+        "location": "xml",
+        "sentAs": "Payer"
+      }
+    },
+    "data": {
+      "xmlRoot": "RequestPaymentConfiguration"
+    }
+  },
+  {
+    "id": "api_put_object",
+    "apiName": "PutObject",
+    "method": "PUT",
+    "description": "OBS API Explorer operation PutObject.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "ContentMD5": {
+        "location": "header",
+        "sentAs": "Content-MD5"
+      },
+      "ContentSHA256": {
+        "location": "header",
+        "sentAs": "content-sha256",
+        "withPrefix": true
+      },
+      "ContentType": {
+        "location": "header",
+        "sentAs": "Content-Type"
+      },
+      "Offset": {
+        "type": "plain"
+      },
+      "ProgressCallback": {
+        "type": "plain"
+      },
+      "ContentLength": {
+        "location": "header",
+        "sentAs": "Content-Length",
+        "type": "plain"
+      },
+      "ACL": {
+        "location": "header",
+        "sentAs": "acl",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "GrantRead": {
+        "location": "header",
+        "sentAs": "grant-read",
+        "withPrefix": true
+      },
+      "GrantReadAcp": {
+        "location": "header",
+        "sentAs": "grant-read-acp",
+        "withPrefix": true
+      },
+      "GrantWriteAcp": {
+        "location": "header",
+        "sentAs": "grant-write-acp",
+        "withPrefix": true
+      },
+      "GrantFullControl": {
+        "location": "header",
+        "sentAs": "grant-full-control",
+        "withPrefix": true
+      },
+      "StorageClass": {
+        "location": "header",
+        "sentAs": "storage-class",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "Metadata": {
+        "type": "object",
+        "location": "header",
+        "sentAs": "meta-",
+        "withPrefix": true
+      },
+      "CacheControl": {
+        "location": "header",
+        "sentAs": "Cache-Control"
+      },
+      "ContentDisposition": {
+        "location": "header",
+        "sentAs": "Content-Disposition",
+        "encodingSafe": " ;/?:@&=+$,\""
+      },
+      "ContentLanguage": {
+        "location": "header",
+        "sentAs": "Content-Language"
+      },
+      "ContentEncoding": {
+        "location": "header",
+        "sentAs": "Content-Encoding"
+      },
+      "WebsiteRedirectLocation": {
+        "location": "header",
+        "sentAs": "website-redirect-location",
+        "withPrefix": true
+      },
+      "Tags": {
+        "location": "header",
+        "sentAs": "tagging",
+        "withPrefix": true
+      },
+      "Expires": {
+        "location": "header",
+        "sentAs": "expires",
+        "type": "number",
+        "withPrefix": true
+      },
+      "SuccessActionRedirect": {
+        "location": "header",
+        "sentAs": "success-action-redirect"
+      },
+      "SseKms": {
+        "location": "header",
+        "sentAs": "server-side-encryption",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "SseKmsKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-kms-key-id",
+        "withPrefix": true
+      },
+      "SseKmsProjectId": {
+        "location": "header",
+        "sentAs": "sse-kms-key-project-id",
+        "withPrefix": true
+      },
+      "SseC": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-algorithm",
+        "withPrefix": true
+      },
+      "SseCKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-key",
+        "type": "password",
+        "withPrefix": true
+      },
+      "Body": {
+        "location": "body"
+      },
+      "SourceFile": {
+        "type": "srcFile"
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_rename_object",
+    "apiName": "RenameObject",
+    "method": "POST",
+    "description": "OBS API Explorer operation RenameObject.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "Name": {
+        "required": true,
+        "location": "urlPath",
+        "sentAs": "name"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_modify_object",
+    "apiName": "ModifyObject",
+    "method": "PUT",
+    "description": "OBS API Explorer operation ModifyObject.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "Position": {
+        "location": "urlPath",
+        "sentAs": "position",
+        "type": "number"
+      },
+      "ContentMD5": {
+        "location": "header",
+        "sentAs": "Content-MD5"
+      },
+      "ContentType": {
+        "location": "header",
+        "sentAs": "Content-Type"
+      },
+      "Offset": {
+        "type": "plain"
+      },
+      "ProgressCallback": {
+        "type": "plain"
+      },
+      "ContentLength": {
+        "location": "header",
+        "sentAs": "Content-Length",
+        "type": "plain"
+      },
+      "ACL": {
+        "location": "header",
+        "sentAs": "acl",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "GrantRead": {
+        "location": "header",
+        "sentAs": "grant-read",
+        "withPrefix": true
+      },
+      "GrantReadAcp": {
+        "location": "header",
+        "sentAs": "grant-read-acp",
+        "withPrefix": true
+      },
+      "GrantWriteAcp": {
+        "location": "header",
+        "sentAs": "grant-write-acp",
+        "withPrefix": true
+      },
+      "GrantFullControl": {
+        "location": "header",
+        "sentAs": "grant-full-control",
+        "withPrefix": true
+      },
+      "StorageClass": {
+        "location": "header",
+        "sentAs": "storage-class",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "Metadata": {
+        "type": "object",
+        "location": "header",
+        "sentAs": "meta-",
+        "withPrefix": true
+      },
+      "WebsiteRedirectLocation": {
+        "location": "header",
+        "sentAs": "website-redirect-location",
+        "withPrefix": true
+      },
+      "Expires": {
+        "location": "header",
+        "sentAs": "expires",
+        "type": "number",
+        "withPrefix": true
+      },
+      "SseKms": {
+        "location": "header",
+        "sentAs": "server-side-encryption",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "SseKmsKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-kms-key-id",
+        "withPrefix": true
+      },
+      "SseKmsProjectId": {
+        "location": "header",
+        "sentAs": "sse-kms-key-project-id",
+        "withPrefix": true
+      },
+      "SseC": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-algorithm",
+        "withPrefix": true
+      },
+      "SseCKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-key",
+        "type": "password",
+        "withPrefix": true
+      },
+      "Body": {
+        "location": "body"
+      },
+      "SourceFile": {
+        "type": "srcFile"
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_append_object",
+    "apiName": "AppendObject",
+    "method": "POST",
+    "description": "OBS API Explorer operation AppendObject.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "Position": {
+        "location": "urlPath",
+        "sentAs": "position",
+        "type": "number"
+      },
+      "ContentMD5": {
+        "location": "header",
+        "sentAs": "Content-MD5"
+      },
+      "ContentType": {
+        "location": "header",
+        "sentAs": "Content-Type"
+      },
+      "Offset": {
+        "type": "plain"
+      },
+      "ProgressCallback": {
+        "type": "plain"
+      },
+      "ContentLength": {
+        "location": "header",
+        "sentAs": "Content-Length",
+        "type": "plain"
+      },
+      "ACL": {
+        "location": "header",
+        "sentAs": "acl",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "GrantRead": {
+        "location": "header",
+        "sentAs": "grant-read",
+        "withPrefix": true
+      },
+      "GrantReadAcp": {
+        "location": "header",
+        "sentAs": "grant-read-acp",
+        "withPrefix": true
+      },
+      "GrantWriteAcp": {
+        "location": "header",
+        "sentAs": "grant-write-acp",
+        "withPrefix": true
+      },
+      "GrantFullControl": {
+        "location": "header",
+        "sentAs": "grant-full-control",
+        "withPrefix": true
+      },
+      "StorageClass": {
+        "location": "header",
+        "sentAs": "storage-class",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "Metadata": {
+        "type": "object",
+        "location": "header",
+        "sentAs": "meta-",
+        "withPrefix": true
+      },
+      "WebsiteRedirectLocation": {
+        "location": "header",
+        "sentAs": "website-redirect-location",
+        "withPrefix": true
+      },
+      "Tags": {
+        "location": "header",
+        "sentAs": "tagging",
+        "withPrefix": true
+      },
+      "Expires": {
+        "location": "header",
+        "sentAs": "expires",
+        "type": "number",
+        "withPrefix": true
+      },
+      "SseKms": {
+        "location": "header",
+        "sentAs": "server-side-encryption",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "SseKmsKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-kms-key-id",
+        "withPrefix": true
+      },
+      "SseKmsProjectId": {
+        "location": "header",
+        "sentAs": "sse-kms-key-project-id",
+        "withPrefix": true
+      },
+      "SseC": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-algorithm",
+        "withPrefix": true
+      },
+      "SseCKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-key",
+        "type": "password",
+        "withPrefix": true
+      },
+      "Body": {
+        "location": "body"
+      },
+      "SourceFile": {
+        "type": "srcFile"
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_get_object",
+    "apiName": "GetObject",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetObject.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "AccessKeyId": {
+        "location": "urlPath"
+      },
+      "Signature": {
+        "location": "urlPath"
+      },
+      "Policy": {
+        "location": "urlPath"
+      },
+      "SecurityToken": {
+        "location": "urlPath",
+        "sentAs": "x-obs-security-token"
+      },
+      "ResponseCacheControl": {
+        "location": "urlPath",
+        "sentAs": "response-cache-control"
+      },
+      "ResponseContentDisposition": {
+        "location": "urlPath",
+        "sentAs": "response-content-disposition"
+      },
+      "ResponseContentEncoding": {
+        "location": "urlPath",
+        "sentAs": "response-content-encoding"
+      },
+      "ResponseContentLanguage": {
+        "location": "urlPath",
+        "sentAs": "response-content-language"
+      },
+      "ResponseContentType": {
+        "location": "urlPath",
+        "sentAs": "response-content-type"
+      },
+      "ResponseExpires": {
+        "location": "urlPath",
+        "sentAs": "response-expires"
+      },
+      "VersionId": {
+        "location": "urlPath",
+        "sentAs": "versionId"
+      },
+      "ImageProcess": {
+        "location": "urlPath",
+        "sentAs": "x-image-process"
+      },
+      "IfMatch": {
+        "location": "header",
+        "sentAs": "If-Match"
+      },
+      "IfModifiedSince": {
+        "location": "header",
+        "sentAs": "If-Modified-Since"
+      },
+      "IfNoneMatch": {
+        "location": "header",
+        "sentAs": "If-None-Match"
+      },
+      "IfUnmodifiedSince": {
+        "location": "header",
+        "sentAs": "If-Unmodified-Since"
+      },
+      "Range": {
+        "location": "header",
+        "sentAs": "Range"
+      },
+      "Origin": {
+        "location": "header",
+        "sentAs": "Origin"
+      },
+      "RequestHeader": {
+        "location": "header",
+        "sentAs": "Access-Control-Request-Headers"
+      },
+      "SaveAsFile": {
+        "type": "dstFile"
+      },
+      "SaveAsStream": {
+        "type": "plain"
+      },
+      "SseC": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-algorithm",
+        "withPrefix": true
+      },
+      "SseCKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-key",
+        "type": "password",
+        "withPrefix": true
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      },
+      "ProgressCallback": {
+        "type": "plain"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_copy_object",
+    "apiName": "CopyObject",
+    "method": "PUT",
+    "description": "OBS API Explorer operation CopyObject.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "ACL": {
+        "location": "header",
+        "sentAs": "acl",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "GrantRead": {
+        "location": "header",
+        "sentAs": "grant-read",
+        "withPrefix": true
+      },
+      "GrantReadAcp": {
+        "location": "header",
+        "sentAs": "grant-read-acp",
+        "withPrefix": true
+      },
+      "GrantWriteAcp": {
+        "location": "header",
+        "sentAs": "grant-write-acp",
+        "withPrefix": true
+      },
+      "GrantFullControl": {
+        "location": "header",
+        "sentAs": "grant-full-control",
+        "withPrefix": true
+      },
+      "StorageClass": {
+        "location": "header",
+        "sentAs": "storage-class",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "CopySource": {
+        "required": true,
+        "location": "header",
+        "sentAs": "copy-source",
+        "withPrefix": true,
+        "skipEncoding": true
+      },
+      "CopySourceIfMatch": {
+        "location": "header",
+        "sentAs": "copy-source-if-match",
+        "withPrefix": true
+      },
+      "CopySourceIfModifiedSince": {
+        "location": "header",
+        "sentAs": "copy-source-if-modified-since",
+        "withPrefix": true
+      },
+      "CopySourceIfNoneMatch": {
+        "location": "header",
+        "sentAs": "copy-source-if-none-match",
+        "withPrefix": true
+      },
+      "CopySourceIfUnmodifiedSince": {
+        "location": "header",
+        "sentAs": "copy-source-if-unmodified-since",
+        "withPrefix": true
+      },
+      "ContentType": {
+        "location": "header",
+        "sentAs": "Content-Type"
+      },
+      "ContentEncoding": {
+        "location": "header",
+        "sentAs": "content-encoding"
+      },
+      "ContentLanguage": {
+        "location": "header",
+        "sentAs": "content-language"
+      },
+      "ContentDisposition": {
+        "location": "header",
+        "sentAs": "content-disposition"
+      },
+      "CacheControl": {
+        "location": "header",
+        "sentAs": "cache-control"
+      },
+      "TagDirective": {
+        "location": "header",
+        "sentAs": "tagging-directive",
+        "withPrefix": true
+      },
+      "Tags": {
+        "location": "header",
+        "sentAs": "tagging",
+        "withPrefix": true
+      },
+      "Expires": {
+        "location": "header",
+        "sentAs": "expires"
+      },
+      "Metadata": {
+        "type": "object",
+        "location": "header",
+        "sentAs": "meta-",
+        "withPrefix": true
+      },
+      "MetadataDirective": {
+        "location": "header",
+        "sentAs": "metadata-directive",
+        "withPrefix": true
+      },
+      "WebsiteRedirectLocation": {
+        "location": "header",
+        "sentAs": "website-redirect-location",
+        "withPrefix": true
+      },
+      "SuccessActionRedirect": {
+        "location": "header",
+        "sentAs": "success-action-redirect"
+      },
+      "SseKms": {
+        "location": "header",
+        "sentAs": "server-side-encryption",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "SseKmsKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-kms-key-id",
+        "withPrefix": true
+      },
+      "SseKmsProjectId": {
+        "location": "header",
+        "sentAs": "sse-kms-key-project-id",
+        "withPrefix": true
+      },
+      "SseC": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-algorithm",
+        "withPrefix": true
+      },
+      "SseCKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-key",
+        "type": "password",
+        "withPrefix": true
+      },
+      "CopySourceSseC": {
+        "location": "header",
+        "sentAs": "copy-source-server-side-encryption-customer-algorithm",
+        "withPrefix": true
+      },
+      "CopySourceSseCKey": {
+        "location": "header",
+        "sentAs": "copy-source-server-side-encryption-customer-key",
+        "type": "password",
+        "withPrefix": true
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_restore_object",
+    "apiName": "RestoreObject",
+    "method": "POST",
+    "description": "OBS API Explorer operation RestoreObject.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "VersionId": {
+        "location": "urlPath",
+        "sentAs": "versionId"
+      },
+      "Days": {
+        "location": "xml",
+        "sentAs": "Days"
+      },
+      "Tier": {
+        "wrapper": "RestoreJob",
+        "location": "xml",
+        "sentAs": "Tier"
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {
+      "xmlRoot": "RestoreRequest",
+      "md5": true
+    }
+  },
+  {
+    "id": "api_get_object_metadata",
+    "apiName": "GetObjectMetadata",
+    "method": "HEAD",
+    "description": "OBS API Explorer operation GetObjectMetadata.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "VersionId": {
+        "location": "urlPath",
+        "sentAs": "versionId"
+      },
+      "Origin": {
+        "location": "header",
+        "sentAs": "Origin"
+      },
+      "RequestHeader": {
+        "location": "header",
+        "sentAs": "Access-Control-Request-Headers"
+      },
+      "SseC": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-algorithm",
+        "withPrefix": true
+      },
+      "SseCKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-key",
+        "type": "password",
+        "withPrefix": true
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_object_metadata",
+    "apiName": "SetObjectMetadata",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetObjectMetadata.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "VersionId": {
+        "location": "urlPath",
+        "sentAs": "versionId"
+      },
+      "Origin": {
+        "location": "header",
+        "sentAs": "Origin"
+      },
+      "RequestHeader": {
+        "location": "header",
+        "sentAs": "Access-Control-Request-Headers"
+      },
+      "CacheControl": {
+        "location": "header",
+        "sentAs": "Cache-Control"
+      },
+      "ContentDisposition": {
+        "location": "header",
+        "sentAs": "Content-Disposition",
+        "encodingSafe": " ;/?:@&=+$,\""
+      },
+      "ContentLanguage": {
+        "location": "header",
+        "sentAs": "Content-Language"
+      },
+      "ContentEncoding": {
+        "location": "header",
+        "sentAs": "Content-Encoding"
+      },
+      "ContentType": {
+        "location": "header",
+        "sentAs": "Content-Type"
+      },
+      "Tags": {
+        "location": "header",
+        "sentAs": "tagging",
+        "withPrefix": true
+      },
+      "Expires": {
+        "location": "header",
+        "sentAs": "Expires"
+      },
+      "Metadata": {
+        "type": "object",
+        "location": "header",
+        "sentAs": "meta-",
+        "withPrefix": true
+      },
+      "MetadataDirective": {
+        "location": "header",
+        "sentAs": "metadata-directive",
+        "withPrefix": true
+      },
+      "StorageClass": {
+        "location": "header",
+        "sentAs": "storage-class",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "WebsiteRedirectLocation": {
+        "location": "header",
+        "sentAs": "website-redirect-location",
+        "withPrefix": true
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_object_acl",
+    "apiName": "SetObjectAcl",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetObjectAcl.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "VersionId": {
+        "location": "urlPath",
+        "sentAs": "versionId"
+      },
+      "ACL": {
+        "location": "header",
+        "sentAs": "acl",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "Delivered": {
+        "location": "xml",
+        "sentAs": "Delivered"
+      },
+      "Owner": {
+        "type": "object",
+        "location": "xml",
+        "sentAs": "Owner",
+        "parameters": {
+          "ID": {
+            "sentAs": "ID"
+          }
+        }
+      },
+      "Grants": {
+        "type": "array",
+        "location": "xml",
+        "wrapper": "AccessControlList",
+        "sentAs": "Grant",
+        "items": {
+          "type": "object",
+          "parameters": {
+            "Grantee": {
+              "type": "object",
+              "sentAs": "Grantee",
+              "parameters": {
+                "Type": {
+                  "type": "ignore"
+                },
+                "ID": {
+                  "sentAs": "ID",
+                  "notAllowEmpty": true
+                },
+                "URI": {
+                  "sentAs": "Canned",
+                  "type": "adapter",
+                  "notAllowEmpty": true
+                }
+              }
+            },
+            "Permission": {
+              "sentAs": "Permission"
+            },
+            "Delivered": {
+              "sentAs": "Delivered"
+            }
+          }
+        }
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {
+      "xmlRoot": "AccessControlPolicy"
+    }
+  },
+  {
+    "id": "api_get_object_acl",
+    "apiName": "GetObjectAcl",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetObjectAcl.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "VersionId": {
+        "location": "urlPath",
+        "sentAs": "versionId"
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_object_tagging",
+    "apiName": "SetObjectTagging",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetObjectTagging.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "VersionId": {
+        "location": "urlPath",
+        "sentAs": "versionId"
+      },
+      "Tags": {
+        "required": true,
+        "type": "array",
+        "location": "xml",
+        "wrapper": "TagSet",
+        "sentAs": "Tag",
+        "items": {
+          "type": "object",
+          "parameters": {
+            "Key": {
+              "sentAs": "Key"
+            },
+            "Value": {
+              "sentAs": "Value"
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "xmlRoot": "Tagging",
+      "md5": true
+    }
+  },
+  {
+    "id": "api_get_object_tagging",
+    "apiName": "GetObjectTagging",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetObjectTagging.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "VersionId": {
+        "location": "urlPath",
+        "sentAs": "versionId"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_object_tagging",
+    "apiName": "DeleteObjectTagging",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteObjectTagging.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "VersionId": {
+        "location": "urlPath",
+        "sentAs": "versionId"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_object",
+    "apiName": "DeleteObject",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteObject.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "VersionId": {
+        "location": "urlPath",
+        "sentAs": "versionId"
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_objects",
+    "apiName": "DeleteObjects",
+    "method": "POST",
+    "description": "OBS API Explorer operation DeleteObjects.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Quiet": {
+        "location": "xml",
+        "sentAs": "Quiet"
+      },
+      "EncodingType": {
+        "location": "xml",
+        "sentAs": "EncodingType"
+      },
+      "Objects": {
+        "required": true,
+        "type": "array",
+        "location": "xml",
+        "sentAs": "Object",
+        "items": {
+          "type": "object",
+          "parameters": {
+            "Key": {
+              "sentAs": "Key"
+            },
+            "VersionId": {
+              "sentAs": "VersionId"
+            }
+          }
+        }
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {
+      "xmlRoot": "Delete",
+      "md5": true
+    }
+  },
+  {
+    "id": "api_initiate_multipart_upload",
+    "apiName": "InitiateMultipartUpload",
+    "method": "POST",
+    "description": "OBS API Explorer operation InitiateMultipartUpload.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "ACL": {
+        "location": "header",
+        "sentAs": "acl",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "GrantRead": {
+        "location": "header",
+        "sentAs": "grant-read",
+        "withPrefix": true
+      },
+      "GrantReadAcp": {
+        "location": "header",
+        "sentAs": "grant-read-acp",
+        "withPrefix": true
+      },
+      "GrantWriteAcp": {
+        "location": "header",
+        "sentAs": "grant-write-acp",
+        "withPrefix": true
+      },
+      "GrantFullControl": {
+        "location": "header",
+        "sentAs": "grant-full-control",
+        "withPrefix": true
+      },
+      "StorageClass": {
+        "location": "header",
+        "sentAs": "storage-class",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "Metadata": {
+        "type": "object",
+        "location": "header",
+        "sentAs": "meta-",
+        "withPrefix": true
+      },
+      "CacheControl": {
+        "location": "header",
+        "sentAs": "Cache-Control"
+      },
+      "ContentDisposition": {
+        "location": "header",
+        "sentAs": "Content-Disposition",
+        "encodingSafe": " ;/?:@&=+$,\""
+      },
+      "ContentLanguage": {
+        "location": "header",
+        "sentAs": "Content-Language"
+      },
+      "ContentEncoding": {
+        "location": "header",
+        "sentAs": "Content-Encoding"
+      },
+      "WebsiteRedirectLocation": {
+        "location": "header",
+        "sentAs": "website-redirect-location",
+        "withPrefix": true
+      },
+      "Tags": {
+        "location": "header",
+        "sentAs": "tagging",
+        "withPrefix": true
+      },
+      "Expires": {
+        "location": "header",
+        "sentAs": "expires",
+        "type": "number",
+        "withPrefix": true
+      },
+      "ContentType": {
+        "location": "header",
+        "sentAs": "Content-Type"
+      },
+      "SseKms": {
+        "location": "header",
+        "sentAs": "server-side-encryption",
+        "withPrefix": true,
+        "type": "adapter"
+      },
+      "SseKmsKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-kms-key-id",
+        "withPrefix": true
+      },
+      "SseKmsProjectId": {
+        "location": "header",
+        "sentAs": "sse-kms-key-project-id",
+        "withPrefix": true
+      },
+      "SseC": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-algorithm",
+        "withPrefix": true
+      },
+      "SseCKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-key",
+        "type": "password",
+        "withPrefix": true
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      },
+      "EncodingType": {
+        "location": "urlPath",
+        "sentAs": "encoding-type"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_list_multipart_uploads",
+    "apiName": "ListMultipartUploads",
+    "method": "GET",
+    "description": "OBS API Explorer operation ListMultipartUploads.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Delimiter": {
+        "location": "urlPath",
+        "sentAs": "delimiter"
+      },
+      "KeyMarker": {
+        "location": "urlPath",
+        "sentAs": "key-marker"
+      },
+      "MaxUploads": {
+        "type": "number",
+        "location": "urlPath",
+        "sentAs": "max-uploads"
+      },
+      "Prefix": {
+        "location": "urlPath",
+        "sentAs": "prefix"
+      },
+      "UploadIdMarker": {
+        "location": "urlPath",
+        "sentAs": "upload-id-marker"
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      },
+      "EncodingType": {
+        "location": "urlPath",
+        "sentAs": "encoding-type"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_upload_part",
+    "apiName": "UploadPart",
+    "method": "PUT",
+    "description": "OBS API Explorer operation UploadPart.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "PartNumber": {
+        "required": true,
+        "type": "number",
+        "location": "urlPath",
+        "sentAs": "partNumber"
+      },
+      "UploadId": {
+        "required": true,
+        "location": "urlPath",
+        "sentAs": "uploadId"
+      },
+      "ContentMD5": {
+        "location": "header",
+        "sentAs": "Content-MD5"
+      },
+      "ContentSHA256": {
+        "location": "header",
+        "sentAs": "content-sha256",
+        "withPrefix": true
+      },
+      "Body": {
+        "location": "body"
+      },
+      "SourceFile": {
+        "type": "srcFile"
+      },
+      "Offset": {
+        "type": "plain"
+      },
+      "PartSize": {
+        "type": "plain"
+      },
+      "ProgressCallback": {
+        "type": "plain"
+      },
+      "SseC": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-algorithm",
+        "withPrefix": true
+      },
+      "SseCKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-key",
+        "type": "password",
+        "withPrefix": true
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_list_parts",
+    "apiName": "ListParts",
+    "method": "GET",
+    "description": "OBS API Explorer operation ListParts.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "UploadId": {
+        "required": true,
+        "location": "urlPath",
+        "sentAs": "uploadId"
+      },
+      "MaxParts": {
+        "type": "number",
+        "location": "urlPath",
+        "sentAs": "max-parts"
+      },
+      "PartNumberMarker": {
+        "type": "number",
+        "location": "urlPath",
+        "sentAs": "part-number-marker"
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      },
+      "EncodingType": {
+        "location": "urlPath",
+        "sentAs": "encoding-type"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_copy_part",
+    "apiName": "CopyPart",
+    "method": "PUT",
+    "description": "OBS API Explorer operation CopyPart.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "PartNumber": {
+        "required": true,
+        "location": "urlPath",
+        "sentAs": "partNumber",
+        "type": "number"
+      },
+      "UploadId": {
+        "required": true,
+        "location": "urlPath",
+        "sentAs": "uploadId"
+      },
+      "CopySource": {
+        "required": true,
+        "location": "header",
+        "sentAs": "copy-source",
+        "skipEncoding": true,
+        "withPrefix": true
+      },
+      "CopySourceRange": {
+        "location": "header",
+        "sentAs": "copy-source-range",
+        "withPrefix": true
+      },
+      "SseC": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-algorithm",
+        "withPrefix": true
+      },
+      "SseCKey": {
+        "location": "header",
+        "sentAs": "server-side-encryption-customer-key",
+        "type": "password",
+        "withPrefix": true
+      },
+      "CopySourceSseC": {
+        "location": "header",
+        "sentAs": "copy-source-server-side-encryption-customer-algorithm",
+        "withPrefix": true
+      },
+      "CopySourceSseCKey": {
+        "location": "header",
+        "sentAs": "copy-source-server-side-encryption-customer-key",
+        "type": "password",
+        "withPrefix": true
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_abort_multipart_upload",
+    "apiName": "AbortMultipartUpload",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation AbortMultipartUpload.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "UploadId": {
+        "required": true,
+        "location": "urlPath",
+        "sentAs": "uploadId"
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_complete_multipart_upload",
+    "apiName": "CompleteMultipartUpload",
+    "method": "POST",
+    "description": "OBS API Explorer operation CompleteMultipartUpload.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "UploadId": {
+        "required": true,
+        "location": "urlPath",
+        "sentAs": "uploadId"
+      },
+      "EncodingType": {
+        "location": "urlPath",
+        "sentAs": "encoding-type"
+      },
+      "Parts": {
+        "required": true,
+        "type": "array",
+        "location": "xml",
+        "sentAs": "Part",
+        "items": {
+          "type": "object",
+          "parameters": {
+            "PartNumber": {
+              "sentAs": "PartNumber"
+            },
+            "ETag": {
+              "sentAs": "ETag"
+            }
+          }
+        }
+      },
+      "RequestPayer": {
+        "location": "header",
+        "sentAs": "request-payer",
+        "withPrefix": true
+      }
+    },
+    "data": {
+      "xmlRoot": "CompleteMultipartUpload"
+    }
+  },
+  {
+    "id": "api_options_object",
+    "apiName": "OptionsObject",
+    "method": "OPTIONS",
+    "description": "OBS API Explorer operation OptionsObject.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Key": {
+        "required": true,
+        "location": "uri"
+      },
+      "Origin": {
+        "required": true,
+        "location": "header",
+        "sentAs": "Origin"
+      },
+      "AccessControlRequestMethods": {
+        "required": true,
+        "type": "array",
+        "location": "header",
+        "sentAs": "Access-Control-Request-Method",
+        "items": {
+          "type": "string"
+        }
+      },
+      "AccessControlRequestHeaders": {
+        "type": "array",
+        "location": "header",
+        "sentAs": "Access-Control-Request-Headers",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_get_bucket_direct_cold_access",
+    "apiName": "GetBucketDirectColdAccess",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketDirectColdAccess.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_direct_cold_access",
+    "apiName": "SetBucketDirectColdAccess",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketDirectColdAccess.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Status": {
+        "required": true,
+        "location": "xml",
+        "sentAs": "Status"
+      }
+    },
+    "data": {
+      "xmlRoot": "DirectColdAccessConfiguration",
+      "md5": true
+    }
+  },
+  {
+    "id": "api_delete_bucket_direct_cold_access",
+    "apiName": "DeleteBucketDirectColdAccess",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteBucketDirectColdAccess.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_get_bucket_encryption",
+    "apiName": "GetBucketEncryption",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketEncryption.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_encryption",
+    "apiName": "SetBucketEncryption",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketEncryption.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "Rule": {
+        "type": "object",
+        "location": "xml",
+        "sentAs": "Rule",
+        "parameters": {
+          "ApplyServerSideEncryptionByDefault": {
+            "type": "object",
+            "sentAs": "ApplyServerSideEncryptionByDefault",
+            "parameters": {
+              "SSEAlgorithm": {
+                "sentAs": "SSEAlgorithm"
+              },
+              "KMSMasterKeyID": {
+                "sentAs": "KMSMasterKeyID"
+              }
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "xmlRoot": "ServerSideEncryptionConfiguration"
+    }
+  },
+  {
+    "id": "api_delete_bucket_encryption",
+    "apiName": "DeleteBucketEncryption",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteBucketEncryption.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_put_bucket_public_access_block",
+    "apiName": "PutBucketPublicAccessBlock",
+    "method": "PUT",
+    "description": "OBS API Explorer operation PutBucketPublicAccessBlock.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "BlockPublicAcls": {
+        "location": "xml",
+        "sentAs": "BlockPublicAcls"
+      },
+      "IgnorePublicAcls": {
+        "location": "xml",
+        "sentAs": "IgnorePublicAcls"
+      },
+      "BlockPublicPolicy": {
+        "location": "xml",
+        "sentAs": "BlockPublicPolicy"
+      },
+      "RestrictPublicBuckets": {
+        "location": "xml",
+        "sentAs": "RestrictPublicBuckets"
+      }
+    },
+    "data": {
+      "xmlRoot": "PublicAccessBlockConfiguration"
+    }
+  },
+  {
+    "id": "api_get_bucket_public_access_block",
+    "apiName": "GetBucketPublicAccessBlock",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketPublicAccessBlock.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_bucket_public_access_block",
+    "apiName": "DeleteBucketPublicAccessBlock",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteBucketPublicAccessBlock.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_get_bucket_policy_public_status",
+    "apiName": "GetBucketPolicyPublicStatus",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketPolicyPublicStatus.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_get_bucket_public_status",
+    "apiName": "GetBucketPublicStatus",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketPublicStatus.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_set_bucket_custom_domain",
+    "apiName": "SetBucketCustomDomain",
+    "method": "PUT",
+    "description": "OBS API Explorer operation SetBucketCustomDomain.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "DomainName": {
+        "required": true,
+        "location": "urlPath",
+        "sentAs": "customdomain"
+      },
+      "DomainBody": {
+        "type": "object",
+        "location": "xml",
+        "required": false,
+        "sentAs": "CustomDomainConfiguration",
+        "parameters": {
+          "Name": {
+            "type": "string",
+            "required": true
+          },
+          "CertificateId": {
+            "type": "string"
+          },
+          "Certificate": {
+            "type": "string",
+            "required": true
+          },
+          "CertificateChain": {
+            "type": "string"
+          },
+          "PrivateKey": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    },
+    "data": {
+      "md5": true
+    }
+  },
+  {
+    "id": "api_get_bucket_custom_domain",
+    "apiName": "GetBucketCustomDomain",
+    "method": "GET",
+    "description": "OBS API Explorer operation GetBucketCustomDomain.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri",
+        "type": "string"
+      }
+    },
+    "data": {}
+  },
+  {
+    "id": "api_delete_bucket_custom_domain",
+    "apiName": "DeleteBucketCustomDomain",
+    "method": "DELETE",
+    "description": "OBS API Explorer operation DeleteBucketCustomDomain.",
+    "parameters": {
+      "Bucket": {
+        "required": true,
+        "location": "uri"
+      },
+      "DomainName": {
+        "required": true,
+        "location": "urlPath",
+        "sentAs": "customdomain"
+      }
+    },
+    "data": {}
+  }
+]

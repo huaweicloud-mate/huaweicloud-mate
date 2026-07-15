@@ -1,4 +1,5 @@
 import { callEcsOpenApi, deleteEcsServers, getEcsJob, getEcsServer, listEcsAvailabilityZones, listEcsFlavors, listEcsServers, rebootEcsServers, startEcsServers, stopEcsServers } from "../openapi";
+import { generatedEcsOperations } from "../generated-operations";
 import type { SubMcp } from "./types";
 
 export const subMcp: SubMcp = {
@@ -17,5 +18,6 @@ export const subMcp: SubMcp = {
     { id: "stop_servers", description: "Stop up to 1,000 ECS servers asynchronously. The default type is SOFT; this operation always requires explicit user confirmation.", isReadOnly: false, inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverIds: { type: "array", minItems: 1, maxItems: 1000, items: { type: "string" } }, type: { type: "string", enum: ["SOFT", "HARD"] } }, required: ["serverIds"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=BatchStopServers", execute: stopEcsServers },
     { id: "reboot_servers", description: "Reboot up to 1,000 ECS servers asynchronously. Select SOFT or HARD and explicitly confirm before execution.", isReadOnly: false, inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverIds: { type: "array", minItems: 1, maxItems: 1000, items: { type: "string" } }, type: { type: "string", enum: ["SOFT", "HARD"] } }, required: ["serverIds", "type"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=BatchRebootServers", execute: rebootEcsServers },
     { id: "delete_servers", description: "Delete up to 1,000 pay-per-use ECS servers asynchronously. EIPs and data disks are preserved by default; explicitly set deletion flags only after user confirmation.", isReadOnly: false, inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverIds: { type: "array", minItems: 1, maxItems: 1000, items: { type: "string" } }, deletePublicIp: { type: "boolean" }, deleteVolume: { type: "boolean" } }, required: ["serverIds"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=DeleteServers", execute: deleteEcsServers },
+    ...generatedEcsOperations(),
   ],
 };

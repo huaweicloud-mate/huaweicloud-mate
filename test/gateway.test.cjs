@@ -261,3 +261,43 @@ test("each dynamically loaded child MCP returns API Explorer source URLs", { con
     }
   }
 });
+
+test("generated catalog pins all official ECS and OBS operations", { concurrency: false }, async () => {
+  const manifest = require("../build/generated/catalog-manifest.json");
+  const { provision } = require("../build/gateway.js");
+  assert.deepEqual(manifest.counts, { ecs: 99, obs: 81 });
+  assert.equal(manifest.sources.ecs.version, "3.1.205");
+  assert.equal(manifest.sources.obs.version, "3.26.2");
+  for (const [service, expected] of [["ecs", 99], ["obs", 81]]) {
+    const child = await provision(service);
+    const generated = child.operations.filter((operation) => operation.id.startsWith("api_"));
+    assert.equal(generated.length, expected);
+    assert.equal(new Set(generated.map((operation) => operation.id)).size, expected);
+    assert.ok(generated.every((operation) => operation.sourceUrl.includes(`/openapi/${service.toUpperCase()}/doc?api=`)));
+  }
+});
+
+test("generated ECS and OBS catalog entries map to their official request shape", { concurrency: false }, async () => {
+  setCredentials();
+  const gateway = require("../build/gateway.js");
+  const originalFetch = global.fetch;
+  const requests = [];
+  global.fetch = async (url, options) => {
+    requests.push({ url: String(url), options });
+    return new Response(options.method === "HEAD" ? null : JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const ecsResult = await gateway.call("ecs", "api_show_server", { server_id: "server-1" });
+    assert.equal(ecsResult.body.ok, true);
+    assert.equal(requests[0].url, "https://ecs.cn-north-4.myhuaweicloud.com/v1/test-project/cloudservers/server-1");
+    assert.equal(requests[0].options.method, "GET");
+    assert.match(requests[0].options.headers.authorization, /^SDK-HMAC-SHA256 Access=test-ak,/);
+    const obsResult = await gateway.call("obs", "api_head_bucket", { Bucket: "example-bucket" });
+    assert.equal(obsResult.status, 200);
+    assert.equal(requests[1].url, "https://example-bucket.obs.cn-north-4.myhuaweicloud.com/");
+    assert.equal(requests[1].options.method, "HEAD");
+    assert.match(requests[1].options.headers.authorization, /^OBS test-ak:/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

@@ -1,0 +1,16 @@
+{
+  "sources": {
+    "ecs": {
+      "name": "@huaweicloud/huaweicloud-sdk-ecs",
+      "version": "3.1.205"
+    },
+    "obs": {
+      "name": "esdk-obs-nodejs",
+      "version": "3.26.2"
+    }
+  },
+  "counts": {
+    "ecs": 99,
+    "obs": 81
+  }
+}
