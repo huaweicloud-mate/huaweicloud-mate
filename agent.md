@@ -33,3 +33,12 @@
 - 对 ECS/OBS 的已知但尚未强类型化的 API，可使用对应子 MCP 的 `openapi_request`。必须先根据 API Explorer 填写请求方法和参数；只允许对应服务域名，`GET`/`HEAD` 以外的方法必须等待用户二次确认。优先使用强类型 operation，避免把整个 API 定义加载到 Agent 上下文。
 - ECS 已提供 `list_availability_zones`、`list_flavors`、`list_servers`、`get_server`、`get_job` 与受二次确认保护的 `start_servers`、`stop_servers`、`reboot_servers`、`delete_servers`；OBS 已提供 `list_buckets`、`get_bucket_metadata`、`get_bucket_location`、`list_objects`、`get_object_metadata`、最多读取 1 MiB 的 `get_object`，以及受二次确认保护的 `create_bucket`、`put_object`、`copy_object`、`append_object`、`delete_object`、`delete_bucket`。完整 OpenAPI catalog 仍未导入，不能声称已覆盖 API 全量。
 - 后续产品部提供正式 MCP 时，应以相同服务 id 替换对应 adapter，而不改变 Agent 的 discover/provision/call 调用方式。
+
+## 首版正式发布验收目标
+
+在以下条件全部满足前，不得宣称首版已经正式发布，或已完成 OpenCode、Claude Code、Codex 与全量 ECS/OBS OpenAPI 的验收：
+
+1. ECS、OBS API Explorer 的全量 operation catalog 已导入；每个 operation 具备独立输入 schema、来源链接和调用验证。`openapi_request` 仅是过渡性受控入口，不能替代全量逐接口 catalog 验收。
+2. 使用非生产测试账号完成 ECS、OBS 的真实只读调用与受二次确认保护的写操作验证；不得在对话中索取或展示 AK/SK。
+3. 在干净的 Windows 环境中，从目标 npm registry 完成 `npx` 安装、KooCLI 安装与凭证配置验证。
+4. 在 OpenCode、Claude Code、Codex 中分别完成真实 MCP 安装、discover/provision/call 调用与写操作确认流程验证。
