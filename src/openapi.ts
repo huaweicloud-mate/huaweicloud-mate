@@ -134,6 +134,37 @@ export async function startEcsServers(input: JsonObject): Promise<unknown> {
   return responseBody(response);
 }
 
+function serverIds(input: JsonObject): string[] {
+  if (!Array.isArray(input.serverIds) || input.serverIds.length === 0 || input.serverIds.length > 1000 || input.serverIds.some((id) => typeof id !== "string" || !id)) {
+    throw new Error("serverIds must contain between 1 and 1000 ECS IDs.");
+  }
+  return input.serverIds as string[];
+}
+
+function powerType(input: JsonObject, required: boolean): "SOFT" | "HARD" {
+  const value = input.type ?? (required ? undefined : "SOFT");
+  if (value !== "SOFT" && value !== "HARD") throw new Error("type must be SOFT or HARD.");
+  return value;
+}
+
+async function ecsAction(input: JsonObject, body: JsonObject): Promise<unknown> {
+  const endpoint = `https://ecs.${region(input)}.myhuaweicloud.com`;
+  const url = new URL(`/v1/${encode(projectId(input))}/cloudservers/action`, endpoint);
+  const serializedBody = JSON.stringify(body);
+  const response = await fetch(url, { method: "POST", headers: signSdkRequest("POST", url, serializedBody), body: serializedBody });
+  return responseBody(response);
+}
+
+export async function stopEcsServers(input: JsonObject): Promise<unknown> {
+  const servers = serverIds(input).map((id) => ({ id }));
+  return ecsAction(input, { "os-stop": { type: powerType(input, false), servers } });
+}
+
+export async function rebootEcsServers(input: JsonObject): Promise<unknown> {
+  const servers = serverIds(input).map((id) => ({ id }));
+  return ecsAction(input, { reboot: { type: powerType(input, true), servers } });
+}
+
 export async function listObsBuckets(input: JsonObject): Promise<unknown> {
   const endpoint = `https://obs.${region(input)}.myhuaweicloud.com`;
   const url = new URL("/", endpoint);

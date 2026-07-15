@@ -1,4 +1,4 @@
-import { getEcsServer, getObsObjectMetadata, JsonObject, listEcsServers, listObsBuckets, listObsObjects, startEcsServers } from "./openapi";
+import { getEcsServer, getObsObjectMetadata, JsonObject, listEcsServers, listObsBuckets, listObsObjects, rebootEcsServers, startEcsServers, stopEcsServers } from "./openapi";
 import type { ServiceDefinition, ServiceOperation } from "./gateway";
 
 export interface CatalogOperation extends ServiceOperation {
@@ -38,6 +38,20 @@ export const serviceCatalog: CatalogService[] = [
         isReadOnly: true,
         inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverId: { type: "string" } }, required: ["serverId"] },
         execute: getEcsServer,
+      },
+      {
+        id: "stop_servers",
+        description: "Stop up to 1,000 ECS servers asynchronously. The default type is SOFT; this operation always requires explicit user confirmation.",
+        isReadOnly: false,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverIds: { type: "array", minItems: 1, maxItems: 1000, items: { type: "string" } }, type: { type: "string", enum: ["SOFT", "HARD"] } }, required: ["serverIds"] },
+        execute: stopEcsServers,
+      },
+      {
+        id: "reboot_servers",
+        description: "Reboot up to 1,000 ECS servers asynchronously. Select SOFT or HARD and explicitly confirm before execution.",
+        isReadOnly: false,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverIds: { type: "array", minItems: 1, maxItems: 1000, items: { type: "string" } }, type: { type: "string", enum: ["SOFT", "HARD"] } }, required: ["serverIds", "type"] },
+        execute: rebootEcsServers,
       },
     ],
   },

@@ -43,6 +43,7 @@ function stableJson(value: unknown): string {
 }
 
 function validateValue(value: unknown, schema: JsonObject, path: string): void {
+  if (Array.isArray(schema.enum) && !schema.enum.some((allowed) => allowed === value)) throw new Error(`${path} must be one of: ${schema.enum.map(String).join(", ")}.`);
   if (schema.type === "string" && typeof value !== "string") throw new Error(`${path} must be a string.`);
   if (schema.type === "number" && (typeof value !== "number" || !Number.isFinite(value))) throw new Error(`${path} must be a finite number.`);
   if (schema.type === "array") {
