@@ -333,3 +333,13 @@ test("generated OBS XML operations serialize official model fields before signin
     global.fetch = originalFetch;
   }
 });
+
+test("generated OBS schema retains nested lifecycle model types", { concurrency: false }, async () => {
+  const { provision, call } = require("../build/gateway.js");
+  const catalog = await provision("obs");
+  const operation = catalog.operations.find((entry) => entry.id === "api_set_bucket_lifecycle_configuration");
+  const transition = operation.inputSchema.properties.Rules.items.properties.Transitions.items.properties;
+  assert.equal(transition.Days.type, "number");
+  assert.equal(transition.StorageClass.type, undefined);
+  await assert.rejects(() => call("obs", "api_set_bucket_lifecycle_configuration", { Bucket: "example-bucket", Rules: [{ Transitions: [{ Days: "30" }] }] }), /Rules\[0\]\.Transitions\[0\]\.Days must be a finite number/);
+});

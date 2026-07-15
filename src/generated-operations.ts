@@ -50,12 +50,12 @@ function isReadOnly(method: string): boolean {
   return method === "GET" || method === "HEAD";
 }
 
-function generatedSchema(names: string[], required: string[], bodySchema?: JsonObject): JsonObject {
+function generatedSchema(names: string[], required: string[], bodySchema?: JsonObject, propertySchemas: Record<string, JsonObject> = {}): JsonObject {
   const properties: JsonObject = {
     region: { type: "string" },
     projectId: { type: "string" },
   };
-  for (const name of names) properties[name] = name === "body" ? bodySchema ?? {} : {};
+  for (const name of names) properties[name] = propertySchemas[name] ?? (name === "body" ? bodySchema ?? {} : {});
   return { type: "object", properties, ...(required.length ? { required } : {}) };
 }
 
@@ -82,6 +82,19 @@ function obsHeaderName(name: string, parameter: ObsParameter): string {
   const sentAs = parameter.sentAs ?? name;
   if (!parameter.withPrefix) return sentAs;
   return sentAs.startsWith("x-obs-") ? sentAs : `x-obs-${sentAs}`;
+}
+
+function obsInputSchema(parameter: ObsParameter): JsonObject {
+  if (parameter.type === "array") return { type: "array", items: obsInputSchema(parameter.items ?? {}) };
+  if (parameter.type === "object" || parameter.parameters) {
+    const properties: JsonObject = {};
+    for (const [name, definition] of Object.entries(parameter.parameters ?? {})) properties[name] = obsInputSchema(definition);
+    return { type: "object", properties };
+  }
+  if (parameter.type === "number") return { type: "number" };
+  if (parameter.type === "boolean") return { type: "boolean" };
+  if (parameter.type === "string") return { type: "string" };
+  return {};
 }
 
 function xmlEscape(value: unknown): string {
@@ -158,11 +171,16 @@ export function generatedObsOperations(): SubMcpOperation[] {
   return obsCatalog.map((entry) => {
     const parameterNames = Object.keys(entry.parameters);
     const required = parameterNames.filter((name) => entry.parameters[name].required);
+    const propertySchemas: Record<string, JsonObject> = {};
+    for (const [name, parameter] of Object.entries(entry.parameters)) {
+      propertySchemas[name] = parameter.location === "body" ? { type: "string", format: "base64" } : obsInputSchema(parameter);
+    }
+    propertySchemas.contentBase64 = { type: "string", format: "base64" };
     return {
       id: entry.id,
       description: entry.description,
       isReadOnly: isReadOnly(entry.method),
-      inputSchema: generatedSchema([...parameterNames, "bucket", "key", "contentBase64"], required),
+      inputSchema: generatedSchema([...parameterNames, "bucket", "key", "contentBase64"], required, undefined, propertySchemas),
       sourceUrl: sourceUrl("OBS", entry.apiName),
       execute: (input: JsonObject) => callGeneratedObs(entry, input),
     };
