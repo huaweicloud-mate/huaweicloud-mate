@@ -57,6 +57,26 @@ test("OBS append signs content and requires confirmation", { concurrency: false 
   }
 });
 
+test("ECS availability-zone discovery uses the documented project endpoint", { concurrency: false }, async () => {
+  setCredentials();
+  const { listEcsAvailabilityZones } = require("../build/openapi.js");
+  const originalFetch = global.fetch;
+  let request;
+  global.fetch = async (url, options) => {
+    request = { url: String(url), options };
+    return new Response(JSON.stringify({ availability_zones: [{ name: "cn-north-4a" }] }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const result = await listEcsAvailabilityZones({});
+    assert.equal(result.body.availability_zones[0].name, "cn-north-4a");
+    assert.equal(request.url, "https://ecs.cn-north-4.myhuaweicloud.com/v1/test-project/availability-zones");
+    assert.equal(request.options.method, "GET");
+    assert.match(request.options.headers.authorization, /^SDK-HMAC-SHA256 Access=test-ak,/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("catalog returns an API Explorer source URL for every ECS and OBS operation", { concurrency: false }, () => {
   const { provision } = require("../build/gateway.js");
   for (const service of ["ecs", "obs"]) {

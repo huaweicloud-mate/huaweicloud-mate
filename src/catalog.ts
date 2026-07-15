@@ -1,4 +1,4 @@
-import { appendObsObject, createObsBucket, deleteEcsServers, deleteObsBucket, deleteObsObject, getEcsJob, getEcsServer, getObsBucketLocation, getObsBucketMetadata, getObsObjectMetadata, JsonObject, listEcsFlavors, listEcsServers, listObsBuckets, listObsObjects, rebootEcsServers, startEcsServers, stopEcsServers } from "./openapi";
+import { appendObsObject, createObsBucket, deleteEcsServers, deleteObsBucket, deleteObsObject, getEcsJob, getEcsServer, getObsBucketLocation, getObsBucketMetadata, getObsObjectMetadata, JsonObject, listEcsAvailabilityZones, listEcsFlavors, listEcsServers, listObsBuckets, listObsObjects, rebootEcsServers, startEcsServers, stopEcsServers } from "./openapi";
 import type { ServiceDefinition, ServiceOperation } from "./gateway";
 
 export interface CatalogOperation extends ServiceOperation {
@@ -58,6 +58,14 @@ export const serviceCatalog: CatalogService[] = [
         inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, availabilityZone: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 1000 }, marker: { type: "string" } } },
         sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=ListFlavors",
         execute: listEcsFlavors,
+      },
+      {
+        id: "list_availability_zones",
+        description: "List ECS availability zones and their availability state in one project.",
+        isReadOnly: true,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" } } },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=ListServerAzInfo",
+        execute: listEcsAvailabilityZones,
       },
       {
         id: "stop_servers",
