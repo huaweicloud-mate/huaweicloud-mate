@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { serviceCatalog, CatalogOperation, CatalogService } from "./catalog";
 import type { JsonObject } from "./openapi";
+import { findSubMcpDescriptor, loadSubMcp, subMcpDescriptors } from "./submcp";
+import type { SubMcp, SubMcpOperation } from "./submcp/types";
 
 export interface ServiceOperation {
   id: string;
@@ -14,10 +15,10 @@ export interface ServiceOperation {
 export interface ServiceDefinition {
   id: string;
   title: string;
-  provider: "openapi" | "koocli";
-  status: "available" | "catalog_pending";
+  provider: "openapi-child-mcp";
+  status: "available";
   description: string;
-  operations: ServiceOperation[];
+  sourceUrl: string;
 }
 
 interface PendingConfirmation {
@@ -97,15 +98,9 @@ async function runKooCli(input: JsonObject): Promise<unknown> {
   });
 }
 
-function findService(serviceId: string): CatalogService {
-  const service = serviceCatalog.find((candidate) => candidate.id === serviceId);
-  if (!service) throw new Error(`Unknown Huawei Cloud service: ${serviceId}`);
-  return service;
-}
-
-function findOperation(service: CatalogService, operationId: string): CatalogOperation {
+function findOperation(service: SubMcp, operationId: string): SubMcpOperation {
   const operation = service.operations.find((candidate) => candidate.id === operationId);
-  if (!operation) throw new Error(`Unknown operation ${operationId} for ${service.id}`);
+  if (!operation) throw new Error(`Unknown operation ${operationId} for ${service.id} child MCP`);
   return operation;
 }
 
@@ -131,20 +126,31 @@ function consumeConfirmation(token: string | undefined, service: string, operati
 
 export function discover(query?: string): ServiceDefinition[] {
   const keyword = query?.trim().toLowerCase();
-  return serviceCatalog.filter((service) => !keyword || `${service.id} ${service.title} ${service.description}`.toLowerCase().includes(keyword));
+  return subMcpDescriptors
+    .filter((service) => !keyword || `${service.id} ${service.title} ${service.description}`.toLowerCase().includes(keyword))
+    .map((service) => ({ ...service, provider: "openapi-child-mcp" as const, status: "available" as const }));
 }
 
-export function provision(serviceId: string): unknown {
-  const service = findService(serviceId);
-  return { service: service.id, status: "provisioned", operations: service.operations.map(({ id, description, isReadOnly, inputSchema, sourceUrl }) => ({ id, description, isReadOnly, inputSchema, sourceUrl })) };
+export async function provision(serviceId: string): Promise<unknown> {
+  const descriptor = findSubMcpDescriptor(serviceId);
+  const service = await loadSubMcp(descriptor.id);
+  return { subMcp: service.id, status: "provisioned", sourceUrl: service.sourceUrl, operations: service.operations.map(({ id, description, isReadOnly, inputSchema, sourceUrl }) => ({ id, description, isReadOnly, inputSchema, sourceUrl })) };
 }
 
 export async function call(serviceId: string, operationId: string, input: unknown, confirmationToken?: string): Promise<unknown> {
   if (!isObject(input)) throw new Error("input must be an object");
-  const operation = findOperation(findService(serviceId), operationId);
+  if (serviceId === "koocli") {
+    if (operationId === "version") return runKooCli({ command: ["version"] });
+    if (operationId === "run") {
+      validateInput(input, { type: "object", properties: { command: { type: "array", items: { type: "string" } }, profile: { type: "string" } }, required: ["command"] });
+      if (!consumeConfirmation(confirmationToken, serviceId, operationId, input)) return confirmationRequired(serviceId, operationId, input);
+      return runKooCli(input);
+    }
+    throw new Error(`Unknown KooCLI fallback operation: ${operationId}`);
+  }
+  const child = await loadSubMcp(serviceId);
+  const operation = findOperation(child, operationId);
   validateInput(input, operation.inputSchema);
   if (!operation.isReadOnly && !consumeConfirmation(confirmationToken, serviceId, operationId, input)) return confirmationRequired(serviceId, operationId, input);
-  if (serviceId === "koocli" && operationId === "version") return runKooCli({ command: ["version"] });
-  if (serviceId === "koocli" && operationId === "run") return runKooCli(input);
   return operation.execute(input);
 }

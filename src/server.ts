@@ -25,7 +25,7 @@ async function startMcp(): Promise<void> {
     if (request.params.name === "huaweicloud_discover") result = discover(typeof args.query === "string" ? args.query : undefined);
     else if (request.params.name === "huaweicloud_provision") {
       if (typeof args.service !== "string") throw new Error("service is required.");
-      result = provision(args.service);
+      result = await provision(args.service);
     } else if (request.params.name === "huaweicloud_call") {
       if (typeof args.service !== "string" || typeof args.operation !== "string") throw new Error("service and operation are required.");
       result = await call(args.service, args.operation, args.input, typeof args.confirmationToken === "string" ? args.confirmationToken : undefined);

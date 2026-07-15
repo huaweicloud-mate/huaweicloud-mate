@@ -86,15 +86,27 @@ test("stdio MCP gateway exposes only the dynamic discovery, provision, and call 
     await client.connect(transport);
     const { tools } = await client.listTools();
     assert.deepEqual(tools.map((tool) => tool.name).sort(), ["huaweicloud_call", "huaweicloud_discover", "huaweicloud_provision"]);
+    const discovered = await client.callTool({ name: "huaweicloud_discover", arguments: {} });
+    assert.deepEqual(JSON.parse(discovered.content[0].text).map((child) => child.id), ["ecs", "obs"]);
+    const provisioned = await client.callTool({ name: "huaweicloud_provision", arguments: { service: "ecs" } });
+    assert.equal(JSON.parse(provisioned.content[0].text).subMcp, "ecs");
   } finally {
     await client.close();
   }
 });
 
-test("catalog returns an API Explorer source URL for every ECS and OBS operation", { concurrency: false }, () => {
+test("root discovery exposes exactly the ECS and OBS child MCPs", { concurrency: false }, () => {
+  const { discover } = require("../build/gateway.js");
+  assert.deepEqual(discover().map((child) => child.id), ["ecs", "obs"]);
+  assert.ok(discover().every((child) => child.provider === "openapi-child-mcp"));
+});
+
+test("each dynamically loaded child MCP returns API Explorer source URLs", { concurrency: false }, async () => {
   const { provision } = require("../build/gateway.js");
   for (const service of ["ecs", "obs"]) {
-    for (const operation of provision(service).operations) {
+    const child = await provision(service);
+    assert.equal(child.subMcp, service);
+    for (const operation of child.operations) {
       assert.ok(operation.sourceUrl?.includes(`/openapi/${service.toUpperCase()}/doc?api=`));
     }
   }
