@@ -155,6 +155,7 @@ function obsCatalog(modelPath) {
       apiName,
       method: definition.httpMethod,
       description: `OBS API Explorer operation ${apiName}.`,
+      urlPath: definition.urlPath,
       parameters: definition.parameters || {},
       data: definition.data || {},
     }));

@@ -309,3 +309,27 @@ test("generated ECS body schema preserves nested API field types", { concurrency
   assert.equal(operation.inputSchema.properties.body.properties["os-start"].properties.servers.items.properties.id.type, "string");
   await assert.rejects(() => call("ecs", "api_batch_start_servers", { body: { "os-start": { servers: [{ id: 1 }] } } }), /body\.os-start\.servers\[0\]\.id must be a string/);
 });
+
+test("generated OBS XML operations serialize official model fields before signing", { concurrency: false }, async () => {
+  setCredentials();
+  const { call } = require("../build/gateway.js");
+  const originalFetch = global.fetch;
+  let request;
+  global.fetch = async (url, options) => {
+    request = { url: String(url), options };
+    return new Response(null, { status: 200, headers: { "x-obs-request-id": "quota-request" } });
+  };
+  try {
+    const input = { Bucket: "example-bucket", StorageQuota: 1024 };
+    const pending = await call("obs", "api_set_bucket_quota", input);
+    assert.equal(pending.status, "confirmation_required");
+    const result = await call("obs", "api_set_bucket_quota", input, pending.confirmationToken);
+    assert.equal(result.requestId, "quota-request");
+    assert.equal(request.url, "https://example-bucket.obs.cn-north-4.myhuaweicloud.com/?quota=");
+    assert.equal(request.options.headers["content-type"], "application/xml");
+    assert.equal(Buffer.from(request.options.body).toString(), "<Quota><StorageQuota>1024</StorageQuota></Quota>");
+    assert.match(request.options.headers.authorization, /^OBS test-ak:/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});

@@ -120,6 +120,7 @@
     "apiName": "HeadApiVersion",
     "method": "HEAD",
     "description": "OBS API Explorer operation HeadApiVersion.",
+    "urlPath": "apiversion",
     "parameters": {
       "Bucket": {
         "location": "uri"
@@ -230,6 +231,7 @@
     "apiName": "ListVersions",
     "method": "GET",
     "description": "OBS API Explorer operation ListVersions.",
+    "urlPath": "versions",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -268,6 +270,7 @@
     "apiName": "GetBucketLocation",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketLocation.",
+    "urlPath": "location",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -281,6 +284,7 @@
     "apiName": "GetBucketStorageInfo",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketStorageInfo.",
+    "urlPath": "storageinfo",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -294,6 +298,7 @@
     "apiName": "SetBucketQuota",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketQuota.",
+    "urlPath": "quota",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -314,6 +319,7 @@
     "apiName": "GetBucketQuota",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketQuota.",
+    "urlPath": "quota",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -327,6 +333,7 @@
     "apiName": "SetBucketAcl",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketAcl.",
+    "urlPath": "acl",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -393,6 +400,7 @@
     "apiName": "GetBucketAcl",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketAcl.",
+    "urlPath": "acl",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -406,6 +414,7 @@
     "apiName": "SetBucketLoggingConfiguration",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketLoggingConfiguration.",
+    "urlPath": "logging",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -468,6 +477,7 @@
     "apiName": "GetBucketLoggingConfiguration",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketLoggingConfiguration.",
+    "urlPath": "logging",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -481,6 +491,7 @@
     "apiName": "SetBucketPolicy",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketPolicy.",
+    "urlPath": "policy",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -498,6 +509,7 @@
     "apiName": "GetBucketPolicy",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketPolicy.",
+    "urlPath": "policy",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -511,6 +523,7 @@
     "apiName": "DeleteBucketPolicy",
     "method": "DELETE",
     "description": "OBS API Explorer operation DeleteBucketPolicy.",
+    "urlPath": "policy",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -524,6 +537,7 @@
     "apiName": "SetBucketLifecycleConfiguration",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketLifecycleConfiguration.",
+    "urlPath": "lifecycle",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -620,6 +634,7 @@
     "apiName": "GetBucketLifecycleConfiguration",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketLifecycleConfiguration.",
+    "urlPath": "lifecycle",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -633,6 +648,7 @@
     "apiName": "DeleteBucketLifecycleConfiguration",
     "method": "DELETE",
     "description": "OBS API Explorer operation DeleteBucketLifecycleConfiguration.",
+    "urlPath": "lifecycle",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -646,6 +662,7 @@
     "apiName": "SetBucketWebsiteConfiguration",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketWebsiteConfiguration.",
+    "urlPath": "website",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -738,6 +755,7 @@
     "apiName": "GetBucketWebsiteConfiguration",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketWebsiteConfiguration.",
+    "urlPath": "website",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -751,6 +769,7 @@
     "apiName": "DeleteBucketWebsiteConfiguration",
     "method": "DELETE",
     "description": "OBS API Explorer operation DeleteBucketWebsiteConfiguration.",
+    "urlPath": "website",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -764,6 +783,7 @@
     "apiName": "SetBucketVersioningConfiguration",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketVersioningConfiguration.",
+    "urlPath": "versioning",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -784,6 +804,7 @@
     "apiName": "GetBucketVersioningConfiguration",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketVersioningConfiguration.",
+    "urlPath": "versioning",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -797,6 +818,7 @@
     "apiName": "SetBucketCors",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketCors.",
+    "urlPath": "cors",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -859,6 +881,7 @@
     "apiName": "GetBucketCors",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketCors.",
+    "urlPath": "cors",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -872,6 +895,7 @@
     "apiName": "DeleteBucketCors",
     "method": "DELETE",
     "description": "OBS API Explorer operation DeleteBucketCors.",
+    "urlPath": "cors",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -885,6 +909,7 @@
     "apiName": "SetBucketNotification",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketNotification.",
+    "urlPath": "notification",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -977,6 +1002,7 @@
     "apiName": "GetBucketNotification",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketNotification.",
+    "urlPath": "notification",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1025,6 +1051,7 @@
     "apiName": "SetBucketTagging",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketTagging.",
+    "urlPath": "tagging",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1059,6 +1086,7 @@
     "apiName": "GetBucketTagging",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketTagging.",
+    "urlPath": "tagging",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1072,6 +1100,7 @@
     "apiName": "DeleteBucketTagging",
     "method": "DELETE",
     "description": "OBS API Explorer operation DeleteBucketTagging.",
+    "urlPath": "tagging",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1085,6 +1114,7 @@
     "apiName": "SetBucketStoragePolicy",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketStoragePolicy.",
+    "urlPath": "storageClass",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1104,6 +1134,7 @@
     "apiName": "GetBucketStoragePolicy",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketStoragePolicy.",
+    "urlPath": "storageClass",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1117,6 +1148,7 @@
     "apiName": "SetBucketReplication",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketReplication.",
+    "urlPath": "replication",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1171,6 +1203,7 @@
     "apiName": "GetBucketReplication",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketReplication.",
+    "urlPath": "replication",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1184,6 +1217,7 @@
     "apiName": "DeleteBucketReplication",
     "method": "DELETE",
     "description": "OBS API Explorer operation DeleteBucketReplication.",
+    "urlPath": "replication",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1197,6 +1231,7 @@
     "apiName": "GetBucketRequesterPayment",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketRequesterPayment.",
+    "urlPath": "requestPayment",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1210,6 +1245,7 @@
     "apiName": "SetBucketRequesterPayment",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketRequesterPayment.",
+    "urlPath": "requestPayment",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1383,6 +1419,7 @@
     "apiName": "RenameObject",
     "method": "POST",
     "description": "OBS API Explorer operation RenameObject.",
+    "urlPath": "rename",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1405,6 +1442,7 @@
     "apiName": "ModifyObject",
     "method": "PUT",
     "description": "OBS API Explorer operation ModifyObject.",
+    "urlPath": "modify",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1533,6 +1571,7 @@
     "apiName": "AppendObject",
     "method": "POST",
     "description": "OBS API Explorer operation AppendObject.",
+    "urlPath": "append",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -1954,6 +1993,7 @@
     "apiName": "RestoreObject",
     "method": "POST",
     "description": "OBS API Explorer operation RestoreObject.",
+    "urlPath": "restore",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2037,6 +2077,7 @@
     "apiName": "SetObjectMetadata",
     "method": "PUT",
     "description": "OBS API Explorer operation SetObjectMetadata.",
+    "urlPath": "metadata",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2123,6 +2164,7 @@
     "apiName": "SetObjectAcl",
     "method": "PUT",
     "description": "OBS API Explorer operation SetObjectAcl.",
+    "urlPath": "acl",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2206,6 +2248,7 @@
     "apiName": "GetObjectAcl",
     "method": "GET",
     "description": "OBS API Explorer operation GetObjectAcl.",
+    "urlPath": "acl",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2232,6 +2275,7 @@
     "apiName": "SetObjectTagging",
     "method": "PUT",
     "description": "OBS API Explorer operation SetObjectTagging.",
+    "urlPath": "tagging",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2274,6 +2318,7 @@
     "apiName": "GetObjectTagging",
     "method": "GET",
     "description": "OBS API Explorer operation GetObjectTagging.",
+    "urlPath": "tagging",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2295,6 +2340,7 @@
     "apiName": "DeleteObjectTagging",
     "method": "DELETE",
     "description": "OBS API Explorer operation DeleteObjectTagging.",
+    "urlPath": "tagging",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2342,6 +2388,7 @@
     "apiName": "DeleteObjects",
     "method": "POST",
     "description": "OBS API Explorer operation DeleteObjects.",
+    "urlPath": "delete",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2388,6 +2435,7 @@
     "apiName": "InitiateMultipartUpload",
     "method": "POST",
     "description": "OBS API Explorer operation InitiateMultipartUpload.",
+    "urlPath": "uploads",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2516,6 +2564,7 @@
     "apiName": "ListMultipartUploads",
     "method": "GET",
     "description": "OBS API Explorer operation ListMultipartUploads.",
+    "urlPath": "uploads",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2851,6 +2900,7 @@
     "apiName": "GetBucketDirectColdAccess",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketDirectColdAccess.",
+    "urlPath": "directcoldaccess",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2864,6 +2914,7 @@
     "apiName": "SetBucketDirectColdAccess",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketDirectColdAccess.",
+    "urlPath": "directcoldaccess",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2885,6 +2936,7 @@
     "apiName": "DeleteBucketDirectColdAccess",
     "method": "DELETE",
     "description": "OBS API Explorer operation DeleteBucketDirectColdAccess.",
+    "urlPath": "directcoldaccess",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2898,6 +2950,7 @@
     "apiName": "GetBucketEncryption",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketEncryption.",
+    "urlPath": "encryption",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2911,6 +2964,7 @@
     "apiName": "SetBucketEncryption",
     "method": "PUT",
     "description": "OBS API Explorer operation SetBucketEncryption.",
+    "urlPath": "encryption",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2945,6 +2999,7 @@
     "apiName": "DeleteBucketEncryption",
     "method": "DELETE",
     "description": "OBS API Explorer operation DeleteBucketEncryption.",
+    "urlPath": "encryption",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2958,6 +3013,7 @@
     "apiName": "PutBucketPublicAccessBlock",
     "method": "PUT",
     "description": "OBS API Explorer operation PutBucketPublicAccessBlock.",
+    "urlPath": "publicAccessBlock",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -2989,6 +3045,7 @@
     "apiName": "GetBucketPublicAccessBlock",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketPublicAccessBlock.",
+    "urlPath": "publicAccessBlock",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -3002,6 +3059,7 @@
     "apiName": "DeleteBucketPublicAccessBlock",
     "method": "DELETE",
     "description": "OBS API Explorer operation DeleteBucketPublicAccessBlock.",
+    "urlPath": "publicAccessBlock",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -3015,6 +3073,7 @@
     "apiName": "GetBucketPolicyPublicStatus",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketPolicyPublicStatus.",
+    "urlPath": "policyStatus",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -3028,6 +3087,7 @@
     "apiName": "GetBucketPublicStatus",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketPublicStatus.",
+    "urlPath": "bucketStatus",
     "parameters": {
       "Bucket": {
         "required": true,
@@ -3087,6 +3147,7 @@
     "apiName": "GetBucketCustomDomain",
     "method": "GET",
     "description": "OBS API Explorer operation GetBucketCustomDomain.",
+    "urlPath": "customdomain",
     "parameters": {
       "Bucket": {
         "required": true,
