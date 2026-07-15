@@ -14,6 +14,7 @@ interface EcsCatalogEntry {
   pathParameters: Record<string, string>;
   queryParameters: Record<string, string>;
   inputNames: string[];
+  bodySchema?: JsonObject;
 }
 
 interface ObsParameter {
@@ -44,12 +45,12 @@ function isReadOnly(method: string): boolean {
   return method === "GET" || method === "HEAD";
 }
 
-function generatedSchema(names: string[], required: string[]): JsonObject {
+function generatedSchema(names: string[], required: string[], bodySchema?: JsonObject): JsonObject {
   const properties: JsonObject = {
     region: { type: "string" },
     projectId: { type: "string" },
   };
-  for (const name of names) properties[name] = name === "body" ? {} : {};
+  for (const name of names) properties[name] = name === "body" ? bodySchema ?? {} : {};
   return { type: "object", properties, ...(required.length ? { required } : {}) };
 }
 
@@ -105,7 +106,7 @@ export function generatedEcsOperations(): SubMcpOperation[] {
     id: entry.id,
     description: entry.description,
     isReadOnly: isReadOnly(entry.method),
-    inputSchema: generatedSchema(entry.inputNames, entry.required),
+    inputSchema: generatedSchema(entry.inputNames, entry.required, entry.bodySchema),
     sourceUrl: sourceUrl("ECS", entry.apiName),
     execute: (input) => callGeneratedEcs(entry, input),
   }));

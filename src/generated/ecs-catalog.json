@@ -16,7 +16,15 @@
     "inputNames": [
       "id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "not_before": {
+          "type": "string"
+        }
+      }
+    }
   },
   {
     "id": "api_add_server_group_member",
@@ -35,7 +43,20 @@
     "inputNames": [
       "server_group_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "add_member": {
+          "type": "object",
+          "properties": {
+            "instance_uuid": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_associate_server_virtual_ip",
@@ -54,7 +75,26 @@
     "inputNames": [
       "nic_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "nic": {
+          "type": "object",
+          "properties": {
+            "subnet_id": {
+              "type": "string"
+            },
+            "ip_address": {
+              "type": "string"
+            },
+            "reverse_binding": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_attach_server_volume",
@@ -73,7 +113,35 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "volumeAttachment": {
+          "type": "object",
+          "properties": {
+            "device": {
+              "type": "string"
+            },
+            "volumeId": {
+              "type": "string"
+            },
+            "count": {
+              "type": "number"
+            },
+            "volume_type": {
+              "type": "string"
+            },
+            "hw:passthrough": {
+              "type": "string"
+            }
+          }
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   {
     "id": "api_batch_add_server_group_member",
@@ -92,7 +160,18 @@
     "inputNames": [
       "server_group_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "server_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_add_server_nics",
@@ -111,7 +190,54 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "nics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "subnet_id": {
+                "type": "string"
+              },
+              "port_id": {
+                "type": "string"
+              },
+              "security_groups": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "ip_address": {
+                "type": "string"
+              },
+              "ipv6_enable": {
+                "type": "boolean"
+              },
+              "ipv6_bandwidth": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "efi_enable": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_attach_sharable_volumes",
@@ -130,7 +256,26 @@
     "inputNames": [
       "volume_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "serverinfo": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "device": {
+                "type": "string"
+              },
+              "server_id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_create_server_tags",
@@ -149,7 +294,27 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "action": {},
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_delete_server_group_member",
@@ -168,7 +333,18 @@
     "inputNames": [
       "server_group_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "server_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_delete_server_nics",
@@ -187,7 +363,23 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "nics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_delete_server_tags",
@@ -206,7 +398,27 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "action": {},
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_detach_volumes",
@@ -225,7 +437,18 @@
     "inputNames": [
       "volume_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "serverinfo": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_reboot_servers",
@@ -240,7 +463,29 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "reboot": {
+          "type": "object",
+          "properties": {
+            "servers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "type": {}
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_reset_servers_password",
@@ -255,7 +500,29 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "servers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "new_password": {
+          "type": "string"
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   {
     "id": "api_batch_resize_servers",
@@ -270,7 +537,51 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "resize": {
+          "type": "object",
+          "properties": {
+            "flavorRef": {
+              "type": "string"
+            },
+            "servers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "mode": {
+              "type": "string"
+            },
+            "promotion": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
+              }
+            },
+            "cpu_options": {
+              "type": "object",
+              "properties": {
+                "hw:cpu_threads": {}
+              }
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_start_servers",
@@ -285,7 +596,28 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "os-start": {
+          "type": "object",
+          "properties": {
+            "servers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_stop_servers",
@@ -300,7 +632,29 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "os-stop": {
+          "type": "object",
+          "properties": {
+            "servers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "type": {}
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_batch_update_servers_name",
@@ -315,7 +669,29 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "servers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   {
     "id": "api_change_server_charge_mode",
@@ -330,7 +706,47 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "server_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "charge_mode": {
+          "type": "string"
+        },
+        "prepaid_options": {
+          "type": "object",
+          "properties": {
+            "include_data_disks": {
+              "type": "boolean"
+            },
+            "include_publicips": {
+              "type": "boolean"
+            },
+            "period_type": {
+              "type": "string"
+            },
+            "period_num": {
+              "type": "string"
+            },
+            "auto_pay": {
+              "type": "boolean"
+            },
+            "auto_renew": {
+              "type": "boolean"
+            }
+          }
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   {
     "id": "api_change_server_network_interface",
@@ -352,7 +768,21 @@
       "port_id",
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "subnet_id": {
+          "type": "string"
+        },
+        "ip_address": {
+          "type": "string"
+        },
+        "ipv6_address": {
+          "type": "string"
+        }
+      }
+    }
   },
   {
     "id": "api_change_server_os_with_cloud_init",
@@ -371,7 +801,52 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "os-change": {
+          "type": "object",
+          "properties": {
+            "adminpass": {
+              "type": "string"
+            },
+            "keyname": {
+              "type": "string"
+            },
+            "userid": {
+              "type": "string"
+            },
+            "imageid": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object",
+              "properties": {
+                "__system__encrypted": {
+                  "type": "string"
+                },
+                "__system__cmkid": {
+                  "type": "string"
+                },
+                "user_data": {
+                  "type": "string"
+                },
+                "BYOL": {
+                  "type": "string"
+                }
+              }
+            },
+            "mode": {
+              "type": "string"
+            },
+            "isAutoPay": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_change_server_os_without_cloud_init",
@@ -390,7 +865,49 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "os-change": {
+          "type": "object",
+          "properties": {
+            "adminpass": {
+              "type": "string"
+            },
+            "keyname": {
+              "type": "string"
+            },
+            "userid": {
+              "type": "string"
+            },
+            "imageid": {
+              "type": "string"
+            },
+            "mode": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object",
+              "properties": {
+                "__system__encrypted": {
+                  "type": "string"
+                },
+                "__system__cmkid": {
+                  "type": "string"
+                },
+                "BYOL": {
+                  "type": "string"
+                }
+              }
+            },
+            "isAutoPay": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_change_vpc",
@@ -409,7 +926,40 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "nic": {
+          "type": "object",
+          "properties": {
+            "port_id": {
+              "type": "string"
+            },
+            "subnet_id": {
+              "type": "string"
+            },
+            "security_groups": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "ip_address": {
+              "type": "string"
+            }
+          }
+        },
+        "vpc_id": {
+          "type": "string"
+        }
+      }
+    }
   },
   {
     "id": "api_create_launch_template",
@@ -424,7 +974,204 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "launch_template": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "template_data": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "metadata": {},
+                "flavor_id": {
+                  "type": "string"
+                },
+                "availability_zone_id": {
+                  "type": "string"
+                },
+                "enterprise_project_id": {
+                  "type": "string"
+                },
+                "auto_recovery": {
+                  "type": "boolean"
+                },
+                "os_profile": {
+                  "type": "object",
+                  "properties": {
+                    "key_name": {
+                      "type": "string"
+                    },
+                    "user_data": {
+                      "type": "string"
+                    },
+                    "iam_agency_name": {
+                      "type": "string"
+                    },
+                    "enable_monitoring_service": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "security_group_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "network_interfaces": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "attachment": {
+                        "type": "object",
+                        "properties": {
+                          "device_index": {
+                            "type": "number"
+                          }
+                        }
+                      },
+                      "virsubnet_id": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "block_device_mappings": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "encrypted": {
+                        "type": "boolean"
+                      },
+                      "attachment": {
+                        "type": "object",
+                        "properties": {
+                          "boot_index": {
+                            "type": "number"
+                          },
+                          "delete_on_termination": {
+                            "type": "boolean"
+                          }
+                        }
+                      },
+                      "source_id": {
+                        "type": "string"
+                      },
+                      "source_type": {},
+                      "cmk_id": {
+                        "type": "string"
+                      },
+                      "volume_type": {
+                        "type": "string"
+                      },
+                      "volume_size": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                },
+                "market_options": {
+                  "type": "object",
+                  "properties": {
+                    "market_type": {},
+                    "spot_options": {
+                      "type": "object",
+                      "properties": {
+                        "spot_price": {
+                          "type": "number"
+                        },
+                        "block_duration_minutes": {
+                          "type": "number"
+                        },
+                        "instance_interruption_behavior": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "internet_access": {
+                  "type": "object",
+                  "properties": {
+                    "publicip": {
+                      "type": "object",
+                      "properties": {
+                        "bandwidth": {
+                          "type": "object",
+                          "properties": {
+                            "size": {
+                              "type": "number"
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "share_type": {},
+                            "charge_mode": {}
+                          }
+                        },
+                        "publicip_type": {
+                          "type": "string"
+                        },
+                        "charging_mode": {
+                          "type": "string"
+                        },
+                        "delete_on_termination": {
+                          "type": "boolean"
+                        }
+                      }
+                    }
+                  }
+                },
+                "tag_options": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string"
+                            },
+                            "value": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "version_description": {
+              "type": "string"
+            }
+          }
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   {
     "id": "api_create_post_paid_servers",
@@ -439,7 +1186,375 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "server": {
+          "type": "object",
+          "properties": {
+            "adminPass": {
+              "type": "string"
+            },
+            "count": {
+              "type": "number"
+            },
+            "extendparam": {
+              "type": "object",
+              "properties": {
+                "chargingMode": {
+                  "type": "number"
+                },
+                "regionID": {
+                  "type": "string"
+                },
+                "marketType": {
+                  "type": "string"
+                },
+                "spotPrice": {
+                  "type": "string"
+                },
+                "diskPrior": {
+                  "type": "string"
+                },
+                "support_auto_recovery": {
+                  "type": "boolean"
+                },
+                "enterprise_project_id": {
+                  "type": "string"
+                },
+                "spot_duration_hours": {
+                  "type": "number"
+                },
+                "interruption_policy": {},
+                "spot_duration_count": {
+                  "type": "number"
+                },
+                "CB_CSBS_BACKUP": {
+                  "type": "string"
+                }
+              }
+            },
+            "flavorRef": {
+              "type": "string"
+            },
+            "imageRef": {
+              "type": "string"
+            },
+            "isAutoRename": {
+              "type": "boolean"
+            },
+            "metadata": {},
+            "name": {
+              "type": "string"
+            },
+            "nics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "subnet_id": {
+                    "type": "string"
+                  },
+                  "port_id": {
+                    "type": "string"
+                  },
+                  "ip_address": {
+                    "type": "string"
+                  },
+                  "ipv6_enable": {
+                    "type": "boolean"
+                  },
+                  "ipv6_bandwidth": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "allowed_address_pairs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ip_address": {
+                          "type": "string"
+                        },
+                        "mac_address": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "efi_enable": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "publicip": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "eip": {
+                  "type": "object",
+                  "properties": {
+                    "iptype": {
+                      "type": "string"
+                    },
+                    "bandwidth": {
+                      "type": "object",
+                      "properties": {
+                        "size": {
+                          "type": "number"
+                        },
+                        "sharetype": {},
+                        "chargemode": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "extendparam": {
+                      "type": "object",
+                      "properties": {
+                        "chargingMode": {}
+                      }
+                    }
+                  }
+                },
+                "delete_on_termination": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "vpcid": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "auto_terminate_time": {
+              "type": "string"
+            },
+            "availability_zone": {
+              "type": "string"
+            },
+            "batch_create_in_multi_az": {
+              "type": "boolean"
+            },
+            "data_volumes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "volumetype": {},
+                  "size": {
+                    "type": "number"
+                  },
+                  "iops": {
+                    "type": "number"
+                  },
+                  "throughput": {
+                    "type": "number"
+                  },
+                  "shareable": {
+                    "type": "boolean"
+                  },
+                  "multiattach": {
+                    "type": "boolean"
+                  },
+                  "extendparam": {
+                    "type": "object",
+                    "properties": {
+                      "resourceSpecCode": {
+                        "type": "string"
+                      },
+                      "resourceType": {
+                        "type": "string"
+                      },
+                      "snapshotId": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "properties": {
+                      "__system__encrypted": {
+                        "type": "string"
+                      },
+                      "__system__cmkid": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "hw:passthrough": {
+                    "type": "boolean"
+                  },
+                  "cluster_type": {},
+                  "cluster_id": {
+                    "type": "string"
+                  },
+                  "data_image_id": {
+                    "type": "string"
+                  },
+                  "delete_on_termination": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "key_name": {
+              "type": "string"
+            },
+            "os:scheduler_hints": {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string"
+                },
+                "tenancy": {
+                  "type": "string"
+                },
+                "dedicated_host_id": {
+                  "type": "string"
+                }
+              }
+            },
+            "root_volume": {
+              "type": "object",
+              "properties": {
+                "volumetype": {},
+                "size": {
+                  "type": "number"
+                },
+                "iops": {
+                  "type": "number"
+                },
+                "throughput": {
+                  "type": "number"
+                },
+                "extendparam": {
+                  "type": "object",
+                  "properties": {
+                    "resourceSpecCode": {
+                      "type": "string"
+                    },
+                    "resourceType": {
+                      "type": "string"
+                    },
+                    "snapshotId": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "metadata": {
+                  "type": "object",
+                  "properties": {
+                    "__system__encrypted": {
+                      "type": "string"
+                    },
+                    "__system__cmkid": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "hw:passthrough": {
+                  "type": "boolean"
+                },
+                "cluster_type": {},
+                "cluster_id": {
+                  "type": "string"
+                }
+              }
+            },
+            "security_groups": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "server_tags": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "user_data": {
+              "type": "string"
+            },
+            "cpu_options": {
+              "type": "object",
+              "properties": {
+                "hw:cpu_threads": {}
+              }
+            },
+            "security_options": {
+              "type": "object",
+              "properties": {
+                "secure_boot_enabled": {
+                  "type": "boolean"
+                },
+                "tpm_enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "serial_console_options": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "metadata_options": {
+              "type": "object",
+              "properties": {
+                "http_endpoint": {},
+                "http_tokens": {}
+              }
+            },
+            "enclave_options": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   {
     "id": "api_create_server_group",
@@ -454,7 +1569,24 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "server_group": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "policies": {
+              "type": "array",
+              "items": {}
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_create_servers",
@@ -469,7 +1601,374 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "server": {
+          "type": "object",
+          "properties": {
+            "imageRef": {
+              "type": "string"
+            },
+            "flavorRef": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "adminPass": {
+              "type": "string"
+            },
+            "vpcid": {
+              "type": "string"
+            },
+            "nics": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "subnet_id": {
+                    "type": "string"
+                  },
+                  "port_id": {
+                    "type": "string"
+                  },
+                  "ip_address": {
+                    "type": "string"
+                  },
+                  "ipv6_enable": {
+                    "type": "boolean"
+                  },
+                  "ipv6_bandwidth": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "allowed_address_pairs": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ip_address": {
+                          "type": "string"
+                        },
+                        "mac_address": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "publicip": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "eip": {
+                  "type": "object",
+                  "properties": {
+                    "iptype": {
+                      "type": "string"
+                    },
+                    "bandwidth": {
+                      "type": "object",
+                      "properties": {
+                        "size": {
+                          "type": "number"
+                        },
+                        "sharetype": {},
+                        "chargemode": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "extendparam": {
+                      "type": "object",
+                      "properties": {
+                        "chargingMode": {}
+                      }
+                    }
+                  }
+                },
+                "delete_on_termination": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "count": {
+              "type": "number"
+            },
+            "isAutoRename": {
+              "type": "boolean"
+            },
+            "extendparam": {
+              "type": "object",
+              "properties": {
+                "chargingMode": {},
+                "regionID": {
+                  "type": "string"
+                },
+                "periodType": {},
+                "periodNum": {
+                  "type": "number"
+                },
+                "isAutoRenew": {},
+                "isAutoPay": {},
+                "marketType": {
+                  "type": "string"
+                },
+                "spotPrice": {
+                  "type": "string"
+                },
+                "diskPrior": {
+                  "type": "string"
+                },
+                "enterprise_project_id": {
+                  "type": "string"
+                },
+                "support_auto_recovery": {
+                  "type": "boolean"
+                },
+                "spot_duration_hours": {
+                  "type": "number"
+                },
+                "interruption_policy": {},
+                "CB_CSBS_BACKUP": {
+                  "type": "string"
+                },
+                "spot_duration_count": {
+                  "type": "number"
+                }
+              }
+            },
+            "metadata": {},
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": {
+              "type": "string"
+            },
+            "auto_terminate_time": {
+              "type": "string"
+            },
+            "user_data": {
+              "type": "string"
+            },
+            "key_name": {
+              "type": "string"
+            },
+            "root_volume": {
+              "type": "object",
+              "properties": {
+                "volumetype": {},
+                "size": {
+                  "type": "number"
+                },
+                "iops": {
+                  "type": "number"
+                },
+                "throughput": {
+                  "type": "number"
+                },
+                "extendparam": {
+                  "type": "object",
+                  "properties": {
+                    "resourceSpecCode": {
+                      "type": "string"
+                    },
+                    "resourceType": {
+                      "type": "string"
+                    },
+                    "snapshotId": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "metadata": {
+                  "type": "object",
+                  "properties": {
+                    "__system__encrypted": {
+                      "type": "string"
+                    },
+                    "__system__cmkid": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "cluster_type": {},
+                "cluster_id": {
+                  "type": "string"
+                },
+                "hw:passthrough": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "data_volumes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "volumetype": {},
+                  "size": {
+                    "type": "number"
+                  },
+                  "iops": {
+                    "type": "number"
+                  },
+                  "throughput": {
+                    "type": "number"
+                  },
+                  "shareable": {
+                    "type": "boolean"
+                  },
+                  "multiattach": {
+                    "type": "boolean"
+                  },
+                  "extendparam": {
+                    "type": "object",
+                    "properties": {
+                      "resourceSpecCode": {
+                        "type": "string"
+                      },
+                      "resourceType": {
+                        "type": "string"
+                      },
+                      "snapshotId": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "properties": {
+                      "__system__encrypted": {
+                        "type": "string"
+                      },
+                      "__system__cmkid": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "hw:passthrough": {
+                    "type": "boolean"
+                  },
+                  "cluster_type": {},
+                  "cluster_id": {
+                    "type": "string"
+                  },
+                  "data_image_id": {
+                    "type": "string"
+                  },
+                  "delete_on_termination": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "security_groups": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "availability_zone": {
+              "type": "string"
+            },
+            "batch_create_in_multi_az": {
+              "type": "boolean"
+            },
+            "os:scheduler_hints": {
+              "type": "object",
+              "properties": {
+                "group": {
+                  "type": "string"
+                },
+                "tenancy": {},
+                "dedicated_host_id": {
+                  "type": "string"
+                }
+              }
+            },
+            "server_tags": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "key": {
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "cpu_options": {
+              "type": "object",
+              "properties": {
+                "hw:cpu_threads": {}
+              }
+            },
+            "security_options": {
+              "type": "object",
+              "properties": {
+                "secure_boot_enabled": {
+                  "type": "boolean"
+                },
+                "tpm_enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "serial_console_options": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "metadata_options": {
+              "type": "object",
+              "properties": {
+                "http_endpoint": {},
+                "http_tokens": {}
+              }
+            },
+            "enclave_options": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   {
     "id": "api_delete_launch_templates",
@@ -539,7 +2038,20 @@
     "inputNames": [
       "server_group_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "remove_member": {
+          "type": "object",
+          "properties": {
+            "instance_uuid": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_delete_server_metadata",
@@ -591,7 +2103,29 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "servers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "delete_publicip": {
+          "type": "boolean"
+        },
+        "delete_volume": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   {
     "id": "api_detach_server_volume",
@@ -633,7 +2167,22 @@
     "inputNames": [
       "nic_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "nic": {
+          "type": "object",
+          "properties": {
+            "subnet_id": {},
+            "ip_address": {},
+            "reverse_binding": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_execute_server_dump",
@@ -973,7 +2522,69 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "string"
+        },
+        "offset": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "not_tags": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "values": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_list_servers_details",
@@ -1052,7 +2663,20 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "migrate": {
+          "type": "object",
+          "properties": {
+            "dedicated_host_id": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_nova_associate_security_group",
@@ -1071,7 +2695,20 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "addSecurityGroup": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_nova_attach_interface",
@@ -1090,7 +2727,34 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "interfaceAttachment": {
+          "type": "object",
+          "properties": {
+            "fixed_ips": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ip_address": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "net_id": {
+              "type": "string"
+            },
+            "port_id": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_nova_create_keypair",
@@ -1105,7 +2769,27 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "keypair": {
+          "type": "object",
+          "properties": {
+            "type": {},
+            "name": {
+              "type": "string"
+            },
+            "public_key": {
+              "type": "string"
+            },
+            "user_id": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_nova_create_servers",
@@ -1120,7 +2804,149 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "server": {
+          "type": "object",
+          "properties": {
+            "imageRef": {
+              "type": "string"
+            },
+            "flavorRef": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "metadata": {},
+            "adminPass": {
+              "type": "string"
+            },
+            "networks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "port": {
+                    "type": "string"
+                  },
+                  "uuid": {
+                    "type": "string"
+                  },
+                  "fixed_ip": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "description": {
+              "type": "string"
+            },
+            "auto_terminate_time": {
+              "type": "string"
+            },
+            "block_device_mapping_v2": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "uuid": {
+                    "type": "string"
+                  },
+                  "source_type": {},
+                  "destination_type": {},
+                  "guest_format": {
+                    "type": "string"
+                  },
+                  "device_name": {
+                    "type": "string"
+                  },
+                  "delete_on_termination": {
+                    "type": "boolean"
+                  },
+                  "boot_index": {
+                    "type": "string"
+                  },
+                  "volume_size": {
+                    "type": "number"
+                  },
+                  "volume_type": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "config_drive": {
+              "type": "string"
+            },
+            "security_groups": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "key_name": {
+              "type": "string"
+            },
+            "user_data": {
+              "type": "string"
+            },
+            "availability_zone": {
+              "type": "string"
+            },
+            "return_reservation_id": {
+              "type": "boolean"
+            },
+            "min_count": {
+              "type": "number"
+            },
+            "max_count": {
+              "type": "number"
+            },
+            "OS-DCF:diskConfig": {}
+          }
+        },
+        "os:scheduler_hints": {
+          "type": "object",
+          "properties": {
+            "group": {
+              "type": "string"
+            },
+            "cidr": {
+              "type": "string"
+            },
+            "tenancy": {
+              "type": "string"
+            },
+            "different_host": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "same_host": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "build_near_host_ip": {
+              "type": "string"
+            },
+            "dedicated_host_id": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_nova_delete_keypair",
@@ -1173,7 +2999,20 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "removeSecurityGroup": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_nova_list_keypairs",
@@ -1373,7 +3212,13 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "monitorMetrics": {}
+      }
+    }
   },
   {
     "id": "api_reinstall_server_with_cloud_init",
@@ -1392,7 +3237,46 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "os-reinstall": {
+          "type": "object",
+          "properties": {
+            "adminpass": {
+              "type": "string"
+            },
+            "keyname": {
+              "type": "string"
+            },
+            "userid": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object",
+              "properties": {
+                "__system__encrypted": {
+                  "type": "string"
+                },
+                "__system__cmkid": {
+                  "type": "string"
+                },
+                "user_data": {
+                  "type": "string"
+                },
+                "BYOL": {
+                  "type": "string"
+                }
+              }
+            },
+            "mode": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_reinstall_server_without_cloud_init",
@@ -1411,7 +3295,43 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "os-reinstall": {
+          "type": "object",
+          "properties": {
+            "adminpass": {
+              "type": "string"
+            },
+            "keyname": {
+              "type": "string"
+            },
+            "userid": {
+              "type": "string"
+            },
+            "mode": {
+              "type": "string"
+            },
+            "metadata": {
+              "type": "object",
+              "properties": {
+                "__system__encrypted": {
+                  "type": "string"
+                },
+                "__system__cmkid": {
+                  "type": "string"
+                },
+                "BYOL": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_reset_server_password",
@@ -1430,7 +3350,23 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "reset-password": {
+          "type": "object",
+          "properties": {
+            "new_password": {
+              "type": "string"
+            },
+            "is_check_password": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_resize_post_paid_server",
@@ -1449,7 +3385,32 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "resize": {
+          "type": "object",
+          "properties": {
+            "flavorRef": {
+              "type": "string"
+            },
+            "mode": {
+              "type": "string"
+            },
+            "cpu_options": {
+              "type": "object",
+              "properties": {
+                "hw:cpu_threads": {}
+              }
+            }
+          }
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   {
     "id": "api_resize_server",
@@ -1468,7 +3429,43 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "resize": {
+          "type": "object",
+          "properties": {
+            "flavorRef": {
+              "type": "string"
+            },
+            "extendparam": {
+              "type": "object",
+              "properties": {
+                "isAutoPay": {
+                  "type": "string"
+                }
+              }
+            },
+            "mode": {
+              "type": "string"
+            },
+            "dedicated_host_id": {
+              "type": "string"
+            },
+            "cpu_options": {
+              "type": "object",
+              "properties": {
+                "hw:cpu_threads": {}
+              }
+            }
+          }
+        },
+        "dry_run": {
+          "type": "boolean"
+        }
+      }
+    }
   },
   {
     "id": "api_revert_recycle_bin_server",
@@ -1682,7 +3679,19 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "remote_console": {
+          "type": "object",
+          "properties": {
+            "protocol": {},
+            "type": {}
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_show_server_tags",
@@ -1718,7 +3727,14 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "http_endpoint": {},
+        "http_tokens": {}
+      }
+    }
   },
   {
     "id": "api_update_recycle_bin",
@@ -1733,7 +3749,18 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "recycle_bin": {
+          "type": "object",
+          "properties": {
+            "switch": {}
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_update_recycle_bin_policy",
@@ -1748,7 +3775,23 @@
     "queryParameters": {},
     "inputNames": [
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "policy": {
+          "type": "object",
+          "properties": {
+            "retention_hour": {
+              "type": "number"
+            },
+            "recycle_threshold_day": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_update_scheduled_event",
@@ -1767,7 +3810,15 @@
     "inputNames": [
       "id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "not_before": {
+          "type": "string"
+        }
+      }
+    }
   },
   {
     "id": "api_update_serial_console_options",
@@ -1786,7 +3837,20 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "serial_console_options": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_update_server",
@@ -1805,7 +3869,40 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "server": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "hostname": {
+              "type": "string"
+            },
+            "security_options": {
+              "type": "object",
+              "properties": {
+                "secure_boot_enabled": {
+                  "type": "boolean"
+                },
+                "tpm_enabled": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "user_data": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_update_server_auto_terminate_time",
@@ -1824,7 +3921,15 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "auto_terminate_time": {
+          "type": "string"
+        }
+      }
+    }
   },
   {
     "id": "api_update_server_block_device",
@@ -1846,7 +3951,20 @@
       "server_id",
       "volume_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "block_device": {
+          "type": "object",
+          "properties": {
+            "delete_on_termination": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_update_server_interface",
@@ -1868,7 +3986,58 @@
       "server_id",
       "port_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "interface_attachment": {
+          "type": "object",
+          "properties": {
+            "fixed_ips": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ip_address": {
+                    "type": "string"
+                  },
+                  "subnet_id": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "mac_addr": {
+              "type": "string"
+            },
+            "net_id": {
+              "type": "string"
+            },
+            "port_id": {
+              "type": "string"
+            },
+            "port_state": {
+              "type": "string"
+            },
+            "delete_on_termination": {
+              "type": "boolean"
+            },
+            "driver_mode": {
+              "type": "string"
+            },
+            "min_rate": {
+              "type": "number"
+            },
+            "multiqueue_num": {
+              "type": "number"
+            },
+            "pci_address": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
   },
   {
     "id": "api_update_server_metadata",
@@ -1887,7 +4056,13 @@
     "inputNames": [
       "server_id",
       "body"
-    ]
+    ],
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "metadata": {}
+      }
+    }
   },
   {
     "id": "api_nova_show_version",

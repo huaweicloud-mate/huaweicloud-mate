@@ -301,3 +301,11 @@ test("generated ECS and OBS catalog entries map to their official request shape"
     global.fetch = originalFetch;
   }
 });
+
+test("generated ECS body schema preserves nested API field types", { concurrency: false }, async () => {
+  const { provision, call } = require("../build/gateway.js");
+  const catalog = await provision("ecs");
+  const operation = catalog.operations.find((entry) => entry.id === "api_batch_start_servers");
+  assert.equal(operation.inputSchema.properties.body.properties["os-start"].properties.servers.items.properties.id.type, "string");
+  await assert.rejects(() => call("ecs", "api_batch_start_servers", { body: { "os-start": { servers: [{ id: 1 }] } } }), /body\.os-start\.servers\[0\]\.id must be a string/);
+});

@@ -65,7 +65,43 @@ function functionBlocks(source) {
   return entries;
 }
 
-function ecsCatalog(source) {
+function schemaForEcsType(type, modelDirectory, cache, stack = new Set()) {
+  const normalized = type.replace(/\s*\|\s*undefined/g, "").trim();
+  if (normalized === "string") return { type: "string" };
+  if (normalized === "number") return { type: "number" };
+  if (normalized === "boolean") return { type: "boolean" };
+  const array = /^(?:Array<(.+)>|(.+)\[\])$/.exec(normalized);
+  if (array) return { type: "array", items: schemaForEcsType(array[1] || array[2], modelDirectory, cache, stack) };
+  if (["any", "object", "unknown"].includes(normalized) || normalized.includes("Record<")) return {};
+  return schemaForEcsModel(normalized, modelDirectory, cache, stack);
+}
+
+function schemaForEcsModel(className, modelDirectory, cache, stack = new Set()) {
+  if (cache.has(className)) return cache.get(className);
+  if (stack.has(className)) return {};
+  const filename = join(modelDirectory, `${className}.d.ts`);
+  let source;
+  try { source = readFileSync(filename, "utf8"); } catch { return {}; }
+  const nextStack = new Set(stack);
+  nextStack.add(className);
+  const aliases = [...source.matchAll(/private '([^']+)'\?;/g)].map((entry) => entry[1]);
+  const directProperties = [...source.matchAll(/^\s+(\w+)\??:\s*([^;]+);/gm)];
+  const getters = [...source.matchAll(/get (\w+)\(\): ([^;]+);/g)];
+  const properties = {};
+  directProperties.forEach((entry) => {
+    properties[entry[1]] = schemaForEcsType(entry[2], modelDirectory, cache, nextStack);
+  });
+  getters.forEach((entry, index) => {
+    const name = aliases[index] || entry[1];
+    properties[name] = schemaForEcsType(entry[2], modelDirectory, cache, nextStack);
+  });
+  const schema = Object.keys(properties).length ? { type: "object", properties } : {};
+  cache.set(className, schema);
+  return schema;
+}
+
+function ecsCatalog(source, modelDirectory) {
+  const schemaCache = new Map();
   return functionBlocks(source).map(({ name, body, prefix }) => {
     const method = /method:\s*"([A-Z]+)"/.exec(body)?.[1];
     const path = /url:\s*"([^"]+)"/.exec(body)?.[1];
@@ -86,6 +122,13 @@ function ecsCatalog(source) {
     const summary = /@summary\s+([^\r\n]+)/.exec(prefix)?.[1]?.trim() || `ECS API Explorer operation ${pascalCase(name)}.`;
     const required = [...new Set(requiredVariables.map((variable) => assigned.get(variable) || variable))];
     const inputNames = [...new Set([...Object.values(pathParameters), ...Object.values(queryParameters), ...required])];
+    const requestClass = `${pascalCase(name)}Request`;
+    let bodySchema;
+    try {
+      const requestModel = readFileSync(join(modelDirectory, `${requestClass}.d.ts`), "utf8");
+      const bodyType = /get body\(\): ([^;]+);/.exec(requestModel)?.[1] || /^\s*body\??:\s*([^;]+);/m.exec(requestModel)?.[1];
+      if (bodyType) bodySchema = schemaForEcsType(bodyType, modelDirectory, schemaCache);
+    } catch { /* Some generated requests have no model class. */ }
     return {
       id: `api_${snakeCase(name)}`,
       apiName: pascalCase(name),
@@ -96,6 +139,7 @@ function ecsCatalog(source) {
       pathParameters,
       queryParameters,
       inputNames,
+      ...(bodySchema ? { bodySchema } : {}),
     };
   });
 }
@@ -121,7 +165,7 @@ function main() {
   try {
     const ecs = unpack(versions.ecs, join(workspace, "ecs"));
     const obs = unpack(versions.obs, join(workspace, "obs"));
-    const ecsOperations = ecsCatalog(readFileSync(join(ecs, "v2", "EcsClient.js"), "utf8"));
+    const ecsOperations = ecsCatalog(readFileSync(join(ecs, "v2", "EcsClient.js"), "utf8"), join(ecs, "v2", "model"));
     const obsOperations = obsCatalog(join(obs, "lib", "obsModel.js"));
     if (ecsOperations.length !== 99 || obsOperations.length !== 81) throw new Error(`Unexpected catalog size: ECS=${ecsOperations.length}, OBS=${obsOperations.length}. Review upstream SDK changes before updating the expected counts.`);
     mkdirSync(generated, { recursive: true });
