@@ -151,6 +151,58 @@ test("ECS availability-zone discovery uses the documented project endpoint", { c
   }
 });
 
+test("ECS child MCP generic OpenAPI request expands project tokens and protects mutations", { concurrency: false }, async () => {
+  setCredentials();
+  const gateway = require("../build/gateway.js");
+  const originalFetch = global.fetch;
+  const requests = [];
+  global.fetch = async (url, options) => {
+    requests.push({ url: String(url), options });
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const read = await gateway.call("ecs", "openapi_request", { method: "GET", path: "/v1/{project_id}/cloudservers/detail", query: { limit: 1 } });
+    assert.equal(read.body.ok, true);
+    assert.equal(requests[0].url, "https://ecs.cn-north-4.myhuaweicloud.com/v1/test-project/cloudservers/detail?limit=1");
+    assert.match(requests[0].options.headers.authorization, /^SDK-HMAC-SHA256 Access=test-ak,/);
+    const input = { method: "POST", path: "/v1/{projectId}/cloudservers/action", body: { "os-start": { servers: [{ id: "server-1" }] } } };
+    const pending = await gateway.call("ecs", "openapi_request", input);
+    assert.equal(pending.status, "confirmation_required");
+    assert.equal(requests.length, 1);
+    await gateway.call("ecs", "openapi_request", input, pending.confirmationToken);
+    assert.equal(requests[1].options.method, "POST");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test("OBS child MCP generic OpenAPI request bounds object reads and protects writes", { concurrency: false }, async () => {
+  setCredentials();
+  const gateway = require("../build/gateway.js");
+  const originalFetch = global.fetch;
+  const requests = [];
+  global.fetch = async (url, options) => {
+    requests.push({ url: String(url), options });
+    return new Response("ok", { status: 200, headers: { "content-type": "text/plain", "x-obs-request-id": "generic-request" } });
+  };
+  try {
+    const read = await gateway.call("obs", "openapi_request", { method: "GET", bucket: "example-bucket", key: "object.txt", maxResponseBytes: 32 });
+    assert.equal(read.body, "ok");
+    assert.equal(requests[0].options.headers.range, "bytes=0-31");
+    const input = { method: "PUT", bucket: "example-bucket", key: "object.txt", headers: { "x-obs-meta-source": "agent" }, contentBase64: Buffer.from("write").toString("base64") };
+    const pending = await gateway.call("obs", "openapi_request", input);
+    assert.equal(pending.status, "confirmation_required");
+    assert.equal(requests.length, 1);
+    await gateway.call("obs", "openapi_request", input, pending.confirmationToken);
+    assert.equal(requests[1].options.method, "PUT");
+    assert.equal(requests[1].options.headers["x-obs-meta-source"], "agent");
+    assert.match(requests[1].options.headers.authorization, /^OBS test-ak:/);
+    assert.equal(Buffer.from(requests[1].options.body).toString(), "write");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("stdio MCP gateway exposes only the dynamic discovery, provision, and call tools", { concurrency: false }, async () => {
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
   const { StdioClientTransport } = await import("@modelcontextprotocol/sdk/client/stdio.js");

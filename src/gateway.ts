@@ -151,6 +151,7 @@ export async function call(serviceId: string, operationId: string, input: unknow
   const child = await loadSubMcp(serviceId);
   const operation = findOperation(child, operationId);
   validateInput(input, operation.inputSchema);
-  if (!operation.isReadOnly && !consumeConfirmation(confirmationToken, serviceId, operationId, input)) return confirmationRequired(serviceId, operationId, input);
+  const requiresConfirmation = operation.requiresConfirmation?.(input) ?? !operation.isReadOnly;
+  if (requiresConfirmation && !consumeConfirmation(confirmationToken, serviceId, operationId, input)) return confirmationRequired(serviceId, operationId, input);
   return operation.execute(input);
 }

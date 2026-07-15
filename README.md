@@ -7,6 +7,7 @@
 - 固定暴露 `huaweicloud_discover`、`huaweicloud_provision`、`huaweicloud_call` 三个主 MCP 工具；主路由只发现和按需加载两个子 MCP：ECS、OBS，避免一次性向 Agent 注入全量服务 schema。
 - 已提供 KooCLI 共享 fallback：以非 shell 的结构化命令调用其他华为云服务，并强制二次确认；它不是第三个业务子 MCP。
 - ECS/OBS 已有独立的官方 AK/SK 签名器与首批动态 catalog 操作：ECS 可用区/规格/查询/单机详情/异步任务/批量启停/重启/删除、OBS 列桶/桶元数据/桶区域/列对象/对象元数据/限量内容读取/受确认保护的桶创建、标准上传、服务端复制、追加写与对象/桶删除。
+- 两个子 MCP 都提供受控 `openapi_request`：用于调用强类型目录之外的 ECS/OBS API Explorer 接口。请求始终固定到对应服务域名；响应限制为最多 1 MiB；`GET`/`HEAD` 只读，其余 HTTP 方法均须二次确认。优先使用已列出的强类型操作。
 - 每个 ECS/OBS catalog 操作均携带其对应的 API Explorer 来源链接；新操作应以 `https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=<operation>` 或 OBS 同格式页面为准。
 - ECS、OBS 的完整 OpenAPI catalog 和正式产品 MCP 尚未实现；本仓库不会将当前少量操作误标为全量 API 支持。
 - 自动安装仅支持 Windows。
@@ -47,5 +48,7 @@ npx -y @hd_vector/huaweicloud-meta
 4. 对有副作用的调用，网关先返回五分钟有效的 `confirmationToken`；Agent 必须在用户明确确认后原样携带令牌再次调用。
 
 对于当前两个子 MCP 未覆盖的服务，可直接通过主工具调用共享 fallback：`service: "koocli"`、`operation: "run"`、`input: { "command": ["<service>", "<operation>", "..."] }`。该路径不会出现在子 MCP 发现列表，且始终要求二次确认。
+
+当需要已知 ECS 或 OBS 接口、但子 MCP 没有强类型 operation 时，使用其 `openapi_request`，并以对应 API Explorer 页面确认 `method`、`path`、`query`、`body` 或 OBS `headers`。ECS `path` 可使用 `{project_id}` 或 `{projectId}` 占位符；OBS 对象内容使用 `contentBase64`，对象 GET 会自动附加受限的 `Range` 请求头。
 
 更详细的 Agent 行为规范见 [agent.md](agent.md)。

@@ -137,6 +137,71 @@ function projectId(input: JsonObject): string {
   return value;
 }
 
+const OPENAPI_METHODS = new Set(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]);
+
+function requestMethod(input: JsonObject): string {
+  if (typeof input.method !== "string" || !OPENAPI_METHODS.has(input.method)) throw new Error("method must be one of GET, HEAD, POST, PUT, PATCH, DELETE.");
+  return input.method;
+}
+
+function objectValue(input: JsonObject, name: string): JsonObject | undefined {
+  const value = input[name];
+  if (value === undefined) return undefined;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error(`${name} must be an object.`);
+  return value as JsonObject;
+}
+
+function applyQuery(url: URL, value: JsonObject | undefined): void {
+  if (!value) return;
+  for (const [name, item] of Object.entries(value)) {
+    if (typeof item !== "string" && typeof item !== "number" && typeof item !== "boolean") throw new Error(`query.${name} must be a string, number, or boolean.`);
+    url.searchParams.set(name, String(item));
+  }
+}
+
+function genericResponseLimit(input: JsonObject): number {
+  const value = input.maxResponseBytes ?? 1024 * 1024;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1 || value > 1024 * 1024) throw new Error("maxResponseBytes must be an integer between 1 and 1048576.");
+  return value;
+}
+
+async function responseGeneric(response: Response, maxBytes: number): Promise<unknown> {
+  const advertisedLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(advertisedLength) && advertisedLength > maxBytes) throw new Error(`Huawei Cloud API returned ${advertisedLength} bytes, exceeding maxResponseBytes=${maxBytes}.`);
+  const content = Buffer.from(await response.arrayBuffer());
+  if (content.byteLength > maxBytes) throw new Error(`Huawei Cloud API returned ${content.byteLength} bytes, exceeding maxResponseBytes=${maxBytes}.`);
+  const contentType = response.headers.get("content-type") ?? "";
+  const text = content.toString("utf8");
+  let body: unknown = text;
+  if (contentType.includes("application/json") && text) {
+    try { body = JSON.parse(text); } catch { /* Preserve invalid JSON text for diagnostics. */ }
+  } else if (!contentType.includes("json") && !contentType.startsWith("text/") && !contentType.includes("xml")) {
+    body = undefined;
+  }
+  if (!response.ok) throw new Error(`Huawei Cloud API returned ${response.status}: ${body === undefined ? content.toString("base64") : typeof body === "string" ? body : JSON.stringify(body)}`);
+  return {
+    status: response.status,
+    requestId: response.headers.get("x-obs-request-id") ?? response.headers.get("x-request-id") ?? undefined,
+    headers: Object.fromEntries(response.headers.entries()),
+    ...(body === undefined ? { bodyBase64: content.toString("base64") } : { body }),
+  };
+}
+
+export async function callEcsOpenApi(input: JsonObject): Promise<unknown> {
+  const method = requestMethod(input);
+  if (typeof input.path !== "string" || !input.path.startsWith("/") || input.path.startsWith("//") || input.path.includes("?") || input.path.includes("#") || input.path.split("/").includes("..")) throw new Error("path must be an ECS API path beginning with one slash and without query, fragment, or '..' segments.");
+  const path = input.path.includes("{project_id}") || input.path.includes("{projectId}")
+    ? input.path.replaceAll("{project_id}", encode(projectId(input))).replaceAll("{projectId}", encode(projectId(input)))
+    : input.path;
+  const url = new URL(path, `https://ecs.${region(input)}.myhuaweicloud.com`);
+  applyQuery(url, objectValue(input, "query"));
+  if ((method === "GET" || method === "HEAD") && input.body !== undefined) throw new Error(`${method} requests cannot include body.`);
+  const body = input.body === undefined ? "" : JSON.stringify(input.body);
+  if (body === undefined) throw new Error("body must be JSON-serializable.");
+  const response = await fetch(url, { method, headers: signSdkRequest(method, url, body), ...(body ? { body } : {}) });
+  return responseGeneric(response, genericResponseLimit(input));
+}
+
 export async function listEcsServers(input: JsonObject): Promise<unknown> {
   const endpoint = `https://ecs.${region(input)}.myhuaweicloud.com`;
   const url = new URL(`/v1/${encode(projectId(input))}/cloudservers/detail`, endpoint);
@@ -273,6 +338,47 @@ export async function createObsBucket(input: JsonObject): Promise<unknown> {
 function decodeBase64(value: unknown): Buffer {
   if (typeof value !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) throw new Error("contentBase64 must be a valid base64 string.");
   return Buffer.from(value, "base64");
+}
+
+function obsHeaders(input: JsonObject): Record<string, string> {
+  const supplied = objectValue(input, "headers");
+  if (!supplied) return {};
+  const permitted = new Set(["content-type", "content-md5", "range", "if-match", "if-none-match", "if-modified-since", "if-unmodified-since", "cache-control", "content-disposition", "content-encoding", "content-language", "expires"]);
+  const result: Record<string, string> = {};
+  for (const [name, value] of Object.entries(supplied)) {
+    const normalized = name.toLowerCase();
+    if ((normalized !== "x-obs-" && !normalized.startsWith("x-obs-")) && !permitted.has(normalized)) throw new Error(`headers.${name} is not permitted.`);
+    if (["authorization", "date", "host", "content-length"].includes(normalized) || normalized.includes("customer-key")) throw new Error(`headers.${name} is managed by the gateway or contains a secret and cannot be supplied.`);
+    if (typeof value !== "string") throw new Error(`headers.${name} must be a string.`);
+    result[normalized] = value;
+  }
+  return result;
+}
+
+export async function callObsOpenApi(input: JsonObject): Promise<unknown> {
+  const method = requestMethod(input);
+  const bucket = input.bucket;
+  const key = input.key;
+  if (bucket !== undefined && (typeof bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(bucket))) throw new Error("bucket must be a valid OBS bucket name.");
+  if (key !== undefined && (typeof key !== "string" || !key)) throw new Error("key must be a non-empty string.");
+  if (bucket === undefined && key !== undefined) throw new Error("bucket is required when key is supplied.");
+  const objectPath = typeof key === "string" ? `/${key.split("/").map(encode).join("/")}` : "/";
+  const url = new URL(bucket ? `https://${bucket}.obs.${region(input)}.myhuaweicloud.com${objectPath}` : `https://obs.${region(input)}.myhuaweicloud.com/`);
+  applyQuery(url, objectValue(input, "query"));
+  const headers = obsHeaders(input);
+  const maxBytes = genericResponseLimit(input);
+  if (method === "GET" && typeof key === "string" && !headers.range) headers.range = `bytes=0-${maxBytes - 1}`;
+  let requestBody: Uint8Array<ArrayBuffer> | undefined;
+  if (input.contentBase64 !== undefined) {
+    if (method === "GET" || method === "HEAD") throw new Error(`${method} requests cannot include contentBase64.`);
+    const content = decodeBase64(input.contentBase64);
+    headers["content-md5"] = createHash("md5").update(content).digest("base64");
+    headers["content-type"] ??= "application/octet-stream";
+    requestBody = new Uint8Array(content.byteLength);
+    requestBody.set(content);
+  }
+  const response = await fetch(url, { method, headers: signObsRequest(method, url, headers), ...(requestBody ? { body: requestBody } : {}) });
+  return method === "HEAD" ? responseMetadata(response) : responseGeneric(response, maxBytes);
 }
 
 export async function appendObsObject(input: JsonObject): Promise<unknown> {

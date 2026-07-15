@@ -4,6 +4,7 @@ export interface SubMcpOperation {
   id: string;
   description: string;
   isReadOnly: boolean;
+  requiresConfirmation?(input: JsonObject): boolean;
   inputSchema: JsonObject;
   sourceUrl: string;
   execute(input: JsonObject): Promise<unknown>;

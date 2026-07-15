@@ -1,4 +1,4 @@
-import { appendObsObject, copyObsObject, createObsBucket, deleteObsBucket, deleteObsObject, getObsBucketLocation, getObsBucketMetadata, getObsObject, getObsObjectMetadata, listObsBuckets, listObsObjects, putObsObject } from "../openapi";
+import { appendObsObject, callObsOpenApi, copyObsObject, createObsBucket, deleteObsBucket, deleteObsObject, getObsBucketLocation, getObsBucketMetadata, getObsObject, getObsObjectMetadata, listObsBuckets, listObsObjects, putObsObject } from "../openapi";
 import type { SubMcp } from "./types";
 
 export const subMcp: SubMcp = {
@@ -7,6 +7,7 @@ export const subMcp: SubMcp = {
   description: "OBS OpenAPI child MCP. Operations are sourced from the OBS API Explorer.",
   sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=AppendObject",
   operations: [
+    { id: "openapi_request", description: "Call another OBS API Explorer endpoint through the OBS child MCP. bucket, key, query, permitted headers, and base64 body are supported; non-GET/HEAD methods require explicit user confirmation.", isReadOnly: false, requiresConfirmation: (input) => input.method !== "GET" && input.method !== "HEAD", inputSchema: { type: "object", properties: { method: { type: "string", enum: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"] }, bucket: { type: "string" }, key: { type: "string" }, query: { type: "object" }, headers: { type: "object" }, contentBase64: { type: "string", format: "base64" }, maxResponseBytes: { type: "integer", minimum: 1, maximum: 1048576 }, region: { type: "string" } }, required: ["method"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=AppendObject", execute: callObsOpenApi },
     { id: "list_buckets", description: "List all OBS buckets available to the authenticated account.", isReadOnly: true, inputSchema: { type: "object", properties: { region: { type: "string" } } }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=ListBuckets", execute: listObsBuckets },
     { id: "get_bucket_metadata", description: "Get OBS bucket metadata without modifying the bucket.", isReadOnly: true, inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" } }, required: ["bucket"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=GetBucketMetadata", execute: getObsBucketMetadata },
     { id: "get_bucket_location", description: "Get the region where one OBS bucket resides.", isReadOnly: true, inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" } }, required: ["bucket"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=GetBucketLocation", execute: getObsBucketLocation },

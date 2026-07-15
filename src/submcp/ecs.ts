@@ -1,4 +1,4 @@
-import { deleteEcsServers, getEcsJob, getEcsServer, listEcsAvailabilityZones, listEcsFlavors, listEcsServers, rebootEcsServers, startEcsServers, stopEcsServers } from "../openapi";
+import { callEcsOpenApi, deleteEcsServers, getEcsJob, getEcsServer, listEcsAvailabilityZones, listEcsFlavors, listEcsServers, rebootEcsServers, startEcsServers, stopEcsServers } from "../openapi";
 import type { SubMcp } from "./types";
 
 export const subMcp: SubMcp = {
@@ -7,6 +7,7 @@ export const subMcp: SubMcp = {
   description: "ECS OpenAPI child MCP. Operations are sourced from the ECS API Explorer.",
   sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=NovaListVersions",
   operations: [
+    { id: "openapi_request", description: "Call another ECS API Explorer endpoint through the ECS child MCP. Use an API path such as /v1/{project_id}/... and optional query/body; non-GET/HEAD methods require explicit user confirmation.", isReadOnly: false, requiresConfirmation: (input) => input.method !== "GET" && input.method !== "HEAD", inputSchema: { type: "object", properties: { method: { type: "string", enum: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"] }, path: { type: "string" }, query: { type: "object" }, body: {}, maxResponseBytes: { type: "integer", minimum: 1, maximum: 1048576 }, region: { type: "string" }, projectId: { type: "string" } }, required: ["method", "path"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=NovaListVersions", execute: callEcsOpenApi },
     { id: "list_servers", description: "List ECS server details in one project.", isReadOnly: true, inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, limit: { type: "number", minimum: 1, maximum: 1000 }, name: { type: "string" }, status: { type: "string" } } }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=ListServersDetails", execute: listEcsServers },
     { id: "get_server", description: "Get the details of one ECS server.", isReadOnly: true, inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverId: { type: "string" } }, required: ["serverId"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=ShowServer", execute: getEcsServer },
     { id: "get_job", description: "Get the status of an asynchronous ECS job returned by lifecycle operations.", isReadOnly: true, inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, jobId: { type: "string" } }, required: ["jobId"] }, sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=ShowJob", execute: getEcsJob },
