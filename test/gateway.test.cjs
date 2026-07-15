@@ -57,6 +57,32 @@ test("OBS append signs content and requires confirmation", { concurrency: false 
   }
 });
 
+test("OBS standard upload signs content and requires confirmation", { concurrency: false }, async () => {
+  setCredentials();
+  const gateway = require("../build/gateway.js");
+  const originalFetch = global.fetch;
+  let request;
+  global.fetch = async (url, options) => {
+    request = { url: String(url), options };
+    return new Response(null, { status: 200, headers: { "etag": "etag-1", "x-obs-request-id": "put-request" } });
+  };
+  try {
+    const input = { bucket: "example-bucket", key: "reports/today.txt", contentBase64: Buffer.from("report").toString("base64"), contentType: "text/plain" };
+    const pending = await gateway.call("obs", "put_object", input);
+    assert.equal(pending.status, "confirmation_required");
+    assert.equal(request, undefined);
+    const result = await gateway.call("obs", "put_object", input, pending.confirmationToken);
+    assert.equal(result.requestId, "put-request");
+    assert.equal(request.url, "https://example-bucket.obs.cn-north-4.myhuaweicloud.com/reports/today.txt");
+    assert.equal(request.options.method, "PUT");
+    assert.equal(request.options.headers["content-type"], "text/plain");
+    assert.match(request.options.headers.authorization, /^OBS test-ak:/);
+    assert.equal(Buffer.from(request.options.body).toString(), "report");
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("ECS availability-zone discovery uses the documented project endpoint", { concurrency: false }, async () => {
   setCredentials();
   const { listEcsAvailabilityZones } = require("../build/openapi.js");

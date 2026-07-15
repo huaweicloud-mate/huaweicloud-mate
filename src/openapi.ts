@@ -263,6 +263,20 @@ export async function appendObsObject(input: JsonObject): Promise<unknown> {
   return responseMetadata(response);
 }
 
+export async function putObsObject(input: JsonObject): Promise<unknown> {
+  if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
+  if (typeof input.key !== "string" || !input.key) throw new Error("key is required.");
+  if (input.contentType !== undefined && typeof input.contentType !== "string") throw new Error("contentType must be a string.");
+  const body = decodeBase64(input.contentBase64);
+  const objectPath = input.key.split("/").map(encode).join("/");
+  const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/${objectPath}`);
+  const headers = signObsRequest("PUT", url, { "content-type": typeof input.contentType === "string" ? input.contentType : "application/octet-stream", "content-md5": createHash("md5").update(body).digest("base64") });
+  const requestBody = new Uint8Array(body.byteLength);
+  requestBody.set(body);
+  const response = await fetch(url, { method: "PUT", headers, body: requestBody });
+  return responseMetadata(response);
+}
+
 export async function listObsObjects(input: JsonObject): Promise<unknown> {
   if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
   const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/`);
