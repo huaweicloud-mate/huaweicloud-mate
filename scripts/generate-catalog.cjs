@@ -129,10 +129,13 @@ function ecsCatalog(source, modelDirectory) {
     const inputNames = [...new Set([...Object.values(pathParameters), ...Object.values(queryParameters), ...Object.values(headerParameters), ...required])];
     const requestClass = `${pascalCase(name)}Request`;
     let bodySchema;
+    let inputSchemas = {};
     try {
       const requestModel = readFileSync(join(modelDirectory, `${requestClass}.d.ts`), "utf8");
       const bodyType = /get body\(\): ([^;]+);/.exec(requestModel)?.[1] || /^\s*body\??:\s*([^;]+);/m.exec(requestModel)?.[1];
       if (bodyType) bodySchema = schemaForEcsType(bodyType, modelDirectory, schemaCache);
+      const requestSchema = schemaForEcsModel(requestClass, modelDirectory, schemaCache);
+      if (requestSchema.properties) inputSchemas = requestSchema.properties;
     } catch { /* Some generated requests have no model class. */ }
     return {
       id: `api_${snakeCase(name)}`,
@@ -146,6 +149,7 @@ function ecsCatalog(source, modelDirectory) {
       headerParameters,
       inputNames,
       ...(bodySchema ? { bodySchema } : {}),
+      inputSchemas,
     };
   });
 }

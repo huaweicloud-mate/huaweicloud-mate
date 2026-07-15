@@ -16,6 +16,7 @@ interface EcsCatalogEntry {
   headerParameters: Record<string, string>;
   inputNames: string[];
   bodySchema?: JsonObject;
+  inputSchemas: Record<string, JsonObject>;
 }
 
 interface ObsParameter {
@@ -130,7 +131,11 @@ function obsXmlBody(entry: ObsCatalogEntry, input: JsonObject): string | undefin
   const xmlFields = Object.entries(entry.parameters).filter(([name, parameter]) => parameter.location === "xml" && input[name] !== undefined);
   if (!xmlFields.length) return undefined;
   const root = entry.data?.xmlRoot;
-  if (!root) throw new Error(`${entry.apiName} has XML parameters but no XML root definition.`);
+  if (!root) {
+    if (xmlFields.length !== 1) throw new Error(`${entry.apiName} has XML parameters but no XML root definition.`);
+    const [name, parameter] = xmlFields[0];
+    return xmlElement(name, parameter, input[name]);
+  }
   return `<${root}>${xmlFields.map(([name, parameter]) => xmlElement(name, parameter, input[name])).join("")}</${root}>`;
 }
 
@@ -149,7 +154,12 @@ async function callGeneratedObs(entry: ObsCatalogEntry, input: JsonObject): Prom
     } else if (parameter.location === "urlPath") {
       query[parameter.sentAs ?? name] = primitiveQueryValue(value, name);
     } else if (parameter.location === "header") {
-      headers[obsHeaderName(name, parameter)] = primitiveQueryValue(value, name);
+      if (parameter.type === "array") {
+        if (!Array.isArray(value)) throw new Error(`${name} must be an array.`);
+        headers[obsHeaderName(name, parameter)] = value.map((item) => primitiveQueryValue(item, name)).join(",");
+      } else {
+        headers[obsHeaderName(name, parameter)] = primitiveQueryValue(value, name);
+      }
     }
   }
   const contentBase64 = input.contentBase64 ?? input.Body;
@@ -166,7 +176,7 @@ export function generatedEcsOperations(): SubMcpOperation[] {
     id: entry.id,
     description: entry.description,
     isReadOnly: isReadOnly(entry.method),
-    inputSchema: generatedSchema(entry.inputNames, entry.required, entry.bodySchema),
+    inputSchema: generatedSchema(entry.inputNames, entry.required, entry.bodySchema, entry.inputSchemas),
     sourceUrl: sourceUrl("ECS", entry.apiName),
     execute: (input) => callGeneratedEcs(entry, input),
   }));

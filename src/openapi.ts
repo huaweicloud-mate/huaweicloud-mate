@@ -147,7 +147,7 @@ function projectId(input: JsonObject): string {
   return value;
 }
 
-const OPENAPI_METHODS = new Set(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]);
+const OPENAPI_METHODS = new Set(["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"]);
 
 function requestMethod(input: JsonObject): string {
   if (typeof input.method !== "string" || !OPENAPI_METHODS.has(input.method)) throw new Error("method must be one of GET, HEAD, POST, PUT, PATCH, DELETE.");
@@ -366,7 +366,7 @@ function decodeBase64(value: unknown): Buffer {
 function obsHeaders(input: JsonObject): Record<string, string> {
   const supplied = objectValue(input, "headers");
   if (!supplied) return {};
-  const permitted = new Set(["content-type", "content-md5", "range", "if-match", "if-none-match", "if-modified-since", "if-unmodified-since", "cache-control", "content-disposition", "content-encoding", "content-language", "expires"]);
+  const permitted = new Set(["content-type", "content-md5", "range", "if-match", "if-none-match", "if-modified-since", "if-unmodified-since", "cache-control", "content-disposition", "content-encoding", "content-language", "expires", "origin", "access-control-request-method", "access-control-request-headers"]);
   const result: Record<string, string> = {};
   for (const [name, value] of Object.entries(supplied)) {
     const normalized = name.toLowerCase();

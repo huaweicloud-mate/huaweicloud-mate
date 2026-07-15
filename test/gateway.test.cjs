@@ -12,6 +12,31 @@ function setCredentials() {
   process.env.HUAWEICLOUD_PROJECT_ID = "test-project";
 }
 
+function generatedValue(schema, name = "value") {
+  if (schema?.format === "base64") return Buffer.from("x").toString("base64");
+  if (schema?.type === "string") return name === "Bucket" || name === "bucket" ? "example-bucket" : name === "Key" || name === "key" ? "object.txt" : "value";
+  if (schema?.type === "number" || schema?.type === "integer") return 1;
+  if (schema?.type === "boolean") return true;
+  if (schema?.type === "array") return [generatedValue(schema.items, name)];
+  if (schema?.type === "object") {
+    const value = {};
+    for (const child of schema.required || []) value[child] = generatedValue(schema.properties?.[child], child);
+    return value;
+  }
+  return "value";
+}
+
+function generatedOperationInput(operation) {
+  const schema = operation.inputSchema;
+  const input = {};
+  for (const name of schema.required || []) input[name] = generatedValue(schema.properties?.[name], name);
+  // OBS requires Bucket whenever an object Key is present, even where a model
+  // marks only Key as required.
+  if (Object.hasOwn(schema.properties || {}, "Bucket") && (input.Key !== undefined || input.Bucket !== undefined)) input.Bucket ??= "example-bucket";
+  if (Object.hasOwn(schema.properties || {}, "bucket") && (input.key !== undefined || input.bucket !== undefined)) input.bucket ??= "example-bucket";
+  return input;
+}
+
 test("Windows DPAPI credential storage can be read and cleared for the current user", { concurrency: false, skip: process.platform !== "win32" }, () => {
   const directory = mkdtempSync(join(tmpdir(), "huaweicloud-mate-test-"));
   const credentialFile = join(directory, "credentials.dpapi");
@@ -361,4 +386,30 @@ test("generated OBS schema retains nested lifecycle model types", { concurrency:
   assert.equal(transition.Days.type, "number");
   assert.equal(transition.StorageClass.type, undefined);
   await assert.rejects(() => call("obs", "api_set_bucket_lifecycle_configuration", { Bucket: "example-bucket", Rules: [{ Transitions: [{ Days: "30" }] }] }), /Rules\[0\]\.Transitions\[0\]\.Days must be a finite number/);
+});
+
+test("every generated ECS and OBS operation reaches a signed request through its catalog adapter", { concurrency: false }, async () => {
+  setCredentials();
+  const { call, provision } = require("../build/gateway.js");
+  const originalFetch = global.fetch;
+  const requests = [];
+  global.fetch = async (url, options) => {
+    requests.push({ url: String(url), options });
+    return new Response(options.method === "HEAD" ? null : JSON.stringify({ ok: true }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    for (const service of ["ecs", "obs"]) {
+      const catalog = await provision(service);
+      for (const operation of catalog.operations.filter((entry) => entry.id.startsWith("api_"))) {
+        const input = generatedOperationInput(operation);
+        const first = await call(service, operation.id, input);
+        if (first?.status === "confirmation_required") await call(service, operation.id, input, first.confirmationToken);
+      }
+    }
+    assert.equal(requests.length, 180);
+    assert.ok(requests.filter((request) => request.url.includes(".ecs.")).every((request) => /^SDK-HMAC-SHA256 Access=test-ak,/.test(request.options.headers.authorization)));
+    assert.ok(requests.filter((request) => request.url.includes(".obs.")).every((request) => /^OBS test-ak:/.test(request.options.headers.authorization)));
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
