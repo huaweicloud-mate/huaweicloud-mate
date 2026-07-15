@@ -175,6 +175,19 @@ function genericResponseLimit(input: JsonObject): number {
   return value;
 }
 
+function ecsHeaders(input: JsonObject): Record<string, string> {
+  const supplied = objectValue(input, "headers");
+  if (!supplied) return {};
+  const result: Record<string, string> = {};
+  for (const [name, value] of Object.entries(supplied)) {
+    const normalized = name.toLowerCase();
+    if (["authorization", "host", "content-length", "x-sdk-date"].includes(normalized)) throw new Error(`headers.${name} is managed by the gateway and cannot be supplied.`);
+    if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") throw new Error(`headers.${name} must be a string, number, or boolean.`);
+    result[normalized] = String(value);
+  }
+  return result;
+}
+
 async function responseGeneric(response: Response, maxBytes: number): Promise<unknown> {
   const advertisedLength = Number(response.headers.get("content-length"));
   if (Number.isFinite(advertisedLength) && advertisedLength > maxBytes) throw new Error(`Huawei Cloud API returned ${advertisedLength} bytes, exceeding maxResponseBytes=${maxBytes}.`);
@@ -208,7 +221,7 @@ export async function callEcsOpenApi(input: JsonObject): Promise<unknown> {
   if ((method === "GET" || method === "HEAD") && input.body !== undefined) throw new Error(`${method} requests cannot include body.`);
   const body = input.body === undefined ? "" : JSON.stringify(input.body);
   if (body === undefined) throw new Error("body must be JSON-serializable.");
-  const response = await fetch(url, { method, headers: signSdkRequest(method, url, body), ...(body ? { body } : {}) });
+  const response = await fetch(url, { method, headers: signSdkRequest(method, url, body, ecsHeaders(input)), ...(body ? { body } : {}) });
   return responseGeneric(response, genericResponseLimit(input));
 }
 

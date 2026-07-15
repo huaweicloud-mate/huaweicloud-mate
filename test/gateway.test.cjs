@@ -302,6 +302,25 @@ test("generated ECS and OBS catalog entries map to their official request shape"
   }
 });
 
+test("generated ECS catalog maps documented request headers into the signed call", { concurrency: false }, async () => {
+  setCredentials();
+  const { call } = require("../build/gateway.js");
+  const originalFetch = global.fetch;
+  let request;
+  global.fetch = async (url, options) => {
+    request = { url: String(url), options };
+    return new Response(JSON.stringify({ servers: [] }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const result = await call("ecs", "api_nova_list_servers", { "OpenStack-API-Version": "2.1" });
+    assert.deepEqual(result.body, { servers: [] });
+    assert.equal(request.options.headers["openstack-api-version"], "2.1");
+    assert.match(request.options.headers.authorization, /^SDK-HMAC-SHA256 Access=test-ak,/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("generated ECS body schema preserves nested API field types", { concurrency: false }, async () => {
   const { provision, call } = require("../build/gateway.js");
   const catalog = await provision("ecs");

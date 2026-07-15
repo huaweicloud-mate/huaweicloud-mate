@@ -13,6 +13,7 @@ interface EcsCatalogEntry {
   required: string[];
   pathParameters: Record<string, string>;
   queryParameters: Record<string, string>;
+  headerParameters: Record<string, string>;
   inputNames: string[];
   bodySchema?: JsonObject;
 }
@@ -75,7 +76,11 @@ async function callGeneratedEcs(entry: EcsCatalogEntry, input: JsonObject): Prom
   for (const [queryName, inputName] of Object.entries(entry.queryParameters)) {
     if (input[inputName] !== undefined) query[queryName] = primitiveQueryValue(input[inputName], inputName);
   }
-  return callEcsOpenApi({ method: entry.method, path, ...(Object.keys(query).length ? { query } : {}), ...(input.body === undefined ? {} : { body: input.body }), ...(typeof input.region === "string" ? { region: input.region } : {}), ...(typeof input.projectId === "string" ? { projectId: input.projectId } : {}) });
+  const headers: JsonObject = {};
+  for (const [headerName, inputName] of Object.entries(entry.headerParameters)) {
+    if (input[inputName] !== undefined) headers[headerName] = primitiveQueryValue(input[inputName], inputName);
+  }
+  return callEcsOpenApi({ method: entry.method, path, ...(Object.keys(query).length ? { query } : {}), ...(Object.keys(headers).length ? { headers } : {}), ...(input.body === undefined ? {} : { body: input.body }), ...(typeof input.region === "string" ? { region: input.region } : {}), ...(typeof input.projectId === "string" ? { projectId: input.projectId } : {}) });
 }
 
 function obsHeaderName(name: string, parameter: ObsParameter): string {

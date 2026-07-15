@@ -13,6 +13,7 @@
       "id": "id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "id",
       "body"
@@ -40,6 +41,7 @@
       "server_group_id": "server_group_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_group_id",
       "body"
@@ -72,6 +74,7 @@
       "nic_id": "nic_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "nic_id",
       "body"
@@ -110,6 +113,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -157,6 +161,7 @@
       "server_group_id": "server_group_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_group_id",
       "body"
@@ -187,6 +192,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -253,6 +259,7 @@
       "volume_id": "volume_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "volume_id",
       "body"
@@ -291,6 +298,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -330,6 +338,7 @@
       "server_group_id": "server_group_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_group_id",
       "body"
@@ -360,6 +369,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -395,6 +405,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -434,6 +445,7 @@
       "volume_id": "volume_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "volume_id",
       "body"
@@ -461,6 +473,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -498,6 +511,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -535,6 +549,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -594,6 +609,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -630,6 +646,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -667,6 +684,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -704,6 +722,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -764,6 +783,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "port_id",
       "server_id",
@@ -798,6 +818,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -862,6 +883,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -923,6 +945,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -972,6 +995,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -1184,7 +1208,11 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {
+      "X-Client-Token": "X-Client-Token"
+    },
     "inputNames": [
+      "X-Client-Token",
       "body"
     ],
     "bodySchema": {
@@ -1567,6 +1595,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -1599,7 +1628,11 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {
+      "X-Client-Token": "X-Client-Token"
+    },
     "inputNames": [
+      "X-Client-Token",
       "body"
     ],
     "bodySchema": {
@@ -1983,6 +2016,7 @@
       "launch_template_id": "launch_template_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "launch_template_id"
     ]
@@ -2000,6 +2034,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -2017,6 +2052,7 @@
       "server_group_id": "server_group_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_group_id"
     ]
@@ -2035,6 +2071,7 @@
       "server_group_id": "server_group_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_group_id",
       "body"
@@ -2068,6 +2105,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "key",
       "server_id"
@@ -2086,6 +2124,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -2101,6 +2140,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -2144,6 +2184,7 @@
     "queryParameters": {
       "delete_flag": "delete_flag"
     },
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "volume_id",
@@ -2164,6 +2205,7 @@
       "nic_id": "nic_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "nic_id",
       "body"
@@ -2197,6 +2239,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -2214,6 +2257,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -2248,6 +2292,7 @@
       "limit": "limit",
       "marker": "marker"
     },
+    "headerParameters": {},
     "inputNames": [
       "id",
       "name",
@@ -2292,6 +2337,7 @@
       "limit": "limit",
       "marker": "marker"
     },
+    "headerParameters": {},
     "inputNames": [
       "flavor_id",
       "sell_status",
@@ -2320,6 +2366,7 @@
       "limit": "limit",
       "marker": "marker"
     },
+    "headerParameters": {},
     "inputNames": [
       "availability_zone",
       "flavor_id",
@@ -2343,6 +2390,7 @@
       "flavor_id": "flavor_id",
       "version": "version"
     },
+    "headerParameters": {},
     "inputNames": [
       "limit",
       "marker",
@@ -2372,6 +2420,7 @@
       "tags": "tags",
       "tags_key": "tags_key"
     },
+    "headerParameters": {},
     "inputNames": [
       "all_tenants",
       "availability_zone",
@@ -2402,6 +2451,7 @@
       "source_flavor_id": "source_flavor_id",
       "source_flavor_name": "source_flavor_name"
     },
+    "headerParameters": {},
     "inputNames": [
       "instance_uuid",
       "limit",
@@ -2430,6 +2480,7 @@
       "publish_until": "publish_until",
       "limit": "limit"
     },
+    "headerParameters": {},
     "inputNames": [
       "marker",
       "id",
@@ -2454,6 +2505,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -2470,6 +2522,7 @@
       "limit": "limit",
       "marker": "marker"
     },
+    "headerParameters": {},
     "inputNames": [
       "limit",
       "marker"
@@ -2488,6 +2541,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -2505,6 +2559,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -2520,6 +2575,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -2609,6 +2665,7 @@
       "server_id": "server_id",
       "marker": "marker"
     },
+    "headerParameters": {},
     "inputNames": [
       "enterprise_project_id",
       "flavor",
@@ -2639,6 +2696,7 @@
       "launch_template_id": "launch_template_id",
       "name": "name"
     },
+    "headerParameters": {},
     "inputNames": [
       "limit",
       "marker",
@@ -2660,6 +2718,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -2692,6 +2751,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -2724,6 +2784,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -2767,7 +2828,11 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {
+      "OpenStack-API-Version": "OpenStack-API-Version"
+    },
     "inputNames": [
+      "OpenStack-API-Version",
       "body"
     ],
     "bodySchema": {
@@ -2802,7 +2867,11 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {
+      "OpenStack-API-Version": "OpenStack-API-Version"
+    },
     "inputNames": [
+      "OpenStack-API-Version",
       "body"
     ],
     "bodySchema": {
@@ -2961,6 +3030,7 @@
       "keypair_name": "keypair_name"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "keypair_name"
     ]
@@ -2978,6 +3048,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -2996,6 +3067,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3026,9 +3098,13 @@
       "limit": "limit",
       "marker": "marker"
     },
+    "headerParameters": {
+      "OpenStack-API-Version": "OpenStack-API-Version"
+    },
     "inputNames": [
       "limit",
-      "marker"
+      "marker",
+      "OpenStack-API-Version"
     ]
   },
   {
@@ -3044,6 +3120,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -3071,6 +3148,9 @@
       "status": "status",
       "tags": "tags"
     },
+    "headerParameters": {
+      "OpenStack-API-Version": "OpenStack-API-Version"
+    },
     "inputNames": [
       "changes-since",
       "flavor",
@@ -3084,7 +3164,8 @@
       "reservation_id",
       "sort_key",
       "status",
-      "tags"
+      "tags",
+      "OpenStack-API-Version"
     ]
   },
   {
@@ -3109,6 +3190,9 @@
       "status": "status",
       "tags": "tags"
     },
+    "headerParameters": {
+      "OpenStack-API-Version": "OpenStack-API-Version"
+    },
     "inputNames": [
       "changes-since",
       "flavor",
@@ -3121,7 +3205,8 @@
       "reservation_id",
       "sort_key",
       "status",
-      "tags"
+      "tags",
+      "OpenStack-API-Version"
     ]
   },
   {
@@ -3137,6 +3222,7 @@
       "flavor_id": "flavor_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "flavor_id"
     ]
@@ -3154,8 +3240,12 @@
       "keypair_name": "keypair_name"
     },
     "queryParameters": {},
+    "headerParameters": {
+      "OpenStack-API-Version": "OpenStack-API-Version"
+    },
     "inputNames": [
-      "keypair_name"
+      "keypair_name",
+      "OpenStack-API-Version"
     ]
   },
   {
@@ -3171,8 +3261,12 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {
+      "OpenStack-API-Version": "OpenStack-API-Version"
+    },
     "inputNames": [
-      "server_id"
+      "server_id",
+      "OpenStack-API-Version"
     ]
   },
   {
@@ -3190,6 +3284,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "port_id",
       "server_id"
@@ -3209,6 +3304,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3234,6 +3330,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3292,6 +3389,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3347,6 +3445,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3382,6 +3481,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3426,6 +3526,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3480,6 +3581,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -3497,6 +3599,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -3517,6 +3620,7 @@
       "count": "count",
       "region_ids": "region_ids"
     },
+    "headerParameters": {},
     "inputNames": [
       "flavor_id",
       "count",
@@ -3536,6 +3640,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -3553,6 +3658,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -3570,6 +3676,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -3587,6 +3694,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -3604,6 +3712,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -3623,6 +3732,7 @@
       "volume_id": "volume_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "volume_id"
@@ -3641,6 +3751,7 @@
       "server_group_id": "server_group_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_group_id"
     ]
@@ -3658,6 +3769,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -3676,6 +3788,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3706,6 +3819,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id"
     ]
@@ -3724,6 +3838,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3747,6 +3862,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -3773,6 +3889,7 @@
     ],
     "pathParameters": {},
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "body"
     ],
@@ -3807,6 +3924,7 @@
       "id": "id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "id",
       "body"
@@ -3834,6 +3952,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3866,6 +3985,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3918,6 +4038,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -3947,6 +4068,7 @@
       "volume_id": "volume_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "volume_id",
@@ -3982,6 +4104,7 @@
       "port_id": "port_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "port_id",
@@ -4053,6 +4176,7 @@
       "server_id": "server_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "server_id",
       "body"
@@ -4077,6 +4201,7 @@
       "api_version": "api_version"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "api_version"
     ]
@@ -4094,6 +4219,7 @@
       "job_id": "job_id"
     },
     "queryParameters": {},
+    "headerParameters": {},
     "inputNames": [
       "job_id"
     ]

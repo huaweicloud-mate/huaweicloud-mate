@@ -119,9 +119,14 @@ function ecsCatalog(source, modelDirectory) {
       const input = assigned.get(entry[2]);
       if (input) queryParameters[entry[1]] = input;
     }
+    const headerParameters = {};
+    for (const entry of body.matchAll(/localVarHeaderParameter\['([^']+)'\]\s*=\s*String\((\w+)\);/g)) {
+      const input = assigned.get(entry[2]);
+      if (input && entry[1].toLowerCase() !== "content-type") headerParameters[entry[1]] = input;
+    }
     const summary = /@summary\s+([^\r\n]+)/.exec(prefix)?.[1]?.trim() || `ECS API Explorer operation ${pascalCase(name)}.`;
     const required = [...new Set(requiredVariables.map((variable) => assigned.get(variable) || variable))];
-    const inputNames = [...new Set([...Object.values(pathParameters), ...Object.values(queryParameters), ...required])];
+    const inputNames = [...new Set([...Object.values(pathParameters), ...Object.values(queryParameters), ...Object.values(headerParameters), ...required])];
     const requestClass = `${pascalCase(name)}Request`;
     let bodySchema;
     try {
@@ -138,6 +143,7 @@ function ecsCatalog(source, modelDirectory) {
       required,
       pathParameters,
       queryParameters,
+      headerParameters,
       inputNames,
       ...(bodySchema ? { bodySchema } : {}),
     };
