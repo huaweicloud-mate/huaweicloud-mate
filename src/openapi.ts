@@ -194,6 +194,13 @@ export async function getObsBucketLocation(input: JsonObject): Promise<unknown> 
   return responseBody(response);
 }
 
+export async function deleteObsBucket(input: JsonObject): Promise<unknown> {
+  if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
+  const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/`);
+  const response = await fetch(url, { method: "DELETE", headers: signObsRequest("DELETE", url) });
+  return responseMetadata(response);
+}
+
 export async function listObsObjects(input: JsonObject): Promise<unknown> {
   if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
   const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/`);
@@ -212,5 +219,15 @@ export async function getObsObjectMetadata(input: JsonObject): Promise<unknown> 
   const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/${objectPath}`);
   if (typeof input.versionId === "string") url.searchParams.set("versionId", input.versionId);
   const response = await fetch(url, { method: "HEAD", headers: signObsRequest("HEAD", url) });
+  return responseMetadata(response);
+}
+
+export async function deleteObsObject(input: JsonObject): Promise<unknown> {
+  if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
+  if (typeof input.key !== "string" || !input.key) throw new Error("key is required.");
+  const objectPath = input.key.split("/").map(encode).join("/");
+  const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/${objectPath}`);
+  if (typeof input.versionId === "string") url.searchParams.set("versionId", input.versionId);
+  const response = await fetch(url, { method: "DELETE", headers: signObsRequest("DELETE", url) });
   return responseMetadata(response);
 }

@@ -1,4 +1,4 @@
-import { getEcsJob, getEcsServer, getObsBucketLocation, getObsBucketMetadata, getObsObjectMetadata, JsonObject, listEcsServers, listObsBuckets, listObsObjects, rebootEcsServers, startEcsServers, stopEcsServers } from "./openapi";
+import { deleteObsBucket, deleteObsObject, getEcsJob, getEcsServer, getObsBucketLocation, getObsBucketMetadata, getObsObjectMetadata, JsonObject, listEcsServers, listObsBuckets, listObsObjects, rebootEcsServers, startEcsServers, stopEcsServers } from "./openapi";
 import type { ServiceDefinition, ServiceOperation } from "./gateway";
 
 export interface CatalogOperation extends ServiceOperation {
@@ -101,6 +101,14 @@ export const serviceCatalog: CatalogService[] = [
         execute: getObsBucketLocation,
       },
       {
+        id: "delete_bucket",
+        description: "Delete one empty OBS bucket. This operation always requires explicit user confirmation.",
+        isReadOnly: false,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" } }, required: ["bucket"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=DeleteBucket",
+        execute: deleteObsBucket,
+      },
+      {
         id: "list_objects",
         description: "List up to 1,000 objects in one OBS bucket.",
         isReadOnly: true,
@@ -115,6 +123,14 @@ export const serviceCatalog: CatalogService[] = [
         inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" }, key: { type: "string" }, versionId: { type: "string" } }, required: ["bucket", "key"] },
         sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=HeadObject",
         execute: getObsObjectMetadata,
+      },
+      {
+        id: "delete_object",
+        description: "Delete one OBS object or one object version. This operation always requires explicit user confirmation.",
+        isReadOnly: false,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" }, key: { type: "string" }, versionId: { type: "string" } }, required: ["bucket", "key"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=DeleteObject",
+        execute: deleteObsObject,
       },
     ],
   },
