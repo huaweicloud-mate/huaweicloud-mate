@@ -98,6 +98,20 @@ async function responseMetadata(response: Response): Promise<unknown> {
   };
 }
 
+async function responseObjectContent(response: Response, maxBytes: number): Promise<unknown> {
+  if (!response.ok) return responseBody(response);
+  const advertisedLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(advertisedLength) && advertisedLength > maxBytes) throw new Error(`OBS returned ${advertisedLength} bytes, exceeding maxBytes=${maxBytes}.`);
+  const content = Buffer.from(await response.arrayBuffer());
+  if (content.byteLength > maxBytes) throw new Error(`OBS returned ${content.byteLength} bytes, exceeding maxBytes=${maxBytes}.`);
+  return {
+    status: response.status,
+    requestId: response.headers.get("x-obs-request-id") ?? response.headers.get("x-request-id") ?? undefined,
+    headers: Object.fromEntries(response.headers.entries()),
+    contentBase64: content.toString("base64"),
+  };
+}
+
 function region(input: JsonObject): string {
   const value = input.region ?? process.env.HUAWEICLOUD_REGION;
   if (typeof value !== "string" || !value) throw new Error("region is required. Provide input.region or HUAWEICLOUD_REGION.");
@@ -296,6 +310,17 @@ export async function getObsObjectMetadata(input: JsonObject): Promise<unknown> 
   if (typeof input.versionId === "string") url.searchParams.set("versionId", input.versionId);
   const response = await fetch(url, { method: "HEAD", headers: signObsRequest("HEAD", url) });
   return responseMetadata(response);
+}
+
+export async function getObsObject(input: JsonObject): Promise<unknown> {
+  if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
+  if (typeof input.key !== "string" || !input.key) throw new Error("key is required.");
+  if (typeof input.maxBytes !== "number" || !Number.isSafeInteger(input.maxBytes) || input.maxBytes < 1 || input.maxBytes > 1024 * 1024) throw new Error("maxBytes must be an integer between 1 and 1048576.");
+  const objectPath = input.key.split("/").map(encode).join("/");
+  const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/${objectPath}`);
+  if (typeof input.versionId === "string") url.searchParams.set("versionId", input.versionId);
+  const response = await fetch(url, { method: "GET", headers: signObsRequest("GET", url, { range: `bytes=0-${input.maxBytes - 1}` }) });
+  return responseObjectContent(response, input.maxBytes);
 }
 
 export async function deleteObsObject(input: JsonObject): Promise<unknown> {

@@ -83,6 +83,28 @@ test("OBS standard upload signs content and requires confirmation", { concurrenc
   }
 });
 
+test("OBS object reads use a bounded Range request and return base64", { concurrency: false }, async () => {
+  setCredentials();
+  const gateway = require("../build/gateway.js");
+  const originalFetch = global.fetch;
+  let request;
+  global.fetch = async (url, options) => {
+    request = { url: String(url), options };
+    return new Response("hello", { status: 206, headers: { "content-length": "5", "x-obs-request-id": "get-request" } });
+  };
+  try {
+    const result = await gateway.call("obs", "get_object", { bucket: "example-bucket", key: "reports/today.txt", maxBytes: 64 });
+    assert.equal(result.requestId, "get-request");
+    assert.equal(result.contentBase64, Buffer.from("hello").toString("base64"));
+    assert.equal(request.url, "https://example-bucket.obs.cn-north-4.myhuaweicloud.com/reports/today.txt");
+    assert.equal(request.options.method, "GET");
+    assert.equal(request.options.headers.range, "bytes=0-63");
+    assert.match(request.options.headers.authorization, /^OBS test-ak:/);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test("ECS availability-zone discovery uses the documented project endpoint", { concurrency: false }, async () => {
   setCredentials();
   const { listEcsAvailabilityZones } = require("../build/openapi.js");
