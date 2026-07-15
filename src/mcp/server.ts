@@ -7,6 +7,7 @@ import type {
 import type { DevelopmentRuntime } from "../development/runtime.js";
 import { RouterError } from "../router/errors.js";
 import type { RouterExecuteInput } from "../router/types.js";
+import { pluginVersion } from "../version.js";
 import {
   actionExecuteInputSchema,
   capabilityDescribeInputSchema,
@@ -72,10 +73,10 @@ function failureResult(error: unknown) {
 
 export function createRouterMcpServer(runtime: DevelopmentRuntime): McpServer {
   const server = new McpServer(
-    { name: "huaweicloud-mate", version: "0.0.0-development" },
+    { name: "huaweicloud-mate", version: pluginVersion },
     {
       instructions:
-        "Development-only Huawei Cloud Router. Use search, then describe, then execute. The bundled reference catalog never accesses Huawei Cloud or credentials. Dangerous previews require the trusted internal approval companion path; no approval tool is exposed to the Agent.",
+        "Huawei Cloud Router. Use search, then describe, then execute. The local OBS provider supports bucket listing plus approved private-bucket creation and empty-bucket deletion; reference capabilities remain local test fixtures. Dangerous previews require the trusted internal approval companion path; no approval tool is exposed to the Agent.",
     },
   );
 
@@ -84,7 +85,7 @@ export function createRouterMcpServer(runtime: DevelopmentRuntime): McpServer {
     {
       title: "Search Huawei Cloud capabilities",
       description:
-        "Search the immutable capability catalog. This development build contains reference-only local capabilities.",
+        "Search the immutable built-in capability catalog.",
       inputSchema: capabilitySearchInputSchema,
       annotations: {
         readOnlyHint: true,

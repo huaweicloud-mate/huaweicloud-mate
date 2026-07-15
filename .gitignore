@@ -7,6 +7,9 @@ coverage/
 *.log
 *.tgz
 .hcloud-agent/
+task_plan.md
+findings.md
+progress.md
 docs/架构方案.zip
 .DS_Store
 Thumbs.db

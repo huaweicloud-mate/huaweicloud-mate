@@ -26,6 +26,8 @@ function secureHeaders(contentType: string): Readonly<Record<string, string>> {
     "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
     "Content-Type": contentType,
     "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
     "Referrer-Policy": "no-referrer",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
@@ -183,16 +185,25 @@ export class BrowserApprovalTerminal implements ApprovalTerminal {
       rejectDecision = reject;
     });
     let settled = false;
+    let pageServed = false;
     let expectedHost = "";
     let expectedOrigin = "";
 
     const server = createServer((request, response) => {
       void (async () => {
-        if (request.headers.host !== expectedHost) {
+        if (
+          request.socket.remoteAddress !== "127.0.0.1" ||
+          request.headers.host !== expectedHost
+        ) {
           sendResponse(response, 400, "Invalid host");
           return;
         }
         if (request.method === "GET" && request.url === pagePath) {
+          if (pageServed) {
+            sendResponse(response, 410, "Approval page has already been opened");
+            return;
+          }
+          pageServed = true;
           sendResponse(
             response,
             200,
@@ -204,15 +215,21 @@ export class BrowserApprovalTerminal implements ApprovalTerminal {
         if (request.method === "POST" && request.url === decisionPath) {
           if (
             request.headers.origin !== expectedOrigin ||
-            !request.headers["content-type"]?.startsWith(
-              "application/x-www-form-urlencoded",
+            !/^application\/x-www-form-urlencoded(?:;\s*charset=utf-8)?$/iu.test(
+              request.headers["content-type"] ?? "",
             )
           ) {
             sendResponse(response, 403, "Invalid approval origin");
             return;
           }
           const values = new URLSearchParams(await readDecisionBody(request));
-          if (values.get("csrf") !== csrfToken) {
+          const entries = [...values.entries()];
+          if (
+            entries.length !== 2 ||
+            entries.filter(([key]) => key === "csrf").length !== 1 ||
+            entries.filter(([key]) => key === "decision").length !== 1 ||
+            values.get("csrf") !== csrfToken
+          ) {
             sendResponse(response, 403, "Invalid approval token");
             return;
           }
@@ -256,6 +273,10 @@ export class BrowserApprovalTerminal implements ApprovalTerminal {
         }
       });
     });
+    server.headersTimeout = 5_000;
+    server.requestTimeout = 5_000;
+    server.keepAliveTimeout = 1_000;
+    server.maxRequestsPerSocket = 2;
 
     await new Promise<void>((resolve, reject) => {
       server.once("error", reject);

@@ -3,6 +3,22 @@
   "version": "0.0.0-development",
   "private": true,
   "description": "Huawei Cloud agent plugin development package",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hd-vector/huaweicloud-mate.git"
+  },
+  "homepage": "https://github.com/hd-vector/huaweicloud-mate#readme",
+  "bugs": {
+    "url": "https://github.com/hd-vector/huaweicloud-mate/issues"
+  },
+  "keywords": [
+    "huaweicloud",
+    "mcp",
+    "agent",
+    "codex",
+    "claude-code"
+  ],
   "type": "module",
   "engines": {
     "node": ">=22 <25"
@@ -15,17 +31,27 @@
     "LICENSE",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "build": "node scripts/clean.mjs && tsc -p tsconfig.json && node scripts/copy-contracts.mjs && node scripts/copy-host-assets.mjs && node scripts/bundle-runtime.mjs && node scripts/create-runtime-manifest.mjs && node scripts/create-install-manifest.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "npm run build && vitest run --maxWorkers=4",
     "doctor": "npm run build && node dist/cli.js doctor --contracts-only",
-    "mcp": "npm run build && node dist/cli.js mcp"
+    "mcp": "npm run build && node dist/cli.js mcp",
+    "pack:check": "node scripts/verify-pack.mjs",
+    "licenses:check": "node scripts/check-licenses.mjs",
+    "source:check": "node scripts/check-source-hygiene.mjs",
+    "release:check": "node scripts/check-release-readiness.mjs",
+    "prepublishOnly": "npm run source:check && npm test && npm run pack:check && npm run licenses:check && npm run release:check"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.29.0",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
+    "fflate": "0.8.2",
     "jsonc-parser": "3.3.1",
     "zod": "4.4.3"
   },

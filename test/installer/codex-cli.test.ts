@@ -33,6 +33,7 @@ import {
   FakeCodexPluginRunner,
 } from "../fixtures/codex-plugin-runner.js";
 import { copyRuntimeCandidate } from "../fixtures/runtime-candidate.js";
+import { noopRuntimePermissions } from "../fixtures/runtime-permissions.js";
 
 const platform = process.platform as "win32" | "darwin" | "linux";
 const temporaryRoots: string[] = [];
@@ -74,6 +75,8 @@ async function fixture(installed = false) {
       runtimeRoot,
       homeDirectory,
       runner,
+      koocliArtifacts: [],
+      runtimePermissions: noopRuntimePermissions,
       approvalProbe: vi.fn(async () => undefined),
     },
   };
@@ -100,10 +103,17 @@ describe("Codex install and uninstall CLI", () => {
   it("installs, verifies, and safely uninstalls one Codex host", async () => {
     const { runtimeRoot, runner, dependencies } = await fixture();
     const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const runtimePermissions = {
+      secureRoot: vi.fn(async () => undefined),
+      verifyRoot: vi.fn(async () => undefined),
+    };
+    const guardedDependencies = { ...dependencies, runtimePermissions };
 
     await expect(
-      main(["install", "--host", "codex", "--json"], dependencies),
+      main(["install", "--host", "codex", "--json"], guardedDependencies),
     ).resolves.toBe(0);
+    expect(runtimePermissions.secureRoot).toHaveBeenCalledOnce();
+    expect(runtimePermissions.secureRoot).toHaveBeenCalledWith(runtimeRoot);
     const installed = loggedJson(log);
     expect(installed).toMatchObject({
       host: "codex",
@@ -119,8 +129,10 @@ describe("Codex install and uninstall CLI", () => {
     expect(dependencies.approvalProbe).toHaveBeenCalledOnce();
 
     await expect(
-      main(["uninstall", "--json", "--host", "codex"], dependencies),
+      main(["uninstall", "--json", "--host", "codex"], guardedDependencies),
     ).resolves.toBe(0);
+    expect(runtimePermissions.verifyRoot).toHaveBeenCalledOnce();
+    expect(runtimePermissions.verifyRoot).toHaveBeenCalledWith(runtimeRoot);
     expect(loggedJson(log)).toMatchObject({
       host: "codex",
       status: "uninstalled",
@@ -227,10 +239,10 @@ describe("Codex install and uninstall CLI", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     await expect(
-      main(["install", "--host", "opencode"], dependencies),
+      main(["install", "--host", "unsupported"], dependencies),
     ).resolves.toBe(2);
     expect(error).toHaveBeenCalledWith(
-      "install supports only --host codex or --host claude",
+      "install supports only --host codex, claude, opencode, or codearts",
     );
     expect(await pathExists(runtimeRoot)).toBe(false);
   });

@@ -1,0 +1,90 @@
+name: Release candidate
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the verified tarball to npm after environment approval
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and attest release candidate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+      - run: npm ci
+      - run: npm run source:check
+      - run: npm test
+      - run: npm audit --omit=dev
+      - run: npm run pack:check
+      - run: npm run licenses:check
+      - run: npm run release:check
+      - name: Generate CycloneDX SBOM
+        run: npm sbom --sbom-format cyclonedx > sbom.cdx.json
+      - name: Create npm tarball
+        id: pack
+        shell: bash
+        run: |
+          npm pack --ignore-scripts --json > pack.json
+          echo "filename=$(node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('pack.json','utf8'));process.stdout.write(p[0].filename)")" >> "$GITHUB_OUTPUT"
+      - name: Attest npm tarball provenance
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        with:
+          subject-path: ${{ steps.pack.outputs.filename }}
+      - name: Upload release candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: npm-release-candidate
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            ${{ steps.pack.outputs.filename }}
+            pack.json
+            sbom.cdx.json
+
+  publish:
+    name: Publish to npm
+    if: ${{ inputs.publish }}
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: npm-production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Download verified release candidate
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: npm-release-candidate
+          path: release
+      - name: Publish verified tarball
+        working-directory: release
+        run: npm publish ./*.tgz --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

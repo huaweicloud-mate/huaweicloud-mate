@@ -34,6 +34,7 @@ export interface BindCodexInstallationOptions {
   readonly runner: HostCommandRunner;
   readonly homeDirectory?: string;
   readonly requireExecutable?: boolean;
+  readonly allowMultiHost?: boolean;
 }
 
 export interface BoundCodexInstallation {
@@ -67,12 +68,14 @@ export async function bindCodexInstallation(
   const runtimeRoot = resolve(options.runtimeRoot);
   if (
     !isAbsolute(options.runtimeRoot) ||
-    snapshot.state.hosts.length !== 1 ||
-    snapshot.state.hosts[0]?.id !== "codex"
+    (options.allowMultiHost !== true && snapshot.state.hosts.length !== 1)
   ) {
     return conflict("Codex operation requires a single-host Codex install state");
   }
-  const host = snapshot.state.hosts[0];
+  const host = snapshot.state.hosts.find((entry) => entry.id === "codex");
+  if (host === undefined) {
+    return conflict("Install state does not contain a managed Codex host");
+  }
   const registry = await HostTemplateRegistry.load(
     pathToFileURL(
       `${resolve(snapshot.state.runtimePath, "hosts", "templates")}${sep}`,

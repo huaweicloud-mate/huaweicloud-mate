@@ -45,6 +45,8 @@ export interface AppliedHostConfigChange {
   readonly backupSha256?: string;
 }
 
+export type HostConfigRollbackStatus = "unowned" | "installed" | "removed";
+
 interface FileSnapshot {
   readonly exists: boolean;
   readonly bytes?: Buffer;
@@ -586,6 +588,72 @@ export async function rollbackHostConfigChange(
     throw new InstallerError(
       "HOST_CONFIG_WRITE_FAILED",
       "Host config rollback failed",
+    );
+  }
+}
+
+export async function inspectHostConfigRollback(
+  change: AppliedHostConfigChange,
+): Promise<HostConfigRollbackStatus> {
+  if (!change.changed) {
+    return "unowned";
+  }
+  try {
+    if (
+      !isAbsolute(change.configPath) ||
+      !/^sha256:[a-f0-9]{64}$/u.test(change.installedSha256) ||
+      !/^sha256:[a-f0-9]{64}$/u.test(change.installedValueHash)
+    ) {
+      return rollbackConflict("Host config rollback evidence is invalid");
+    }
+    const current = await readSnapshot(change.configPath);
+    if (!current.exists) {
+      if (change.createdFile) {
+        return "removed";
+      }
+      return rollbackConflict(
+        "Host config was removed after installation; refusing to restore it",
+      );
+    }
+    if (current.sha256 !== change.installedSha256) {
+      return rollbackConflict(
+        "Host config changed after installation; refusing to roll it back",
+      );
+    }
+    if (!change.createdFile) {
+      if (
+        change.backupPath === undefined ||
+        change.backupSha256 === undefined ||
+        change.beforeSha256 === undefined ||
+        !isAbsolute(change.backupPath)
+      ) {
+        return rollbackConflict("Host config rollback metadata is incomplete");
+      }
+      const backup = await readSnapshot(change.backupPath);
+      if (
+        !backup.exists ||
+        backup.sha256 !== change.backupSha256 ||
+        backup.sha256 !== change.beforeSha256
+      ) {
+        return rollbackConflict("Host config backup is missing or has changed");
+      }
+    }
+    return "installed";
+  } catch (error) {
+    if (error instanceof InstallerError) {
+      if (
+        error.code === "HOST_CONFIG_CONFLICT" ||
+        error.code === "HOST_CONFIG_INVALID"
+      ) {
+        return rollbackConflict(
+          "Host config is invalid during rollback inspection",
+        );
+      }
+      throw error;
+    }
+    throw new InstallerError(
+      "HOST_CONFIG_WRITE_FAILED",
+      "Host config rollback inspection failed",
     );
   }
 }

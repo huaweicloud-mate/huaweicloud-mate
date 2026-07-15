@@ -14,7 +14,10 @@ import type {
   ApprovalTerminal,
   UnsignedApprovalReceipt,
 } from "./types.js";
-import { ContractRegistry } from "../contracts/registry.js";
+import {
+  ContractRegistry,
+  type ContractJsonDocuments,
+} from "../contracts/registry.js";
 
 const uuidPattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -91,6 +94,16 @@ export class TrustedApprovalCompanion {
     return new TrustedApprovalCompanion(
       ApprovalSessionKey.create(now),
       await ContractRegistry.load(contractDirectory),
+    );
+  }
+
+  static fromJsonDocuments(
+    documents: ContractJsonDocuments,
+    now = new Date(),
+  ): TrustedApprovalCompanion {
+    return new TrustedApprovalCompanion(
+      ApprovalSessionKey.create(now),
+      ContractRegistry.fromJsonDocuments(documents),
     );
   }
 

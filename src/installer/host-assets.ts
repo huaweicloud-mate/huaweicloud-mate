@@ -416,6 +416,23 @@ async function existingTreeHash(path: string): Promise<string | undefined> {
   }
 }
 
+export async function inspectHostAssetTreeHash(
+  path: string,
+): Promise<string | undefined> {
+  try {
+    if (!isAbsolute(path)) {
+      return invalid("Host asset inspection target is not absolute");
+    }
+    return await existingTreeHash(resolve(path));
+  } catch (error) {
+    if (error instanceof InstallerError) throw error;
+    throw new InstallerError(
+      "HOST_ASSET_WRITE_FAILED",
+      "Host asset inspection failed",
+    );
+  }
+}
+
 function assetPaths(plan: HostInstallPlan, runtime: HostAssetRuntime): {
   readonly kind: "plugin" | "skill";
   readonly prefix: string;

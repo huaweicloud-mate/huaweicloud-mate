@@ -35,3 +35,60 @@ export function defaultRuntimeRoot(
       : environment.XDG_DATA_HOME;
   return posix.resolve(dataHome, "hcloud-agent", "runtime");
 }
+
+export function defaultCredentialsPath(
+  platform: NodeJS.Platform = process.platform,
+  homeDirectory = homedir(),
+  environment: RuntimePathEnvironment = process.env,
+): string {
+  return platform === "win32"
+    ? win32.resolve(
+        environment.LOCALAPPDATA === undefined ||
+            environment.LOCALAPPDATA.length === 0
+          ? win32.join(homeDirectory, "AppData", "Local")
+          : environment.LOCALAPPDATA,
+        "hcloud-agent",
+        "credentials.json",
+      )
+    : platform === "darwin"
+      ? posix.resolve(
+          homeDirectory,
+          "Library",
+          "Application Support",
+          "hcloud-agent",
+          "credentials.json",
+        )
+      : posix.resolve(
+          environment.XDG_DATA_HOME === undefined ||
+              environment.XDG_DATA_HOME.length === 0
+            ? posix.join(homeDirectory, ".local", "share")
+            : environment.XDG_DATA_HOME,
+          "hcloud-agent",
+          "credentials.json",
+        );
+}
+
+export function defaultAuditLogPath(
+  platform: NodeJS.Platform = process.platform,
+  homeDirectory = homedir(),
+  environment: RuntimePathEnvironment = process.env,
+): string {
+  if (platform === "win32") {
+    return win32.resolve(
+      environment.LOCALAPPDATA === undefined ||
+          environment.LOCALAPPDATA.length === 0
+        ? win32.join(homeDirectory, "AppData", "Local")
+        : environment.LOCALAPPDATA,
+      "hcloud-agent",
+      "logs",
+      "router.jsonl",
+    );
+  }
+  const dataRoot = platform === "darwin"
+    ? posix.join(homeDirectory, "Library", "Application Support")
+    : environment.XDG_DATA_HOME === undefined ||
+        environment.XDG_DATA_HOME.length === 0
+      ? posix.join(homeDirectory, ".local", "share")
+      : environment.XDG_DATA_HOME;
+  return posix.resolve(dataRoot, "hcloud-agent", "logs", "router.jsonl");
+}

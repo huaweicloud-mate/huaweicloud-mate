@@ -42,6 +42,7 @@ import {
   FakeCodexPluginRunner,
 } from "../fixtures/codex-plugin-runner.js";
 import { copyRuntimeCandidate } from "../fixtures/runtime-candidate.js";
+import { noopRuntimePermissions } from "../fixtures/runtime-permissions.js";
 
 const platform = process.platform as "win32" | "darwin" | "linux";
 const temporaryRoots: string[] = [];
@@ -78,6 +79,8 @@ async function fixture() {
     runtimeRoot,
     homeDirectory,
     runner,
+    koocliArtifacts: [],
+    runtimePermissions: noopRuntimePermissions,
     approvalProbe: vi.fn(async () => undefined),
   };
   vi.spyOn(console, "log").mockImplementation(() => undefined);
@@ -344,7 +347,10 @@ describe("Codex upgrade recovery", () => {
     );
 
     await expect(
-      main(["install", "--host", "codex"], { runtimeRoot }),
+      main(["install", "--host", "codex"], {
+        runtimeRoot,
+        runtimePermissions: noopRuntimePermissions,
+      }),
     ).rejects.toMatchObject({ code: "UPGRADE_RECOVERY_CONFLICT" });
     expect(await pathExists(resolve(runtimeRoot, "versions"))).toBe(false);
   });

@@ -6,6 +6,7 @@ import { InstallerError } from "../installer/errors.js";
 import { verifyHostAssetChange } from "../installer/host-assets.js";
 import { verifyHostConfigChange } from "../installer/config-transaction.js";
 import type { HostId } from "./types.js";
+import { verifyStableRouterProcess } from "./router-process-verification.js";
 import {
   type HostCommandResult,
   type HostCommandRunner,
@@ -24,6 +25,7 @@ export interface HostVerificationEvidence {
     | "config-registration"
     | "plugin-registration"
     | "mcp-registration"
+    | "mcp-process"
     | "router"
     | "skill"
   )[];
@@ -31,7 +33,13 @@ export interface HostVerificationEvidence {
 
 export interface InitialHostVerificationReport {
   readonly hosts: readonly HostVerificationEvidence[];
+  readonly routerProcessProbe: "passed";
   readonly approvalProbe: "passed";
+}
+
+export interface InstalledHostVerificationReport {
+  readonly hosts: readonly HostVerificationEvidence[];
+  readonly routerProcessProbe: "passed";
 }
 
 export interface InitialHostVerificationOptions {
@@ -173,20 +181,20 @@ async function verifyRouter(
   }
 }
 
-export async function verifyInitialInstallHosts(
+export async function verifyInstalledHostBindings(
   context: InitialInstallVerificationContext,
-  options: InitialHostVerificationOptions,
-): Promise<InitialHostVerificationReport> {
+  runner: HostCommandRunner = new NodeHostCommandRunner(),
+): Promise<InstalledHostVerificationReport> {
   if (
     context.completedHosts.length === 0 ||
     context.completedHosts.length > 4 ||
     new Set(context.completedHosts.map((host) => host.plan.id)).size !==
       context.completedHosts.length
   ) {
-    return invalid("Initial host verification context is invalid");
+    return invalid("Installed host verification context is invalid");
   }
-  const runner = options.runner ?? new NodeHostCommandRunner();
   await verifyRouter(context, runner);
+  await verifyStableRouterProcess(context.runtime);
   const hosts: HostVerificationEvidence[] = [];
   for (const completed of context.completedHosts) {
     await verifyHostAssetChange(completed.assetChange);
@@ -207,6 +215,7 @@ export async function verifyInitialInstallHosts(
 
     const checks: HostVerificationEvidence["checks"][number][] = [
       "config",
+      "mcp-process",
       "router",
       "skill",
     ];
@@ -237,13 +246,22 @@ export async function verifyInitialInstallHosts(
       checks,
     });
   }
+  return { hosts, routerProcessProbe: "passed" };
+}
+
+export async function verifyInitialInstallHosts(
+  context: InitialInstallVerificationContext,
+  options: InitialHostVerificationOptions,
+): Promise<InitialHostVerificationReport> {
+  const runner = options.runner ?? new NodeHostCommandRunner();
+  const installed = await verifyInstalledHostBindings(context, runner);
   try {
     await options.approvalProbe();
   } catch {
     return verificationFailed("Trusted approval probe failed");
   }
   return {
-    hosts,
+    ...installed,
     approvalProbe: "passed",
   };
 }

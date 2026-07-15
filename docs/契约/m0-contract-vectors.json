@@ -293,6 +293,15 @@
         {"event": "old-session-reuse-requested", "expectedError": "AUTH_SESSION_EXPIRED"},
         {"event": "known-old-session-revoke", "expectedResult": "best-effort"}
       ]
+    },
+    {
+      "id": "provider-unavailable-selects-koocli-before-dispatch",
+      "steps": [
+        {"event": "provider-health-checked", "expectedResult": "unavailable"},
+        {"event": "secure-koocli-boundary-checked", "expectedResult": "available"},
+        {"event": "dispatch-requested", "expectedExecutor": "koocli"},
+        {"event": "dispatch-completed", "expectedState": "completed"}
+      ]
     }
   ]
 }

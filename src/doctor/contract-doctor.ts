@@ -5,6 +5,11 @@ import {
   type ContractFileName,
 } from "../contracts/manifest.js";
 import { ContractRegistry } from "../contracts/registry.js";
+import {
+  runStateMachineDoctor,
+  type StateMachineVector,
+  type StateMachineVectorResult,
+} from "./state-machine-doctor.js";
 
 function expectedSchemaValidity(expectation: string): boolean {
   switch (expectation) {
@@ -24,18 +29,20 @@ interface ContractVector {
   readonly targetSchema: ContractFileName;
   readonly expectation: string;
   readonly instance: unknown;
+  readonly descriptorDigest?: string;
 }
 
 interface ContractVectorFile {
   readonly schemaVersion: string;
   readonly vectors: readonly ContractVector[];
-  readonly stateMachineVectors: readonly unknown[];
+  readonly stateMachineVectors: readonly StateMachineVector[];
 }
 
 export interface ContractVectorResult {
   readonly id: string;
   readonly expectation: string;
   readonly schemaValid: boolean;
+  readonly semanticValid?: boolean;
   readonly passed: boolean;
   readonly errorCount: number;
 }
@@ -44,12 +51,31 @@ export interface ContractDoctorReport {
   readonly ok: boolean;
   readonly schemaCount: number;
   readonly vectorCount: number;
+  readonly stateMachineVectorCount: number;
   readonly deferredStateMachineVectorCount: number;
   readonly vectors: readonly ContractVectorResult[];
+  readonly stateMachineVectors: readonly StateMachineVectorResult[];
 }
 
 function isContractFileName(value: string): value is ContractFileName {
   return contractFileNames.some((fileName) => fileName === value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function semanticValidity(vector: ContractVector): boolean {
+  if (
+    vector.targetSchema !== "provider-v1-lite.schema.json" ||
+    typeof vector.descriptorDigest !== "string" ||
+    !/^sha256:[a-f0-9]{64}$/u.test(vector.descriptorDigest) ||
+    !isRecord(vector.instance) ||
+    typeof vector.instance.capabilityDigest !== "string"
+  ) {
+    throw new Error(`Vector ${vector.id} has no supported semantic validator`);
+  }
+  return vector.instance.capabilityDigest === vector.descriptorDigest;
 }
 
 async function readVectorFile(url: URL): Promise<ContractVectorFile> {
@@ -84,20 +110,34 @@ export async function runContractDoctor(
 
     const validation = registry.validate(vector.targetSchema, vector.instance);
     const expectedValidity = expectedSchemaValidity(vector.expectation);
+    const semanticValid = vector.expectation === "semantic-reject"
+      ? semanticValidity(vector)
+      : undefined;
     return {
       id: vector.id,
       expectation: vector.expectation,
       schemaValid: validation.valid,
-      passed: validation.valid === expectedValidity,
+      passed:
+        validation.valid === expectedValidity &&
+        (vector.expectation !== "semantic-reject" || semanticValid === false),
       errorCount: validation.errors.length,
+      ...(semanticValid === undefined ? {} : { semanticValid }),
     };
   });
+  const stateMachineResults = await runStateMachineDoctor(
+    vectors.stateMachineVectors,
+    baseDirectory,
+  );
 
   return {
-    ok: results.every((result) => result.passed),
+    ok:
+      results.every((result) => result.passed) &&
+      stateMachineResults.every((result) => result.passed),
     schemaCount: registry.compileAll().size,
     vectorCount: results.length,
-    deferredStateMachineVectorCount: vectors.stateMachineVectors.length,
+    stateMachineVectorCount: stateMachineResults.length,
+    deferredStateMachineVectorCount: 0,
     vectors: results,
+    stateMachineVectors: stateMachineResults,
   };
 }

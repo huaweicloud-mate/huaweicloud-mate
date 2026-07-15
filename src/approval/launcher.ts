@@ -1,8 +1,8 @@
-import { fork, type ChildProcess } from "node:child_process";
+import { fork, spawn, type ChildProcess } from "node:child_process";
 import { createHash } from "node:crypto";
 import { lstat, readFile } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { createExpectedApprovalBinding } from "./binding.js";
 import {
@@ -21,6 +21,11 @@ import type {
   ApprovalSigningContext,
 } from "./types.js";
 import { TrustedApprovalVerifier } from "./verifier.js";
+import {
+  contractFileNames,
+  type ContractFileName,
+} from "../contracts/manifest.js";
+import type { ContractJsonDocuments } from "../contracts/registry.js";
 
 interface RuntimeManifest {
   readonly schemaVersion: "huaweicloud-mate-runtime-manifest/v1";
@@ -41,9 +46,11 @@ export interface ApprovalCompanionLauncherOptions {
   readonly artifacts?: readonly {
     readonly path: string;
     readonly expectedSha256: string;
+    readonly runtimePath?: string;
   }[];
   readonly contractDirectory?: URL;
   readonly timeoutMs?: number;
+  readonly loadVerifiedEntryBytes?: boolean;
 }
 
 const allowedCompanionEnvironmentKeys = [
@@ -63,6 +70,131 @@ const allowedCompanionEnvironmentKeys = [
   "WINDIR",
 ] as const;
 const maxApprovalIpcMessageBytes = 65_536;
+const maxApprovalArtifactBytes = 64 * 1024 * 1024;
+const maxRuntimeManifestBytes = 1024 * 1024;
+const verifiedContractDocumentsKey =
+  "__HUAWEICLOUD_MATE_VERIFIED_CONTRACT_DOCUMENTS__";
+const bootstrapReadyMessage = {
+  schemaVersion: "huaweicloud-mate-approval-bootstrap-ready/v1",
+  type: "approval-bootstrap-ready",
+} as const;
+const companionBootstrapSource = String.raw`
+const chunks = [];
+let byteLength = 0;
+let stage = "verify-process";
+try {
+  const inspector = await import("node:inspector");
+  if (
+    inspector.url() !== undefined ||
+    process.execArgv.some((argument) => /^--(?:inspect|debug)(?:-|=|$)/.test(argument)) ||
+    process.env.NODE_OPTIONS !== undefined ||
+    process.env.NODE_PATH !== undefined ||
+    process.env.NODE_DEBUG !== undefined ||
+    process.env.NODE_DEBUG_NATIVE !== undefined ||
+    process.env.NODE_V8_COVERAGE !== undefined ||
+    process.env.SSLKEYLOGFILE !== undefined
+  ) throw new Error("unsafe process");
+  stage = "read-envelope";
+  for await (const chunk of process.stdin) {
+    byteLength += chunk.byteLength;
+    if (byteLength <= 0 || byteLength > ${maxApprovalArtifactBytes}) throw new Error("invalid source");
+    chunks.push(chunk);
+  }
+  const envelope = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  if (
+    typeof envelope !== "object" || envelope === null || Array.isArray(envelope) ||
+    Object.keys(envelope).sort().join("\n") !== "contractDocuments\nentrySource\nschemaVersion" ||
+    envelope.schemaVersion !== "huaweicloud-mate-verified-companion/v1" ||
+    typeof envelope.entrySource !== "string" ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(envelope.entrySource) ||
+    typeof envelope.contractDocuments !== "object" ||
+    envelope.contractDocuments === null || Array.isArray(envelope.contractDocuments)
+  ) throw new Error("invalid envelope");
+  const sourceBytes = Buffer.from(envelope.entrySource, "base64");
+  if (
+    sourceBytes.byteLength <= 0 || sourceBytes.byteLength > ${maxApprovalArtifactBytes} ||
+    sourceBytes.toString("base64") !== envelope.entrySource
+  ) throw new Error("invalid source");
+  stage = "bind-runtime";
+  const logicalUrl = new URL(process.argv[1]);
+  if (logicalUrl.protocol !== "file:") throw new Error("invalid logical URL");
+  Object.defineProperty(globalThis, "__HUAWEICLOUD_MATE_COMPANION_IMPORT_META_URL__", {
+    value: logicalUrl.href,
+    configurable: false,
+    enumerable: false,
+    writable: false,
+  });
+  Object.defineProperty(globalThis, "${verifiedContractDocumentsKey}", {
+    value: Object.freeze({ ...envelope.contractDocuments }),
+    configurable: false,
+    enumerable: false,
+    writable: false,
+  });
+  stage = "import-entry";
+  const loaded = await import("data:text/javascript;base64," + envelope.entrySource);
+  if (typeof loaded.runApprovalCompanionProcess !== "function") throw new Error("invalid entry");
+  stage = "start-entry";
+  const pending = loaded.runApprovalCompanionProcess();
+  stage = "signal-ready";
+  await new Promise((resolve, reject) => {
+    if (process.send === undefined || !process.connected) return reject(new Error("missing IPC"));
+    process.send(${JSON.stringify(bootstrapReadyMessage)}, (error) => error == null ? resolve() : reject(error));
+  });
+  stage = "run-entry";
+  process.exitCode = await pending;
+} catch {
+  try {
+    if (process.send !== undefined && process.connected) {
+      await new Promise((resolve) => process.send({
+        schemaVersion: "huaweicloud-mate-approval-bootstrap-error/v1",
+        type: "approval-bootstrap-error",
+        stage,
+      }, () => resolve()));
+    }
+  } catch {}
+  process.exitCode = 2;
+} finally {
+  if (process.connected) process.disconnect();
+}
+`;
+
+function isBootstrapReadyMessage(value: unknown): boolean {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.keys(value).sort().join("\n") === "schemaVersion\ntype" &&
+    (value as Record<string, unknown>).schemaVersion ===
+      bootstrapReadyMessage.schemaVersion &&
+    (value as Record<string, unknown>).type === bootstrapReadyMessage.type
+  );
+}
+
+function bootstrapErrorStage(value: unknown): string | undefined {
+  const allowedStages = new Set([
+    "verify-process",
+    "read-envelope",
+    "bind-runtime",
+    "import-entry",
+    "start-entry",
+    "signal-ready",
+    "run-entry",
+  ]);
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    Array.isArray(value) ||
+    Object.keys(value).sort().join("\n") !== "schemaVersion\nstage\ntype"
+  ) return undefined;
+  const record = value as Record<string, unknown>;
+  return record.schemaVersion ===
+      "huaweicloud-mate-approval-bootstrap-error/v1" &&
+      record.type === "approval-bootstrap-error" &&
+      typeof record.stage === "string" &&
+      allowedStages.has(record.stage)
+    ? record.stage
+    : undefined;
+}
 
 function parseRuntimeManifest(value: unknown): RuntimeManifest {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -90,7 +222,9 @@ function parseRuntimeManifest(value: unknown): RuntimeManifest {
     Object.keys(companion).sort().join("\n") !==
       ["artifacts", "entryPath"].join("\n") ||
     companion.entryPath !== "approval/companion-process.js" ||
-    !Array.isArray(companion.artifacts)
+    !Array.isArray(companion.artifacts) ||
+    companion.artifacts.length === 0 ||
+    companion.artifacts.length > 128
   ) {
     throw new ApprovalError(
       "APPROVAL_ARTIFACT_INVALID",
@@ -125,8 +259,10 @@ function parseRuntimeManifest(value: unknown): RuntimeManifest {
     return { path: artifact.path, sha256: artifact.sha256 };
   });
   if (
-    artifacts.length === 0 ||
-    !seenPaths.has("approval/companion-process.js")
+    !seenPaths.has("approval/companion-process.js") ||
+    contractFileNames.some(
+      (fileName) => !seenPaths.has(`contracts/schema/${fileName}`),
+    )
   ) {
     throw new ApprovalError(
       "APPROVAL_ARTIFACT_INVALID",
@@ -140,6 +276,48 @@ function parseRuntimeManifest(value: unknown): RuntimeManifest {
       artifacts,
     },
   };
+}
+
+async function readRuntimeManifest(url: URL): Promise<RuntimeManifest> {
+  if (url.protocol !== "file:") {
+    throw new ApprovalError(
+      "APPROVAL_ARTIFACT_INVALID",
+      "Runtime manifest must be a local file",
+    );
+  }
+  const path = fileURLToPath(url);
+  const entry = await lstat(path);
+  if (
+    !entry.isFile() ||
+    entry.isSymbolicLink() ||
+    entry.size <= 0 ||
+    entry.size > maxRuntimeManifestBytes
+  ) {
+    throw new ApprovalError(
+      "APPROVAL_ARTIFACT_INVALID",
+      "Runtime manifest must be a bounded regular file",
+    );
+  }
+  const bytes = await readFile(path);
+  if (bytes.byteLength !== entry.size) {
+    throw new ApprovalError(
+      "APPROVAL_ARTIFACT_INVALID",
+      "Runtime manifest changed while it was read",
+    );
+  }
+  try {
+    return parseRuntimeManifest(
+      JSON.parse(
+        new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+      ) as unknown,
+    );
+  } catch (error) {
+    if (error instanceof ApprovalError) throw error;
+    throw new ApprovalError(
+      "APPROVAL_ARTIFACT_INVALID",
+      "Runtime manifest is not valid UTF-8 JSON",
+    );
+  }
 }
 
 function minimalCompanionEnvironment(): NodeJS.ProcessEnv {
@@ -164,7 +342,9 @@ export class ApprovalCompanionLauncher {
   readonly #artifacts: readonly {
     readonly path: string;
     readonly expectedSha256: string;
+    readonly runtimePath?: string;
   }[];
+  readonly #loadVerifiedEntryBytes: boolean;
 
   constructor(options: ApprovalCompanionLauncherOptions) {
     if (!isAbsolute(options.entryPath)) {
@@ -197,7 +377,11 @@ export class ApprovalCompanionLauncher {
       artifacts.some(
         (artifact) =>
           !isAbsolute(artifact.path) ||
-          !/^sha256:[a-f0-9]{64}$/.test(artifact.expectedSha256),
+          !/^sha256:[a-f0-9]{64}$/.test(artifact.expectedSha256) ||
+          (artifact.runtimePath !== undefined &&
+            !/^(?:approval\/[A-Za-z0-9._-]+\.js|contracts\/(?:manifest|registry)\.js|contracts\/schema\/[A-Za-z0-9._-]+\.json)$/.test(
+              artifact.runtimePath,
+            )),
       ) ||
       !artifacts.some(
         (artifact) =>
@@ -210,19 +394,27 @@ export class ApprovalCompanionLauncher {
         "Approval runtime artifact list is invalid",
       );
     }
+    const runtimePaths = artifacts
+      .map((artifact) => artifact.runtimePath)
+      .filter((value): value is string => value !== undefined);
+    if (new Set(runtimePaths).size !== runtimePaths.length) {
+      throw new ApprovalError(
+        "APPROVAL_ARTIFACT_INVALID",
+        "Approval runtime artifact paths are duplicated",
+      );
+    }
     this.#entryPath = options.entryPath;
     this.#contractDirectory = options.contractDirectory;
     this.#timeoutMs = timeoutMs;
     this.#artifacts = artifacts;
+    this.#loadVerifiedEntryBytes = options.loadVerifiedEntryBytes === true;
   }
 
   static async fromRuntimeManifest(
     manifestUrl = new URL("../runtime-manifest.json", import.meta.url),
     contractDirectory?: URL,
   ): Promise<ApprovalCompanionLauncher> {
-    const manifest = parseRuntimeManifest(
-      JSON.parse(await readFile(manifestUrl, "utf8")) as unknown,
-    );
+    const manifest = await readRuntimeManifest(manifestUrl);
     const runtimeDirectory = dirname(fileURLToPath(manifestUrl));
     const entryPath = resolve(
       runtimeDirectory,
@@ -237,7 +429,9 @@ export class ApprovalCompanionLauncher {
       artifacts: manifest.approvalCompanion.artifacts.map((artifact) => ({
         path: resolve(runtimeDirectory, artifact.path),
         expectedSha256: artifact.sha256,
+        runtimePath: artifact.path,
       })),
+      loadVerifiedEntryBytes: true,
       ...(contractDirectory === undefined ? {} : { contractDirectory }),
     });
   }
@@ -261,12 +455,17 @@ export class ApprovalCompanionLauncher {
         "Approval context exceeds the private IPC limit",
       );
     }
-    await this.#verifyArtifact();
-    const child = this.#spawnCompanion();
-    return this.#exchange(child, context);
+    const verified = await this.#verifyArtifact();
+    const child = this.#spawnCompanion(verified !== undefined);
+    return this.#exchange(child, context, verified);
   }
 
-  async #verifyArtifact(): Promise<void> {
+  async #verifyArtifact(): Promise<{
+    readonly envelopeBytes: Buffer;
+    readonly contractDocuments: ContractJsonDocuments;
+  } | undefined> {
+    let verifiedEntryBytes: Buffer | undefined;
+    const contractDocuments: Partial<Record<ContractFileName, string>> = {};
     for (const artifact of this.#artifacts) {
       if (!isAbsolute(artifact.path)) {
         throw new ApprovalError(
@@ -275,27 +474,110 @@ export class ApprovalCompanionLauncher {
         );
       }
       const entry = await lstat(artifact.path);
-      if (!entry.isFile() || entry.isSymbolicLink()) {
+      if (
+        !entry.isFile() ||
+        entry.isSymbolicLink() ||
+        entry.size <= 0 ||
+        entry.size > maxApprovalArtifactBytes
+      ) {
         throw new ApprovalError(
           "APPROVAL_ARTIFACT_INVALID",
           "Runtime artifact must be a regular non-symlink file",
         );
       }
-      if ((await sha256File(artifact.path)) !== artifact.expectedSha256) {
+      const bytes = await readFile(artifact.path);
+      if (
+        bytes.byteLength !== entry.size ||
+        `sha256:${createHash("sha256").update(bytes).digest("hex")}` !==
+          artifact.expectedSha256
+      ) {
         throw new ApprovalError(
           "APPROVAL_ARTIFACT_INVALID",
           "Runtime artifact digest does not match the runtime manifest",
         );
       }
+      if (artifact.path === this.#entryPath) {
+        verifiedEntryBytes = bytes;
+      }
+      const contractFileName = contractFileNames.find(
+        (fileName) => artifact.runtimePath === `contracts/schema/${fileName}`,
+      );
+      if (contractFileName !== undefined) {
+        try {
+          contractDocuments[contractFileName] = new TextDecoder("utf-8", {
+            fatal: true,
+          }).decode(bytes);
+        } catch {
+          throw new ApprovalError(
+            "APPROVAL_ARTIFACT_INVALID",
+            "Approval contract artifact is not valid UTF-8",
+          );
+        }
+      }
     }
+    if (verifiedEntryBytes === undefined) {
+      throw new ApprovalError(
+        "APPROVAL_ARTIFACT_INVALID",
+        "Approval companion entry was not verified",
+      );
+    }
+    if (!this.#loadVerifiedEntryBytes) return undefined;
+    if (
+      Object.keys(contractDocuments).sort().join("\n") !==
+        [...contractFileNames].sort().join("\n")
+    ) {
+      throw new ApprovalError(
+        "APPROVAL_ARTIFACT_INVALID",
+        "Approval runtime does not contain the complete contract set",
+      );
+    }
+    const completeDocuments = contractDocuments as ContractJsonDocuments;
+    const envelopeBytes = Buffer.from(
+      JSON.stringify({
+        schemaVersion: "huaweicloud-mate-verified-companion/v1",
+        entrySource: verifiedEntryBytes.toString("base64"),
+        contractDocuments: completeDocuments,
+      }),
+      "utf8",
+    );
+    if (
+      envelopeBytes.byteLength <= 0 ||
+      envelopeBytes.byteLength > maxApprovalArtifactBytes
+    ) {
+      throw new ApprovalError(
+        "APPROVAL_ARTIFACT_INVALID",
+        "Verified companion envelope exceeds the private source limit",
+      );
+    }
+    return { envelopeBytes, contractDocuments: completeDocuments };
   }
 
-  #spawnCompanion(): ChildProcess {
+  #spawnCompanion(loadVerifiedEntryBytes: boolean): ChildProcess {
+    if (loadVerifiedEntryBytes) {
+      return spawn(
+        process.execPath,
+        [
+          "--disable-sigusr1",
+          "--input-type=module",
+          "--eval",
+          companionBootstrapSource,
+          pathToFileURL(this.#entryPath).href,
+        ],
+        {
+          cwd: dirname(this.#entryPath),
+          detached: false,
+          env: minimalCompanionEnvironment(),
+          shell: false,
+          windowsHide: true,
+          stdio: ["pipe", "ignore", "pipe", "ipc"],
+        },
+      );
+    }
     return fork(this.#entryPath, [], {
       cwd: dirname(this.#entryPath),
       detached: false,
       env: minimalCompanionEnvironment(),
-      execArgv: [],
+      execArgv: ["--disable-sigusr1"],
       execPath: process.execPath,
       serialization: "json",
       stdio: ["ignore", "ignore", "pipe", "ipc"],
@@ -305,11 +587,16 @@ export class ApprovalCompanionLauncher {
   #exchange(
     child: ChildProcess,
     context: ApprovalSigningContext,
+    verified?: {
+      readonly envelopeBytes: Buffer;
+      readonly contractDocuments: ContractJsonDocuments;
+    },
   ): Promise<ApprovalReceipt | null> {
     return new Promise<ApprovalReceipt | null>((resolveResult, rejectResult) => {
       let settled = false;
       let readyBinding: ApprovalSessionBinding | undefined;
       let verifier: Promise<TrustedApprovalVerifier> | undefined;
+      let bootstrapReady = verified === undefined;
       let messageChain = Promise.resolve();
       const startedAt = Date.now();
 
@@ -378,6 +665,24 @@ export class ApprovalCompanionLauncher {
         succeed(result.receipt);
       };
       const handleMessage = async (rawMessage: unknown): Promise<void> => {
+        if (!bootstrapReady) {
+          const failedStage = bootstrapErrorStage(rawMessage);
+          if (failedStage !== undefined) {
+            throw new ApprovalError(
+              "APPROVAL_PROCESS_FAILED",
+              `Approval companion bootstrap failed at ${failedStage}`,
+            );
+          }
+          if (!isBootstrapReadyMessage(rawMessage)) {
+            throw new ApprovalError(
+              "APPROVAL_PROTOCOL_INVALID",
+              "Approval companion bootstrap returned an invalid message",
+            );
+          }
+          bootstrapReady = true;
+          sendReview();
+          return;
+        }
         if (readyBinding === undefined) {
           try {
             const ready = parseApprovalSessionReadyMessage(rawMessage);
@@ -396,6 +701,7 @@ export class ApprovalCompanionLauncher {
             verifier = TrustedApprovalVerifier.create(
               ready.binding,
               this.#contractDirectory,
+              verified?.contractDocuments,
             );
             return;
           } catch (readyError) {
@@ -429,36 +735,62 @@ export class ApprovalCompanionLauncher {
       child.stderr?.resume();
       child.once("error", fail);
       child.once("exit", (code, signal) => {
-        void messageChain.then(() => {
-          if (!settled) {
-            fail(
-              new ApprovalError(
-                "APPROVAL_PROCESS_FAILED",
-                `Approval companion exited before a result (code=${String(code)}, signal=${String(signal)})`,
-              ),
-            );
-          }
-        });
+        void new Promise<void>((resolve) => setImmediate(resolve))
+          .then(() => messageChain)
+          .then(() => {
+            if (!settled) {
+              fail(
+                new ApprovalError(
+                  "APPROVAL_PROCESS_FAILED",
+                  `Approval companion exited before a result (code=${String(code)}, signal=${String(signal)})`,
+                ),
+              );
+            }
+          })
+          .catch(fail);
       });
 
-      try {
-        child.send(createApprovalReviewMessage(context), (error) => {
-          if (error !== null && error !== undefined) {
-            fail(
-              new ApprovalError(
-                "APPROVAL_PROCESS_FAILED",
-                "Router could not send the approval request over private IPC",
-              ),
-            );
-          }
-        });
-      } catch {
+      const sendReview = (): void => {
+        try {
+          child.send(createApprovalReviewMessage(context), (error) => {
+            if (error !== null && error !== undefined) {
+              fail(
+                new ApprovalError(
+                  "APPROVAL_PROCESS_FAILED",
+                  "Router could not send the approval request over private IPC",
+                ),
+              );
+            }
+          });
+        } catch {
+          fail(
+            new ApprovalError(
+              "APPROVAL_PROCESS_FAILED",
+              "Router could not open the private approval IPC channel",
+            ),
+          );
+        }
+      };
+
+      if (verified === undefined) {
+        sendReview();
+      } else if (child.stdin === null) {
         fail(
           new ApprovalError(
             "APPROVAL_PROCESS_FAILED",
-            "Router could not open the private approval IPC channel",
+            "Router could not open the private companion source channel",
           ),
         );
+      } else {
+        child.stdin.once("error", () => {
+          fail(
+            new ApprovalError(
+              "APPROVAL_PROCESS_FAILED",
+              "Router could not send the verified companion source",
+            ),
+          );
+        });
+        child.stdin.end(verified.envelopeBytes);
       }
     });
   }

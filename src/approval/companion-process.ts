@@ -9,6 +9,19 @@ import {
   createApprovalSessionReadyMessage,
   parseApprovalReviewMessage,
 } from "./session-protocol.js";
+import type { ContractJsonDocuments } from "../contracts/registry.js";
+
+const verifiedContractDocumentsKey =
+  "__HUAWEICLOUD_MATE_VERIFIED_CONTRACT_DOCUMENTS__";
+
+function verifiedContractDocuments(): ContractJsonDocuments | undefined {
+  const value = (
+    globalThis as typeof globalThis & Record<string, unknown>
+  )[verifiedContractDocumentsKey];
+  return value === undefined
+    ? undefined
+    : value as ContractJsonDocuments;
+}
 
 function sendToParent(message: object): Promise<void> {
   if (process.send === undefined || !process.connected) {
@@ -50,9 +63,12 @@ export async function runApprovalCompanionProcess(): Promise<number> {
         let sessionId = "unavailable_abcdefghijklmnopqrstuvwxyz0123456789";
         try {
           const review = parseApprovalReviewMessage(rawMessage);
-          const companion = await TrustedApprovalCompanion.create(
-            new URL("../contracts/schema/", import.meta.url),
-          );
+          const documents = verifiedContractDocuments();
+          const companion = documents === undefined
+            ? await TrustedApprovalCompanion.create(
+                new URL("../contracts/schema/", import.meta.url),
+              )
+            : TrustedApprovalCompanion.fromJsonDocuments(documents);
           sessionId = companion.binding.sessionId;
           await sendToParent(
             createApprovalSessionReadyMessage(companion.binding),

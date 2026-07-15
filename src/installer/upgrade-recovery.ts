@@ -15,6 +15,9 @@ import { InstallerError } from "./errors.js";
 import { isSafePluginVersion } from "./install-manifest.js";
 
 export const codexUpgradeRecoveryFileName = "codex-upgrade-recovery.json";
+export const claudeUpgradeRecoveryFileName = "claude-upgrade-recovery.json";
+export const configHostUpgradeRecoveryFileName = "config-host-upgrade-recovery.json";
+export const multiHostUpgradeRecoveryFileName = "multi-host-upgrade-recovery.json";
 
 const maxRecoveryBytes = 16 * 1024;
 const digestPattern = /^sha256:[a-f0-9]{64}$/u;
@@ -401,6 +404,126 @@ export async function removeCodexUpgradeRecovery(
     throw new InstallerError(
       "UPGRADE_RECOVERY_WRITE_FAILED",
       "Codex upgrade recovery marker could not be removed",
+    );
+  }
+}
+
+export interface UpgradeRecoveryDocumentSnapshot {
+  readonly value: unknown;
+  readonly sha256: string;
+}
+
+function recoveryDocumentPath(runtimeRoot: string, fileName: string): string {
+  if (
+    fileName !== codexUpgradeRecoveryFileName &&
+    fileName !== claudeUpgradeRecoveryFileName &&
+    fileName !== configHostUpgradeRecoveryFileName &&
+    fileName !== multiHostUpgradeRecoveryFileName
+  ) {
+    return invalid("Upgrade recovery marker filename is unsupported");
+  }
+  return resolve(runtimeRoot, fileName);
+}
+
+export async function readUpgradeRecoveryDocument(
+  runtimeRoot: string,
+  fileName: string,
+): Promise<UpgradeRecoveryDocumentSnapshot | undefined> {
+  try {
+    const root = await assertRuntimeRoot(runtimeRoot);
+    const snapshot = await readSnapshot(recoveryDocumentPath(root, fileName));
+    if (
+      !snapshot.exists ||
+      snapshot.bytes === undefined ||
+      snapshot.sha256 === undefined
+    ) {
+      return undefined;
+    }
+    return { value: decode(snapshot.bytes), sha256: snapshot.sha256 };
+  } catch (error) {
+    if (error instanceof InstallerError) throw error;
+    throw new InstallerError(
+      "UPGRADE_RECOVERY_INVALID",
+      "Upgrade recovery marker could not be read",
+    );
+  }
+}
+
+export async function replaceUpgradeRecoveryDocument(
+  runtimeRoot: string,
+  fileName: string,
+  value: unknown,
+  expectedSha256: string | null,
+): Promise<UpgradeRecoveryDocumentSnapshot> {
+  try {
+    if (expectedSha256 !== null && !digestPattern.test(expectedSha256)) {
+      return invalid("Expected upgrade recovery digest is invalid");
+    }
+    const root = await assertRuntimeRoot(runtimeRoot);
+    const path = recoveryDocumentPath(root, fileName);
+    const bytes = Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf8");
+    if (bytes.byteLength > maxRecoveryBytes) {
+      return invalid("Rendered upgrade recovery marker exceeds the size limit");
+    }
+    const before = await readSnapshot(path);
+    if (!snapshotMatches(before, expectedSha256)) {
+      return conflict("Upgrade recovery marker no longer matches its digest");
+    }
+    const sha256 = digest(bytes);
+    if (before.sha256 !== sha256) {
+      await commitBytes(path, bytes, expectedSha256);
+    }
+    return { value, sha256 };
+  } catch (error) {
+    if (error instanceof InstallerError) throw error;
+    throw new InstallerError(
+      "UPGRADE_RECOVERY_WRITE_FAILED",
+      "Upgrade recovery marker transaction failed",
+    );
+  }
+}
+
+export async function removeUpgradeRecoveryDocument(
+  runtimeRoot: string,
+  fileName: string,
+  expectedSha256: string,
+): Promise<void> {
+  let quarantinePath: string | undefined;
+  let path = "";
+  try {
+    if (!digestPattern.test(expectedSha256)) {
+      return invalid("Expected upgrade recovery digest is invalid");
+    }
+    const root = await assertRuntimeRoot(runtimeRoot);
+    path = recoveryDocumentPath(root, fileName);
+    const before = await readSnapshot(path);
+    if (!before.exists || before.sha256 !== expectedSha256) {
+      return conflict("Upgrade recovery marker changed before removal");
+    }
+    quarantinePath = resolve(
+      root,
+      `.${fileName}.${randomBytes(16).toString("hex")}.rollback`,
+    );
+    await rename(path, quarantinePath);
+    const captured = await readSnapshot(quarantinePath);
+    if (captured.sha256 !== expectedSha256) {
+      if (await restoreQuarantine(quarantinePath, path)) {
+        quarantinePath = undefined;
+      }
+      return conflict("Upgrade recovery marker changed during removal");
+    }
+    await rm(quarantinePath, { force: true });
+    quarantinePath = undefined;
+  } catch (error) {
+    if (quarantinePath !== undefined && path !== "") {
+      if (await restoreQuarantine(quarantinePath, path)) {
+        quarantinePath = undefined;
+      }
+    }
+    if (error instanceof InstallerError) throw error;
+    throw new InstallerError(
+      "UPGRADE_RECOVERY_WRITE_FAILED",
+      "Upgrade recovery marker could not be removed",
     );
   }
 }

@@ -217,6 +217,32 @@ async function queryInstalledPlugin(
   return parseListOutput(result.stdout, expectedVersion);
 }
 
+export async function discoverClaudePluginActivation(
+  executablePath: string,
+  expectedVersion: string,
+  runner: HostCommandRunner = new NodeHostCommandRunner(),
+): Promise<AppliedClaudeActivationChange | undefined> {
+  if (
+    !isAbsolute(executablePath) ||
+    !boundedTextPattern.test(expectedVersion)
+  ) {
+    return invalid("Claude activation discovery binding is invalid");
+  }
+  const installed = await queryInstalledPlugin(
+    executablePath,
+    expectedVersion,
+    runner,
+  );
+  return installed === undefined
+    ? undefined
+    : {
+        kind: "claude-cli-plugin",
+        executablePath,
+        ...installed,
+        changed: true,
+      };
+}
+
 function validateDependencies(
   catalog: AppliedClaudeMarketplaceCatalogChange,
   registration: AppliedClaudeMarketplaceRegistration,

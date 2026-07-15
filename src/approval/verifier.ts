@@ -16,7 +16,10 @@ import type {
   ExpectedApprovalBinding,
   UnsignedApprovalReceipt,
 } from "./types.js";
-import { ContractRegistry } from "../contracts/registry.js";
+import {
+  ContractRegistry,
+  type ContractJsonDocuments,
+} from "../contracts/registry.js";
 
 function unsignedReceipt(receipt: ApprovalReceipt): UnsignedApprovalReceipt {
   const { signature: _signature, ...unsigned } = receipt;
@@ -62,6 +65,7 @@ export class TrustedApprovalVerifier {
   static async create(
     binding: ApprovalSessionBinding,
     contractDirectory?: URL,
+    contractDocuments?: ContractJsonDocuments,
   ): Promise<TrustedApprovalVerifier> {
     if (
       binding.issuerId !== approvalIssuerId ||
@@ -75,7 +79,9 @@ export class TrustedApprovalVerifier {
     }
     return new TrustedApprovalVerifier(
       binding,
-      await ContractRegistry.load(contractDirectory),
+      contractDocuments === undefined
+        ? await ContractRegistry.load(contractDirectory)
+        : ContractRegistry.fromJsonDocuments(contractDocuments),
     );
   }
 

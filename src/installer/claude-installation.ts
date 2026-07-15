@@ -37,6 +37,7 @@ export interface BindClaudeInstallationOptions {
   readonly runner: HostCommandRunner;
   readonly homeDirectory?: string;
   readonly requireExecutable?: boolean;
+  readonly allowMultiHost?: boolean;
 }
 
 export interface BoundClaudeInstallation {
@@ -71,12 +72,14 @@ export async function bindClaudeInstallation(
   const runtimeRoot = resolve(options.runtimeRoot);
   if (
     !isAbsolute(options.runtimeRoot) ||
-    snapshot.state.hosts.length !== 1 ||
-    snapshot.state.hosts[0]?.id !== "claude"
+    (options.allowMultiHost !== true && snapshot.state.hosts.length !== 1)
   ) {
     return conflict("Claude operation requires a single-host Claude install state");
   }
-  const host = snapshot.state.hosts[0];
+  const host = snapshot.state.hosts.find((entry) => entry.id === "claude");
+  if (host === undefined) {
+    return conflict("Install state does not contain a managed Claude host");
+  }
   const registry = await HostTemplateRegistry.load(
     pathToFileURL(
       `${resolve(snapshot.state.runtimePath, "hosts", "templates")}${sep}`,

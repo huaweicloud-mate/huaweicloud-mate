@@ -39,7 +39,7 @@
 - 7 个 schema 均通过 Draft 2020-12 元 schema 检查；
 - 当时的 7 个测试向量的 schema 层结果均与声明一致；
 - `provider-handshake-digest-mismatch-rejected` 与 `approval-receipt-accepted-once` 按设计先通过结构校验，分别留给运行时握手语义和单次消费状态机验证；
-- 3 个状态机向量已纳入契约，但必须在后续运行时实现中执行，不能由 JSON Schema 单独判定；
+- 4 个状态机向量已纳入契约，并由构建后 doctor 的真实无云 Router/session/KooCLI Adapter harness 执行，不能由 JSON Schema 单独判定；
 - 所有 schema 通过显式本地 registry 解析，校验过程未获取远程 `$ref`。
 
 2026-07-13 工程注册表进一步使用 `Ajv 8.20.0` strict mode 编译全部 7 个 schema，并执行最初 7 个 schema 层测试向量。该检查修正了条件分支缺少显式类型以及 URN schema 使用相对跨文件 `$ref` 的问题。
@@ -51,8 +51,8 @@
 - 公共 npm scope 与发布身份；
 - 统一受信审批 companion 的稳定安装目录真实性、四宿主隔离验证和责任人；
 - `auth set` 使用的固定只读账号身份校验能力；
-- 首发产品 MCP 清单、同源 endpoint、版本范围和 capability digest；
-- KooCLI 兼容范围、固定版本、下载 URL 与 SHA-256；
+- 首版本地 OBS/KooCLI 最小权限账号与真实场景；真实产品 MCP 清单、同源 endpoint、版本范围和 capability digest 移至后续版本；
+- 首个 ECS KooCLI capability 的元数据可用性与最小权限账号验收；mapping、固定 `7.2.12`、五平台 SHA-256 和授权 argv invoker 已由 ADR-0048/0050/0051 绑定；
 - 最终 3～5 个真实端到端验收场景及责任人。
 
 上述输入未补齐前，本目录保持 `Draft for M0`，不得标记为 Frozen。

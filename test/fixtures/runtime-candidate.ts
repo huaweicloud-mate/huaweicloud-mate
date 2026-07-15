@@ -3,12 +3,11 @@ import { cp, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const versionedArtifacts = [
-  "cli.js",
   "host-assets/claude/plugin/.claude-plugin/plugin.json",
   "host-assets/codex/plugin/.codex-plugin/plugin.json",
-  "mcp/server.js",
   "package.json",
   "runtime/cli.js",
+  "version.js",
 ] as const;
 
 function digest(bytes: Uint8Array): string {
@@ -49,5 +48,28 @@ export async function copyRuntimeCandidate(
     artifact.size = bytes.byteLength;
     artifact.sha256 = digest(bytes);
   }
+  await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+export async function rewriteRuntimeArtifact(
+  runtimeDirectory: string,
+  artifactPath: string,
+  rewrite: (text: string) => string,
+): Promise<void> {
+  const manifestPath = resolve(runtimeDirectory, "install-manifest.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8")) as {
+    artifacts: Array<{ path: string; size: number; sha256: string }>;
+  };
+  const path = resolve(runtimeDirectory, ...artifactPath.split("/"));
+  const bytes = Buffer.from(rewrite(await readFile(path, "utf8")), "utf8");
+  const artifact = manifest.artifacts.find(
+    (candidate) => candidate.path === artifactPath,
+  );
+  if (artifact === undefined) {
+    throw new Error(`Candidate manifest is missing ${artifactPath}`);
+  }
+  await writeFile(path, bytes);
+  artifact.size = bytes.byteLength;
+  artifact.sha256 = digest(bytes);
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 }

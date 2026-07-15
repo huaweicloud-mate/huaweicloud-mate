@@ -4,6 +4,8 @@
 
 日期：2026-07-13
 
+后续状态：ADR-0048 将真实产品 MCP 移出首版；本 ADR 的 reference provider 与统一 companion 边界继续有效。
+
 ## 背景
 
 Proposed v0.3-lite 要求至少一个内置官方产品 MCP 完成 credential session、兼容握手和真实资源操作验证，但当前无法获得满足该契约的正式产品 MCP。四个目标宿主虽然都有不同程度的用户审批入口，也没有统一、可验证且能绑定 Router challenge 的签名回执接口。

@@ -17,6 +17,8 @@ const maxManifestBytes = 8 * 1024 * 1024;
 const maxArtifactBytes = 64 * 1024 * 1024;
 const maxRuntimeBytes = 512 * 1024 * 1024;
 const maxArtifactCount = 4096;
+const runtimeImportMetaUrlKey =
+  "__HUAWEICLOUD_MATE_RUNTIME_IMPORT_META_URL__";
 
 interface ActiveRuntime {
   readonly schemaVersion: "huaweicloud-mate-active-runtime/v1";
@@ -157,7 +159,7 @@ function contained(root: string, path: string): boolean {
 async function verifyArtifact(
   runtimeDirectory: string,
   artifact: RuntimeArtifact,
-): Promise<void> {
+): Promise<Buffer> {
   let current = runtimeDirectory;
   const segments = artifact.path.split("/");
   for (let index = 0; index < segments.length; index += 1) {
@@ -182,9 +184,12 @@ async function verifyArtifact(
   if (bytes.byteLength !== artifact.size || digest(bytes) !== artifact.sha256) {
     return fail();
   }
+  return bytes;
 }
 
-async function verifiedCliUrl(launcherUrl: string): Promise<URL> {
+async function verifiedCli(
+  launcherUrl: string,
+): Promise<{ readonly url: URL; readonly bytes: Buffer }> {
   const currentDirectory = dirname(fileURLToPath(launcherUrl));
   const runtimeRoot = dirname(currentDirectory);
   const currentEntry = await lstat(currentDirectory);
@@ -232,16 +237,17 @@ async function verifiedCliUrl(launcherUrl: string): Promise<URL> {
     pointer.pluginVersion,
   );
   let runtimePackageBytes: Buffer | undefined;
+  let runtimeCliBytes: Buffer | undefined;
   for (const artifact of artifacts) {
-    await verifyArtifact(runtimeDirectory, artifact);
+    const artifactBytes = await verifyArtifact(runtimeDirectory, artifact);
     if (artifact.path === "package.json") {
-      runtimePackageBytes = await readRegularFile(
-        resolve(runtimeDirectory, "package.json"),
-        maxArtifactBytes,
-      );
+      runtimePackageBytes = artifactBytes;
+    }
+    if (artifact.path === "runtime/cli.js") {
+      runtimeCliBytes = artifactBytes;
     }
   }
-  if (runtimePackageBytes === undefined) {
+  if (runtimePackageBytes === undefined || runtimeCliBytes === undefined) {
     return fail();
   }
   let runtimePackage: unknown;
@@ -268,15 +274,36 @@ async function verifiedCliUrl(launcherUrl: string): Promise<URL> {
   ) {
     return fail();
   }
-  return pathToFileURL(resolve(runtimeDirectory, "runtime", "cli.js"));
+  return {
+    url: pathToFileURL(resolve(runtimeDirectory, "runtime", "cli.js")),
+    bytes: runtimeCliBytes,
+  };
+}
+
+function bindRuntimeImportMetaUrl(url: string): void {
+  const target = globalThis as typeof globalThis & Record<string, unknown>;
+  if (Object.hasOwn(target, runtimeImportMetaUrlKey)) {
+    if (target[runtimeImportMetaUrlKey] !== url) {
+      return fail();
+    }
+    return;
+  }
+  Object.defineProperty(target, runtimeImportMetaUrlKey, {
+    value: url,
+    configurable: false,
+    enumerable: false,
+    writable: false,
+  });
 }
 
 export async function runStableLauncher(
   args: readonly string[],
   launcherUrl = import.meta.url,
 ): Promise<number> {
-  const cliUrl = await verifiedCliUrl(launcherUrl);
-  const cli = (await import(cliUrl.href)) as {
+  const cliRuntime = await verifiedCli(launcherUrl);
+  bindRuntimeImportMetaUrl(cliRuntime.url.href);
+  const verifiedModuleUrl = `data:text/javascript;base64,${cliRuntime.bytes.toString("base64")}`;
+  const cli = (await import(verifiedModuleUrl)) as {
     readonly main?: (args: readonly string[]) => Promise<number>;
   };
   if (typeof cli.main !== "function") {

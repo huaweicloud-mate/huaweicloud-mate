@@ -8,9 +8,13 @@ import {
   sha256File,
 } from "../../src/approval/launcher.js";
 import type { ApprovalSigningContext } from "../../src/approval/types.js";
+import { contractFileNames } from "../../src/contracts/manifest.js";
 
 const contractDirectory = pathToFileURL(`${resolve("docs/契约")}/`);
 const fixturePath = resolve("test/fixtures/approval-companion-child.mjs");
+const bootstrapFixturePath = resolve(
+  "test/fixtures/approval-companion-error-child.mjs",
+);
 
 function signingContext(): ApprovalSigningContext {
   return {
@@ -37,6 +41,30 @@ function signingContext(): ApprovalSigningContext {
   };
 }
 
+async function verifiedBootstrapArtifacts() {
+  const entryDigest = await sha256File(bootstrapFixturePath);
+  return {
+    entryDigest,
+    artifacts: [
+      {
+        path: bootstrapFixturePath,
+        expectedSha256: entryDigest,
+        runtimePath: "approval/companion-process.js",
+      },
+      ...(await Promise.all(
+        contractFileNames.map(async (fileName) => {
+          const path = resolve("docs/契约", fileName);
+          return {
+            path,
+            expectedSha256: await sha256File(path),
+            runtimePath: `contracts/schema/${fileName}`,
+          };
+        }),
+      )),
+    ],
+  };
+}
+
 describe("approval companion launcher", () => {
   it("loads the build-generated fixed runtime manifest", async () => {
     await expect(
@@ -45,6 +73,24 @@ describe("approval companion launcher", () => {
         contractDirectory,
       ),
     ).resolves.toBeInstanceOf(ApprovalCompanionLauncher);
+  });
+
+  it("boots the build-generated companion from verified bytes without opening approval", async () => {
+    const launcher = await ApprovalCompanionLauncher.fromRuntimeManifest(
+      pathToFileURL(resolve("dist/runtime-manifest.json")),
+      contractDirectory,
+    );
+    const context = signingContext();
+
+    await expect(
+      launcher.review({
+        ...context,
+        request: {
+          ...context.request,
+          expiresAt: new Date(Date.now() - 1_000).toISOString(),
+        },
+      }),
+    ).rejects.toMatchObject({ code: "APPROVAL_REQUEST_EXPIRED" });
   });
 
   it("exchanges a verified receipt over private parent-child IPC", async () => {
@@ -72,6 +118,23 @@ describe("approval companion launcher", () => {
 
     await expect(launcher.review(signingContext())).rejects.toMatchObject({
       code: "APPROVAL_ARTIFACT_INVALID",
+    });
+  });
+
+  it("loads verified companion entry bytes through the private source pipe", async () => {
+    const verified = await verifiedBootstrapArtifacts();
+    const launcher = new ApprovalCompanionLauncher({
+      entryPath: bootstrapFixturePath,
+      expectedSha256: verified.entryDigest,
+      artifacts: verified.artifacts,
+      contractDirectory,
+      timeoutMs: 10_000,
+      loadVerifiedEntryBytes: true,
+    });
+
+    await expect(launcher.review(signingContext())).rejects.toMatchObject({
+      code: "APPROVAL_PROCESS_FAILED",
+      message: "Verified source bootstrap fixture",
     });
   });
 

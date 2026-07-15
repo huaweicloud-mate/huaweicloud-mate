@@ -24,6 +24,13 @@ await build({
   ...common,
   entryPoints: [fileURLToPath(new URL("cli.js", distDirectory))],
   outfile: fileURLToPath(new URL("cli.js", runtimeDirectory)),
+  define: {
+    "import.meta.url":
+      "globalThis.__HUAWEICLOUD_MATE_RUNTIME_IMPORT_META_URL__",
+  },
+  banner: {
+    js: "globalThis.__HUAWEICLOUD_MATE_RUNTIME_IMPORT_META_URL__ ??= import.meta.url;",
+  },
 });
 
 const companionBundle = new URL(
@@ -36,6 +43,13 @@ await build({
     fileURLToPath(new URL("approval/companion-process.js", distDirectory)),
   ],
   outfile: fileURLToPath(companionBundle),
+  define: {
+    "import.meta.url":
+      "globalThis.__HUAWEICLOUD_MATE_COMPANION_IMPORT_META_URL__",
+  },
+  banner: {
+    js: "globalThis.__HUAWEICLOUD_MATE_COMPANION_IMPORT_META_URL__ ??= import.meta.url;",
+  },
 });
 await rename(
   companionBundle,

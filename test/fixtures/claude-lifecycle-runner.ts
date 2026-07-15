@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import {
@@ -43,6 +44,7 @@ export class FakeClaudeLifecycleRunner implements HostCommandRunner {
   marketplaceAddCode = 0;
   installCode = 0;
   uninstallCode = 0;
+  failPluginListAfterInstall = false;
   readonly failingMarketplaceListCalls = new Set<number>();
   readonly failingPluginListCalls = new Set<number>();
   private marketplaceListCallCount = 0;
@@ -91,6 +93,20 @@ export class FakeClaudeLifecycleRunner implements HostCommandRunner {
       "huaweicloud-mate",
       version,
     );
+  }
+
+  private async catalogVersion(): Promise<string> {
+    const manifest = JSON.parse(
+      await readFile(
+        resolve(this.marketplaceRoot, ".claude-plugin", "marketplace.json"),
+        "utf8",
+      ),
+    ) as { plugins?: Array<{ version?: unknown }> };
+    const version = manifest.plugins?.[0]?.version;
+    if (typeof version !== "string") {
+      throw new Error("Fake Claude marketplace has no plugin version");
+    }
+    return version;
   }
 
   async resolveCommand(command: string): Promise<string | undefined> {
@@ -161,7 +177,15 @@ export class FakeClaudeLifecycleRunner implements HostCommandRunner {
       `plugin install ${claudePluginId} --scope user`
     ) {
       if (this.installMutates) {
-        this.pluginEntry = this.createPluginEntry();
+        const version = await this.catalogVersion();
+        this.pluginEntry = this.createPluginEntry({
+          version,
+          installPath: this.pluginInstallPath(version),
+        });
+      }
+      if (this.failPluginListAfterInstall) {
+        this.failingPluginListCalls.add(this.pluginListCallCount + 1);
+        this.failPluginListAfterInstall = false;
       }
       return commandResult(this.installCode);
     }

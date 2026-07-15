@@ -1,8 +1,34 @@
-import { resolve } from "node:path";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { describe, expect, it } from "vitest";
+import {
+  getDefaultEnvironment,
+  StdioClientTransport,
+} from "@modelcontextprotocol/sdk/client/stdio.js";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { defaultAuditLogPath } from "../../src/installer/paths.js";
+
+let dataRoot: string;
+
+beforeAll(async () => {
+  dataRoot = await mkdtemp(join(tmpdir(), "huaweicloud-mate-mcp-data-"));
+});
+
+afterAll(async () => {
+  await rm(dataRoot, { recursive: true, force: true });
+});
+
+function testEnvironment(): Record<string, string> {
+  return {
+    ...getDefaultEnvironment(),
+    HOME: dataRoot,
+    LOCALAPPDATA: dataRoot,
+    XDG_DATA_HOME: dataRoot,
+  };
+}
 
 describe("development stdio MCP server", () => {
   it("exposes exactly the three frozen Router tools over real stdio", async () => {
@@ -10,10 +36,11 @@ describe("development stdio MCP server", () => {
       command: process.execPath,
       args: [resolve("dist/cli.js"), "mcp"],
       cwd: resolve("."),
+      env: testEnvironment(),
       stderr: "pipe",
     });
     const client = new Client(
-      { name: "huaweicloud-mate-test", version: "1.0.0" },
+      { name: "codex-test", version: "1.0.0" },
       { capabilities: {} },
     );
     try {
@@ -101,6 +128,25 @@ describe("development stdio MCP server", () => {
           riskTags: ["privileged"],
         },
       });
+      const auditPath = defaultAuditLogPath(process.platform, dataRoot, {
+        LOCALAPPDATA: dataRoot,
+        XDG_DATA_HOME: dataRoot,
+      });
+      const events = (await readFile(auditPath, "utf8"))
+        .trim()
+        .split("\n")
+        .map((line) => JSON.parse(line));
+      expect(events).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          event: "dispatch-completed",
+          agent: "codex",
+          pluginVersion: "0.0.0-development",
+        }),
+        expect.objectContaining({
+          event: "preview-created",
+          agent: "codex",
+        }),
+      ]));
     } finally {
       await client.close();
     }
@@ -111,6 +157,7 @@ describe("development stdio MCP server", () => {
       command: process.execPath,
       args: [resolve("dist/cli.js"), "mcp"],
       cwd: resolve("."),
+      env: testEnvironment(),
       stderr: "pipe",
     });
     const client = new Client(

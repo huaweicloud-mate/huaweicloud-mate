@@ -1278,6 +1278,13 @@ export async function readInstallState(
   }
 }
 
+export function installStateSha256(state: InstallState): string {
+  const normalized = parseInstallState(state);
+  return digest(
+    Buffer.from(`${JSON.stringify(normalized, null, 2)}\n`, "utf8"),
+  );
+}
+
 async function writeExclusive(path: string, bytes: Uint8Array): Promise<void> {
   const handle = await open(path, "wx", 0o600);
   try {

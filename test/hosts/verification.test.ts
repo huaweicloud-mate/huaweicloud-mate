@@ -26,6 +26,7 @@ import {
   createInitialHostVerificationHook,
   verifyInitialInstallHosts,
 } from "../../src/hosts/verification.js";
+import { hasExactRouterToolSet } from "../../src/hosts/router-process-verification.js";
 import { runInitialInstallTransaction } from "../../src/installer/initial-install.js";
 import { readInstallState } from "../../src/installer/install-state.js";
 import { materializeStableRuntime } from "../../src/installer/runtime.js";
@@ -195,7 +196,7 @@ describe("initial host verification", () => {
         }),
         expect.objectContaining({
           id: "codearts",
-          checks: expect.arrayContaining(["config-registration"]),
+          checks: expect.arrayContaining(["config-registration", "mcp-process"]),
         }),
         expect.objectContaining({
           id: "codex",
@@ -206,6 +207,7 @@ describe("initial host verification", () => {
           checks: expect.arrayContaining(["mcp-registration"]),
         }),
       ],
+      routerProcessProbe: "passed",
       approvalProbe: "passed",
     });
     expect(await readInstallState(runtime.runtimeRoot)).toMatchObject({
@@ -276,6 +278,26 @@ describe("initial host verification", () => {
 
     expect(await pathExists(plans[0]!.configPath)).toBe(false);
     expect(await pathExists(assetTarget(plans[0]!))).toBe(false);
+  });
+});
+
+describe("stable Router process verification", () => {
+  it("accepts only the three frozen Router MCP tools", () => {
+    expect(hasExactRouterToolSet([
+      "cloud_capability_describe",
+      "cloud_action_execute",
+      "cloud_capabilities_search",
+    ])).toBe(true);
+    expect(hasExactRouterToolSet([
+      "cloud_capability_describe",
+      "cloud_action_execute",
+      "cloud_capabilities_search",
+      "approval_grant",
+    ])).toBe(false);
+    expect(hasExactRouterToolSet([
+      "cloud_capability_describe",
+      "cloud_capabilities_search",
+    ])).toBe(false);
   });
 });
 

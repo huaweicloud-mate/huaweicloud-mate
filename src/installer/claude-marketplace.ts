@@ -311,6 +311,13 @@ export function createClaudeMarketplaceCatalogPlan(
   return plan;
 }
 
+export function expectedClaudeMarketplaceCatalogSha256(
+  plan: ClaudeMarketplaceCatalogPlan,
+): string {
+  validatePlan(plan);
+  return digest(renderCatalog(plan));
+}
+
 async function readSnapshot(path: string): Promise<FileSnapshot> {
   let entry;
   try {

@@ -1,5 +1,7 @@
 import type { ValidateFunction } from "ajv";
 
+import type { RouterAuditSink } from "../audit/types.js";
+
 import type {
   ApprovalAccountIdentity,
   ApprovalExecutor,
@@ -114,10 +116,15 @@ export interface RouterCoreOptions {
   readonly adapters: readonly RouterExecutorAdapter[];
   readonly approvalReviewer?: ApprovalReviewer;
   readonly approvalManifestUrl?: URL;
-  readonly identityProvider: () => Promise<RouterIdentityContext>;
+  readonly identityProvider: (
+    capability: RouterCapabilityDefinition,
+  ) => Promise<RouterIdentityContext>;
   readonly contractDirectory?: URL;
   readonly now?: () => Date;
   readonly previewTtlMs?: number;
+  readonly auditSink?: RouterAuditSink;
+  readonly agentProvider?: () =>
+    "codex" | "claude" | "opencode" | "codearts" | "unknown-mcp-client";
 }
 
 export interface CompiledRouterCapability {

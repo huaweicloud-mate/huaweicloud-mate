@@ -1,11 +1,11 @@
 # 华为云产品 MCP 接入规范
 
 状态：Proposed v0.3-lite
-适用：随插件内置发布的华为云官方公网 Streamable HTTP MCP
+适用：首版之后随插件静态内置的华为云官方公网 Streamable HTTP MCP
 
-## 1. 首版边界
+## 1. 后续接入边界
 
-首版只接入 npm 包内置的官方产品 MCP：
+ADR-0048 已确认首版不接入真实产品 MCP，当前由内置本地 OBS provider 提供首发能力。本规范作为后续接入口继续有效；接入时只允许 npm 包静态内置的官方产品 MCP：
 
 - 不支持第三方、社区或用户自定义 Provider；
 - 不支持运行时注册 endpoint；

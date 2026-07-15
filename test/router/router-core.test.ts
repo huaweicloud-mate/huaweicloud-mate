@@ -286,6 +286,40 @@ describe("minimal Router approval state machine", () => {
     expect(reviewCount).toBe(0);
   });
 
+  it("invalidates a pending preview after Router process restart", async () => {
+    const oldRouter = await createRouter({
+      reviewer: {
+        review: async () => {
+          throw new Error("The old Router must not review during preview creation");
+        },
+      },
+    });
+    const preview = await createPreview(oldRouter);
+    let reviewCount = 0;
+    let dispatchCount = 0;
+    const restartedRouter = await createRouter({
+      reviewer: {
+        review: async () => {
+          reviewCount += 1;
+          return null;
+        },
+      },
+      provider: adapter("provider-mcp", async () => {
+        dispatchCount += 1;
+        return { result: { serverId: "unexpected" }, effectiveAccountId: "account-1" };
+      }),
+    });
+
+    await expect(
+      restartedRouter.execute({
+        ...dangerousInput,
+        previewId: preview.previewId,
+      }),
+    ).rejects.toMatchObject({ code: "APPROVAL_INVALID" });
+    expect(reviewCount).toBe(0);
+    expect(dispatchCount).toBe(0);
+  });
+
   it("allows only one concurrent dispatch for the same preview", async () => {
     let dispatchCount = 0;
     let releaseDispatch = (): void => undefined;
@@ -349,6 +383,12 @@ describe("minimal Router approval state machine", () => {
 
     await expect(router.execute(approvedInput)).rejects.toMatchObject({
       code: "OUTCOME_UNKNOWN",
+    });
+    await expect(router.execute({
+      ...approvedInput,
+      executorPreference: "koocli",
+    })).rejects.toMatchObject({
+      code: "EXECUTOR_LOCKED",
     });
     await expect(router.execute(approvedInput)).rejects.toMatchObject({
       code: "APPROVAL_REPLAYED",
@@ -480,6 +520,80 @@ describe("minimal Router approval state machine", () => {
     ).resolves.toMatchObject({
       status: "completed",
       result: { buckets: "[REDACTED]" },
+    });
+  });
+
+  it("rejects credential-shaped output that was not declared for redaction", async () => {
+    const credentialRead: RouterCapabilityRegistration = {
+      ...safeRead,
+      definition: {
+        ...safeRead.definition,
+        outputSchema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["secretKey"],
+          properties: { secretKey: { type: "string" } },
+        },
+      },
+    };
+    const provider = adapter("provider-mcp", async (request) => ({
+      result: { secretKey: "provider-must-not-return-this" },
+      effectiveAccountId: request.identity.accountIdentity.accountId,
+    }));
+    const router = await createRouter({
+      capabilities: [credentialRead],
+      provider,
+    });
+
+    await expect(
+      router.execute({
+        schemaVersion: "huaweicloud-agent-execute-input/v1-lite",
+        capabilityId: credentialRead.definition.capabilityId,
+        arguments: {},
+        scope: {},
+      }),
+    ).rejects.toMatchObject({
+      code: "OUTPUT_REJECTED",
+      message: "Executor result contains undeclared sensitive material",
+    });
+  });
+
+  it("allows credential-shaped output only when the declared path is redacted", async () => {
+    const credentialRead: RouterCapabilityRegistration = {
+      ...safeRead,
+      definition: {
+        ...safeRead.definition,
+        outputSchema: {
+          type: "object",
+          additionalProperties: false,
+          required: ["secretKey"],
+          properties: { secretKey: { type: "string" } },
+        },
+        outputPolicy: {
+          ...safeRead.definition.outputPolicy,
+          sensitivePaths: ["/secretKey"],
+        },
+      },
+    };
+    const provider = adapter("provider-mcp", async (request) => ({
+      result: { secretKey: "provider-must-not-return-this" },
+      effectiveAccountId: request.identity.accountIdentity.accountId,
+    }));
+    const router = await createRouter({
+      capabilities: [credentialRead],
+      provider,
+    });
+
+    await expect(
+      router.execute({
+        schemaVersion: "huaweicloud-agent-execute-input/v1-lite",
+        capabilityId: credentialRead.definition.capabilityId,
+        arguments: {},
+        scope: {},
+      }),
+    ).resolves.toMatchObject({
+      status: "completed",
+      result: { secretKey: "[REDACTED]" },
     });
   });
 });

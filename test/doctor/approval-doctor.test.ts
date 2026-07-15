@@ -59,7 +59,7 @@ describe("approval doctor", () => {
       main(["doctor", "--contracts-only", "--approval-probe"]),
     ).resolves.toBe(2);
     expect(error).toHaveBeenCalledWith(
-      "--contracts-only and --approval-probe cannot be used together",
+      "--contracts-only, --approval-probe, --koocli, and --hosts cannot be used together",
     );
 
     error.mockRestore();

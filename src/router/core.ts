@@ -28,6 +28,7 @@ import { ContractRegistry } from "../contracts/registry.js";
 import { canonicalizeJson, digestCanonicalJson } from "./canonical.js";
 import { RouterError } from "./errors.js";
 import { redactJsonPointers } from "./redaction.js";
+import { assertNoSensitiveOutput } from "./sensitive-output.js";
 import type {
   CompiledRouterCapability,
   RouterCapabilityDefinition,
@@ -39,6 +40,7 @@ import type {
   RouterExecutorAdapter,
   RouterIdentityContext,
 } from "./types.js";
+import { pluginVersion } from "../version.js";
 
 const addFormats = (
   "default" in addFormatsModule
@@ -54,6 +56,7 @@ interface PendingPreview {
   readonly arguments: Readonly<Record<string, unknown>>;
   readonly scope: ApprovalScope;
   readonly inputDigest: string;
+  readonly correlationId: string;
   approvedReceipt?: ApprovalReceipt;
   reviewPromise?: Promise<ApprovalReceipt | null>;
 }
@@ -269,7 +272,9 @@ export class RouterCore {
       );
     }
 
-    const identity = await this.#options.identityProvider();
+    const identity = await this.#options.identityProvider(
+      capability.registration.definition,
+    );
     const adapter = await this.#selectAdapter(
       capability.registration.definition,
       input.executorPreference,
@@ -281,6 +286,8 @@ export class RouterCore {
         structuredClone(input.arguments),
         structuredClone(input.scope),
         identity,
+        randomUUID(),
+        "not-required",
       );
     }
     return this.#createPreview(input, capability, adapter, identity);
@@ -371,6 +378,15 @@ export class RouterCore {
         "The approval preview does not exist in this Router process",
       );
     }
+    if (
+      input.executorPreference !== undefined &&
+      input.executorPreference !== pending.adapter.executor
+    ) {
+      throw new RouterError(
+        "EXECUTOR_LOCKED",
+        "Executor cannot change after preview creation",
+      );
+    }
     if (pending.state === "consumed") {
       throw new RouterError(
         "APPROVAL_REPLAYED",
@@ -389,17 +405,9 @@ export class RouterCore {
         "Capability, arguments, or scope changed after preview creation",
       );
     }
-    if (
-      input.executorPreference !== undefined &&
-      input.executorPreference !== pending.adapter.executor
-    ) {
-      throw new RouterError(
-        "EXECUTOR_LOCKED",
-        "Executor cannot change after preview creation",
-      );
-    }
-
-    const identityBeforeReview = await this.#options.identityProvider();
+    const identityBeforeReview = await this.#options.identityProvider(
+      pending.capability.registration.definition,
+    );
     this.#assertPendingIdentity(pending, identityBeforeReview);
     if (pending.state !== "pending") {
       throw new RouterError(
@@ -436,13 +444,21 @@ export class RouterCore {
         );
       }
       pending.state = "consumed";
+      await this.#audit({
+        ...this.#auditBase(pending.capability, pending.adapter, pending.scope, pending.inputDigest, pending.correlationId),
+        event: "approval-rejected",
+        approval: "rejected",
+        errorCode: "APPROVAL_INVALID",
+      }, false);
       throw new RouterError(
         "APPROVAL_INVALID",
         "Trusted approval was rejected by the user",
       );
     }
 
-    const identity = await this.#options.identityProvider();
+    const identity = await this.#options.identityProvider(
+      pending.capability.registration.definition,
+    );
     this.#assertPendingIdentity(pending, identity);
     if (pending.state !== "pending") {
       throw new RouterError(
@@ -470,6 +486,8 @@ export class RouterCore {
       pending.arguments,
       pending.scope,
       identity,
+      pending.correlationId,
+      "approved",
     );
   }
 
@@ -498,12 +516,12 @@ export class RouterCore {
     }
   }
 
-  #createPreview(
+  async #createPreview(
     input: RouterExecuteInput,
     capability: CompiledRouterCapability,
     adapter: RouterExecutorAdapter,
     identity: RouterIdentityContext,
-  ): ApprovalRequest {
+  ): Promise<ApprovalRequest> {
     const argumentsValue = structuredClone(input.arguments);
     const scope = structuredClone(input.scope);
     const previewId = opaqueId();
@@ -549,7 +567,25 @@ export class RouterCore {
       arguments: argumentsValue,
       scope,
       inputDigest: request.parameterDigest,
+      correlationId: randomUUID(),
     });
+    const pending = this.#previews.get(previewId)!;
+    try {
+      await this.#audit({
+        ...this.#auditBase(
+          pending.capability,
+          pending.adapter,
+          pending.scope,
+          pending.inputDigest,
+          pending.correlationId,
+        ),
+        event: "preview-created",
+        approval: "pending",
+      }, true);
+    } catch (error) {
+      this.#previews.delete(previewId);
+      throw error;
+    }
     return structuredClone(request);
   }
 
@@ -630,22 +666,53 @@ export class RouterCore {
     argumentsValue: Readonly<Record<string, unknown>>,
     scope: ApprovalScope,
     identity: RouterIdentityContext,
+    correlationId: string,
+    approval: "not-required" | "approved",
   ): Promise<RouterExecuteOutput> {
     const startedAt = performance.now();
-    const correlationId = randomUUID();
-    const dispatchResult = await adapter.execute({
-      capability: capability.registration.definition,
+    const inputDigest = this.#inputDigest({
+      capabilityId: capability.registration.definition.capabilityId,
       arguments: argumentsValue,
-      scope,
-      identity,
-      correlationId,
     });
-    const result = this.#validateDispatchResult(
+    const auditBase = this.#auditBase(
       capability,
-      dispatchResult,
+      adapter,
       scope,
-      identity,
+      inputDigest,
+      correlationId,
     );
+    await this.#audit({
+      ...auditBase,
+      event: "dispatch-started",
+      approval,
+    }, true);
+    let dispatchResult: RouterDispatchResult;
+    let result: unknown;
+    try {
+      dispatchResult = await adapter.execute({
+        capability: capability.registration.definition,
+        arguments: argumentsValue,
+        scope,
+        identity,
+        correlationId,
+      });
+      result = this.#validateDispatchResult(
+        capability,
+        dispatchResult,
+        scope,
+        identity,
+      );
+    } catch (error) {
+      await this.#audit({
+        ...auditBase,
+        event: "dispatch-failed",
+        approval,
+        errorCode: error instanceof RouterError ? error.code : "UNKNOWN",
+        retryable: error instanceof RouterError && error.retryable,
+        durationMs: Math.max(0, Math.trunc(performance.now() - startedAt)),
+      }, false);
+      throw error;
+    }
 
     const execution: RouterExecuteOutput["execution"] = {
       correlationId,
@@ -671,12 +738,66 @@ export class RouterCore {
     if (
       !this.#contracts.validate("router-tools-v1-lite.schema.json", output).valid
     ) {
+      await this.#audit({
+        ...auditBase,
+        event: "dispatch-failed",
+        approval,
+        errorCode: "OUTPUT_REJECTED",
+        retryable: false,
+        durationMs: execution.durationMs,
+      }, false);
       throw new RouterError(
         "OUTPUT_REJECTED",
         "Executor output does not match the frozen Router contract",
       );
     }
+    await this.#audit({
+      ...auditBase,
+      event: "dispatch-completed",
+      approval,
+      resultDigest: digestCanonicalJson(result),
+      ...(dispatchResult.requestId === undefined
+        ? {}
+        : { requestId: dispatchResult.requestId }),
+      durationMs: execution.durationMs,
+    }, false);
     return output;
+  }
+
+  #auditBase(
+    capability: CompiledRouterCapability,
+    adapter: RouterExecutorAdapter,
+    scope: ApprovalScope,
+    parameterDigest: string,
+    correlationId: string,
+  ) {
+    return {
+      schemaVersion: "huaweicloud-mate-audit/v1" as const,
+      timestamp: this.#now().toISOString(),
+      agent: this.#options.agentProvider?.() ?? "unknown-mcp-client",
+      pluginVersion,
+      correlationId,
+      capabilityId: capability.registration.definition.capabilityId,
+      product: capability.registration.definition.product,
+      executor: adapter.executor,
+      scope: structuredClone(scope),
+      riskTags: [...capability.registration.definition.riskTags],
+      parameterDigest,
+    };
+  }
+
+  async #audit(
+    event: Parameters<NonNullable<RouterCoreOptions["auditSink"]>["record"]>[0],
+    requiredBeforeDispatch: boolean,
+  ): Promise<void> {
+    if (this.#options.auditSink === undefined) return;
+    try {
+      await this.#options.auditSink.record(event);
+    } catch {
+      if (requiredBeforeDispatch) {
+        throw new RouterError("UNKNOWN", "Local audit log is unavailable");
+      }
+    }
   }
 
   #validateDispatchResult(
@@ -736,9 +857,11 @@ export class RouterCore {
         "Executor result violates the capability output policy",
       );
     }
-    return redactJsonPointers(
+    const redacted = redactJsonPointers(
       result.result,
       capability.registration.definition.outputPolicy.sensitivePaths,
     );
+    assertNoSensitiveOutput(redacted);
+    return redacted;
   }
 }
