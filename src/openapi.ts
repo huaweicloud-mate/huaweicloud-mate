@@ -123,6 +123,14 @@ export async function getEcsServer(input: JsonObject): Promise<unknown> {
   return responseBody(response);
 }
 
+export async function getEcsJob(input: JsonObject): Promise<unknown> {
+  if (typeof input.jobId !== "string" || !input.jobId) throw new Error("jobId is required.");
+  const endpoint = `https://ecs.${region(input)}.myhuaweicloud.com`;
+  const url = new URL(`/v1/${encode(projectId(input))}/jobs/${encode(input.jobId)}`, endpoint);
+  const response = await fetch(url, { method: "GET", headers: signSdkRequest("GET", url) });
+  return responseBody(response);
+}
+
 export async function startEcsServers(input: JsonObject): Promise<unknown> {
   if (!Array.isArray(input.serverIds) || input.serverIds.length === 0 || input.serverIds.length > 1000 || input.serverIds.some((id) => typeof id !== "string" || !id)) {
     throw new Error("serverIds must contain between 1 and 1000 ECS IDs.");
@@ -168,6 +176,20 @@ export async function rebootEcsServers(input: JsonObject): Promise<unknown> {
 export async function listObsBuckets(input: JsonObject): Promise<unknown> {
   const endpoint = `https://obs.${region(input)}.myhuaweicloud.com`;
   const url = new URL("/", endpoint);
+  const response = await fetch(url, { method: "GET", headers: signObsRequest("GET", url) });
+  return responseBody(response);
+}
+
+export async function getObsBucketMetadata(input: JsonObject): Promise<unknown> {
+  if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
+  const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/`);
+  const response = await fetch(url, { method: "HEAD", headers: signObsRequest("HEAD", url) });
+  return responseMetadata(response);
+}
+
+export async function getObsBucketLocation(input: JsonObject): Promise<unknown> {
+  if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
+  const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/?location`);
   const response = await fetch(url, { method: "GET", headers: signObsRequest("GET", url) });
   return responseBody(response);
 }

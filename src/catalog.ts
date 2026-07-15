@@ -1,4 +1,4 @@
-import { getEcsServer, getObsObjectMetadata, JsonObject, listEcsServers, listObsBuckets, listObsObjects, rebootEcsServers, startEcsServers, stopEcsServers } from "./openapi";
+import { getEcsJob, getEcsServer, getObsBucketLocation, getObsBucketMetadata, getObsObjectMetadata, JsonObject, listEcsServers, listObsBuckets, listObsObjects, rebootEcsServers, startEcsServers, stopEcsServers } from "./openapi";
 import type { ServiceDefinition, ServiceOperation } from "./gateway";
 
 export interface CatalogOperation extends ServiceOperation {
@@ -44,6 +44,14 @@ export const serviceCatalog: CatalogService[] = [
         execute: getEcsServer,
       },
       {
+        id: "get_job",
+        description: "Get the status of an asynchronous ECS job returned by lifecycle operations.",
+        isReadOnly: true,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, jobId: { type: "string" } }, required: ["jobId"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=ShowJob",
+        execute: getEcsJob,
+      },
+      {
         id: "stop_servers",
         description: "Stop up to 1,000 ECS servers asynchronously. The default type is SOFT; this operation always requires explicit user confirmation.",
         isReadOnly: false,
@@ -75,6 +83,22 @@ export const serviceCatalog: CatalogService[] = [
         inputSchema: { type: "object", properties: { region: { type: "string" } } },
         sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=ListBuckets",
         execute: listObsBuckets,
+      },
+      {
+        id: "get_bucket_metadata",
+        description: "Get OBS bucket metadata without modifying the bucket.",
+        isReadOnly: true,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" } }, required: ["bucket"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=GetBucketMetadata",
+        execute: getObsBucketMetadata,
+      },
+      {
+        id: "get_bucket_location",
+        description: "Get the region where one OBS bucket resides.",
+        isReadOnly: true,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" } }, required: ["bucket"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=GetBucketLocation",
+        execute: getObsBucketLocation,
       },
       {
         id: "list_objects",
