@@ -47,6 +47,7 @@ function validateValue(value: unknown, schema: JsonObject, path: string): void {
   if (schema.type === "string" && typeof value !== "string") throw new Error(`${path} must be a string.`);
   if (schema.type === "number" && (typeof value !== "number" || !Number.isFinite(value))) throw new Error(`${path} must be a finite number.`);
   if (schema.type === "integer" && (typeof value !== "number" || !Number.isSafeInteger(value))) throw new Error(`${path} must be an integer.`);
+  if (schema.type === "boolean" && typeof value !== "boolean") throw new Error(`${path} must be a boolean.`);
   if (schema.format === "base64" && (typeof value !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value))) throw new Error(`${path} must be a valid base64 string.`);
   if (schema.type === "array") {
     if (!Array.isArray(value)) throw new Error(`${path} must be an array.`);

@@ -168,6 +168,16 @@ async function ecsAction(input: JsonObject, body: JsonObject): Promise<unknown> 
   return responseBody(response);
 }
 
+export async function deleteEcsServers(input: JsonObject): Promise<unknown> {
+  if (input.deletePublicIp !== undefined && typeof input.deletePublicIp !== "boolean") throw new Error("deletePublicIp must be a boolean.");
+  if (input.deleteVolume !== undefined && typeof input.deleteVolume !== "boolean") throw new Error("deleteVolume must be a boolean.");
+  const endpoint = `https://ecs.${region(input)}.myhuaweicloud.com`;
+  const url = new URL(`/v1/${encode(projectId(input))}/cloudservers/delete`, endpoint);
+  const body = JSON.stringify({ servers: serverIds(input).map((id) => ({ id })), delete_publicip: input.deletePublicIp ?? false, delete_volume: input.deleteVolume ?? false });
+  const response = await fetch(url, { method: "POST", headers: signSdkRequest("POST", url, body), body });
+  return responseBody(response);
+}
+
 export async function stopEcsServers(input: JsonObject): Promise<unknown> {
   const servers = serverIds(input).map((id) => ({ id }));
   return ecsAction(input, { "os-stop": { type: powerType(input, false), servers } });

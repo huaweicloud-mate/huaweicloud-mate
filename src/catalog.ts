@@ -1,4 +1,4 @@
-import { appendObsObject, createObsBucket, deleteObsBucket, deleteObsObject, getEcsJob, getEcsServer, getObsBucketLocation, getObsBucketMetadata, getObsObjectMetadata, JsonObject, listEcsServers, listObsBuckets, listObsObjects, rebootEcsServers, startEcsServers, stopEcsServers } from "./openapi";
+import { appendObsObject, createObsBucket, deleteEcsServers, deleteObsBucket, deleteObsObject, getEcsJob, getEcsServer, getObsBucketLocation, getObsBucketMetadata, getObsObjectMetadata, JsonObject, listEcsServers, listObsBuckets, listObsObjects, rebootEcsServers, startEcsServers, stopEcsServers } from "./openapi";
 import type { ServiceDefinition, ServiceOperation } from "./gateway";
 
 export interface CatalogOperation extends ServiceOperation {
@@ -66,6 +66,14 @@ export const serviceCatalog: CatalogService[] = [
         inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverIds: { type: "array", minItems: 1, maxItems: 1000, items: { type: "string" } }, type: { type: "string", enum: ["SOFT", "HARD"] } }, required: ["serverIds", "type"] },
         sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=BatchRebootServers",
         execute: rebootEcsServers,
+      },
+      {
+        id: "delete_servers",
+        description: "Delete up to 1,000 pay-per-use ECS servers asynchronously. EIPs and data disks are preserved by default; explicitly set deletion flags only after user confirmation.",
+        isReadOnly: false,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverIds: { type: "array", minItems: 1, maxItems: 1000, items: { type: "string" } }, deletePublicIp: { type: "boolean" }, deleteVolume: { type: "boolean" } }, required: ["serverIds"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=DeleteServers",
+        execute: deleteEcsServers,
       },
     ],
   },
