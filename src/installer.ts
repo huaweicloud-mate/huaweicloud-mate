@@ -4,6 +4,7 @@ import { rm } from "node:fs/promises";
 import { get } from "node:https";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { configureStoredCredentials } from "./credentials";
 
 type AgentName = "codex" | "claude-code" | "opencode";
 
@@ -91,7 +92,7 @@ async function configureKooCli(executable: string): Promise<void> {
 
 export async function runInstaller(args: string[]): Promise<void> {
   if (args.includes("--help") || args.includes("-h")) {
-    process.stdout.write("Usage: huaweicloud-mate install --agent codex|claude-code|opencode [--configure-koocli]\n");
+    process.stdout.write("Usage: huaweicloud-mate install --agent codex|claude-code|opencode [--configure-koocli] [--configure-openapi]\n");
     return;
   }
   const agent = agentFrom(args);
@@ -100,7 +101,8 @@ export async function runInstaller(args: string[]): Promise<void> {
   await execFileAsync(executable, ["version"]);
   process.stdout.write(`KooCLI is ready at ${executable}.\n`);
   if (args.includes("--configure-koocli")) await configureKooCli(executable);
+  if (args.includes("--configure-openapi")) configureStoredCredentials();
   process.stdout.write(`Configure ${agent}:\n${configurationCommand(agent)}\n`);
   process.stdout.write("KooCLI fallback uses its local profile. To configure it now, add --configure-koocli; otherwise run `hcloud configure init` in a user-visible terminal.\n");
-  process.stdout.write("The self-built ECS/OBS adapter separately reads HUAWEICLOUD_AK, HUAWEICLOUD_SK, HUAWEICLOUD_REGION, and HUAWEICLOUD_PROJECT_ID from the MCP server environment. Do not put these values in project or Agent configuration files.\n");
+  process.stdout.write("The self-built ECS/OBS adapter reads encrypted local credentials configured by --configure-openapi. Explicit HUAWEICLOUD_AK, HUAWEICLOUD_SK, HUAWEICLOUD_REGION, and HUAWEICLOUD_PROJECT_ID environment variables take precedence for a temporary override. Do not put these values in project or Agent configuration files.\n");
 }

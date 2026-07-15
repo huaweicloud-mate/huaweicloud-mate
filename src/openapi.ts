@@ -1,4 +1,5 @@
 import { createHash, createHmac } from "node:crypto";
+import { loadStoredCredentials } from "./credentials";
 
 export type JsonObject = Record<string, unknown>;
 
@@ -10,8 +11,15 @@ interface Credentials {
 const OBS_SIGNED_QUERY_PARAMETERS = new Set(["acl", "append", "cors", "customdomain", "delete", "inventory", "lifecycle", "location", "logging", "metadata", "mirrorback", "modify", "notification", "partNumber", "policy", "position", "quota", "rename", "replication", "requestPayment", "response-cache-control", "response-content-disposition", "response-content-encoding", "response-content-language", "response-content-type", "response-expires", "restore", "storageClass", "storageinfo", "tagging", "torrent", "uploadId", "uploads", "versionId", "versioning", "versions", "website"]);
 
 function credentials(): Credentials {
-  const accessKey = process.env.HUAWEICLOUD_AK ?? process.env.HUAWEICLOUD_SDK_AK;
-  const secretKey = process.env.HUAWEICLOUD_SK ?? process.env.HUAWEICLOUD_SDK_SK;
+  const configuredAccessKey = process.env.HUAWEICLOUD_AK ?? process.env.HUAWEICLOUD_SDK_AK;
+  const configuredSecretKey = process.env.HUAWEICLOUD_SK ?? process.env.HUAWEICLOUD_SDK_SK;
+  if (configuredAccessKey || configuredSecretKey) {
+    if (!configuredAccessKey || !configuredSecretKey) throw new Error("Both HUAWEICLOUD_AK and HUAWEICLOUD_SK must be set when using environment credentials.");
+    return { accessKey: configuredAccessKey, secretKey: configuredSecretKey };
+  }
+  const stored = loadStoredCredentials();
+  const accessKey = stored?.accessKey;
+  const secretKey = stored?.secretKey;
   if (!accessKey || !secretKey) throw new Error("OpenAPI credentials are missing. Set HUAWEICLOUD_AK and HUAWEICLOUD_SK in the MCP server environment.");
   return { accessKey, secretKey };
 }
@@ -126,13 +134,15 @@ async function responseCopyResult(response: Response): Promise<unknown> {
 }
 
 function region(input: JsonObject): string {
-  const value = input.region ?? process.env.HUAWEICLOUD_REGION;
+  const explicitValue = input.region ?? process.env.HUAWEICLOUD_REGION;
+  const value = explicitValue ?? loadStoredCredentials()?.region;
   if (typeof value !== "string" || !value) throw new Error("region is required. Provide input.region or HUAWEICLOUD_REGION.");
   return value;
 }
 
 function projectId(input: JsonObject): string {
-  const value = input.projectId ?? process.env.HUAWEICLOUD_PROJECT_ID;
+  const explicitValue = input.projectId ?? process.env.HUAWEICLOUD_PROJECT_ID;
+  const value = explicitValue ?? loadStoredCredentials()?.projectId;
   if (typeof value !== "string" || !value) throw new Error("projectId is required. Provide input.projectId or HUAWEICLOUD_PROJECT_ID.");
   return value;
 }

@@ -4,6 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { call, discover, provision } from "./gateway";
 import { runInstaller } from "./installer";
+import { clearStoredCredentials, configureStoredCredentials } from "./credentials";
 
 const tools = [
   { name: "huaweicloud_discover", description: "Search Huawei Cloud capability modules without loading every service schema.", inputSchema: { type: "object", properties: { query: { type: "string" } } } },
@@ -39,8 +40,10 @@ async function startMcp(): Promise<void> {
 async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2);
   if (command === "install") return runInstaller(args);
+  if (command === "configure") return configureStoredCredentials();
+  if (command === "clear-credentials") return clearStoredCredentials();
   if (command === "--help" || command === "-h") {
-    process.stdout.write("huaweicloud-mate [install --agent codex|claude-code|opencode]\n");
+    process.stdout.write("huaweicloud-mate [install --agent codex|claude-code|opencode] | configure | clear-credentials\n");
     process.stdout.write("Without a command, starts the stdio MCP gateway.\n");
     return;
   }

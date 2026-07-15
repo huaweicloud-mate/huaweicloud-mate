@@ -1,4 +1,8 @@
 const assert = require("node:assert/strict");
+const { execFileSync } = require("node:child_process");
+const { existsSync, mkdtempSync, rmSync } = require("node:fs");
+const { tmpdir } = require("node:os");
+const { join } = require("node:path");
 const test = require("node:test");
 
 function setCredentials() {
@@ -7,6 +11,26 @@ function setCredentials() {
   process.env.HUAWEICLOUD_REGION = "cn-north-4";
   process.env.HUAWEICLOUD_PROJECT_ID = "test-project";
 }
+
+test("Windows DPAPI credential storage can be read and cleared for the current user", { concurrency: false, skip: process.platform !== "win32" }, () => {
+  const directory = mkdtempSync(join(tmpdir(), "huaweicloud-mate-test-"));
+  const credentialFile = join(directory, "credentials.dpapi");
+  const originalCredentialFile = process.env.HUAWEICLOUD_CREDENTIAL_FILE;
+  try {
+    execFileSync("powershell.exe", ["-NoProfile", "-Command", "$secure = ConvertTo-SecureString -String $env:HUAWEICLOUD_TEST_STORED -AsPlainText -Force; [System.IO.File]::WriteAllText($env:HUAWEICLOUD_CREDENTIAL_FILE, (ConvertFrom-SecureString -SecureString $secure))"], {
+      env: { ...process.env, HUAWEICLOUD_CREDENTIAL_FILE: credentialFile, HUAWEICLOUD_TEST_STORED: JSON.stringify({ accessKey: "stored-ak", secretKey: "stored-sk", region: "cn-north-4", projectId: "stored-project" }) },
+    });
+    process.env.HUAWEICLOUD_CREDENTIAL_FILE = credentialFile;
+    const credentials = require("../build/credentials.js");
+    assert.deepEqual(credentials.loadStoredCredentials(), { accessKey: "stored-ak", secretKey: "stored-sk", region: "cn-north-4", projectId: "stored-project" });
+    credentials.clearStoredCredentials();
+    assert.equal(existsSync(credentialFile), false);
+  } finally {
+    if (originalCredentialFile === undefined) delete process.env.HUAWEICLOUD_CREDENTIAL_FILE;
+    else process.env.HUAWEICLOUD_CREDENTIAL_FILE = originalCredentialFile;
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test("ECS deletion keeps EIPs and data disks by default after confirmation", { concurrency: false }, async () => {
   setCredentials();

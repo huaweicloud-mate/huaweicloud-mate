@@ -6,10 +6,10 @@
 
 ## 安装与凭证
 
-1. Agent 需要安装时，可执行 `npx -y @hd_vector/huaweicloud-meta install --agent <codex|claude-code|opencode>`。
-2. 安装器自动下载 KooCLI，并输出当前 Agent 的 MCP 配置命令或配置内容。用户同意后，Agent 可使用 `--configure-koocli` 打开 KooCLI 的交互配置。
+1. Agent 需要安装时，可执行 `npx -y @hd_vector/huaweicloud-meta install --agent <codex|claude-code|opencode> --configure-openapi`。
+2. 安装器自动下载 KooCLI，并输出当前 Agent 的 MCP 配置命令或配置内容。`--configure-openapi` 会在用户可见终端交互采集 ECS/OBS 所需凭证，并用 Windows DPAPI 为当前 Windows 用户加密保存；用户同意后，Agent 可额外使用 `--configure-koocli` 打开 KooCLI 的交互配置。
 3. KooCLI fallback 的 AK/SK 与默认 Region 必须由用户在可见终端执行 `hcloud configure init` 时输入；不得要求用户把 AK/SK 贴到对话、项目配置、命令行参数或日志中。
-4. 不读取、复制或展示 KooCLI 的加密本地凭证文件。自研 ECS/OBS OpenAPI adapter 从 MCP 运行时环境读取 `HUAWEICLOUD_AK`、`HUAWEICLOUD_SK`、`HUAWEICLOUD_REGION` 和 `HUAWEICLOUD_PROJECT_ID`；这些值不得持久化到项目或 Agent 配置。
+4. 不读取、复制或展示 KooCLI 的加密本地凭证文件。需修改 ECS/OBS 凭证时，指引用户运行 `npx -y @hd_vector/huaweicloud-meta configure`；需删除时运行 `clear-credentials`。显式 MCP 进程环境变量仅作临时覆盖，且这些值不得持久化到项目或 Agent 配置。
 
 ## MCP 工作流
 

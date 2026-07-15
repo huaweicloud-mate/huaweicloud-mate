@@ -15,18 +15,18 @@
 ## 安装
 
 ```powershell
-npx -y @hd_vector/huaweicloud-meta install --agent codex
+npx -y @hd_vector/huaweicloud-meta install --agent codex --configure-openapi
 ```
 
-将 `codex` 改为 `claude-code` 或 `opencode` 可得到对应配置。安装器把 KooCLI 安装到当前用户目录，并输出 Agent 的 MCP 配置命令或 JSON。若希望立即进行 KooCLI 交互配置，可额外传入 `--configure-koocli`；也可以在用户可见的终端中运行：
+将 `codex` 改为 `claude-code` 或 `opencode` 可得到对应配置。安装器把 KooCLI 安装到当前用户目录，并输出 Agent 的 MCP 配置命令或 JSON。`--configure-openapi` 会交互收集 AK、SK、默认 Region 和可选 Project ID，并以 Windows 当前用户的 DPAPI 加密保存，供 ECS/OBS 子 MCP 使用。若希望立即进行 KooCLI 交互配置，可额外传入 `--configure-koocli`；也可以在用户可见的终端中运行：
 
 ```powershell
 hcloud configure init
 ```
 
-KooCLI 将交互收集 AK、SK 和默认 Region，并加密保存在其本地 profile 中；它供 KooCLI fallback 使用。
+KooCLI 将交互收集 AK、SK 和默认 Region，并加密保存在其本地 profile 中；它供 KooCLI fallback 使用。KooCLI profile 与 ECS/OBS 的 DPAPI 本地凭证存储彼此独立，插件不会读取或解密 KooCLI profile。
 
-自研 ECS/OBS OpenAPI adapter 不会解密或复制 KooCLI profile。请将 `HUAWEICLOUD_AK`、`HUAWEICLOUD_SK`、`HUAWEICLOUD_REGION` 和（ECS 所需的）`HUAWEICLOUD_PROJECT_ID` 仅注入启动 MCP server 的运行时环境。不要把密钥放入项目文件、Agent 配置、日志或命令行参数。
+需要修改账号、Region 或 Project ID 时，重新运行 `npx -y @hd_vector/huaweicloud-meta configure`，它会安全覆盖旧值；需要删除时运行 `npx -y @hd_vector/huaweicloud-meta clear-credentials`。显式设置的 `HUAWEICLOUD_AK`、`HUAWEICLOUD_SK`、`HUAWEICLOUD_REGION` 和 `HUAWEICLOUD_PROJECT_ID` 只对当前 MCP 进程生效，并优先于本地加密存储，适合临时切换账号。不要把密钥放入项目文件、Agent 配置、日志或命令行参数。
 
 ## Agent 配置
 
