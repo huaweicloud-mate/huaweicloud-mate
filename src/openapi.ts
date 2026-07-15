@@ -136,6 +136,16 @@ export async function getEcsJob(input: JsonObject): Promise<unknown> {
   return responseBody(response);
 }
 
+export async function listEcsFlavors(input: JsonObject): Promise<unknown> {
+  const endpoint = `https://ecs.${region(input)}.myhuaweicloud.com`;
+  const url = new URL(`/v1/${encode(projectId(input))}/cloudservers/flavors`, endpoint);
+  if (typeof input.availabilityZone === "string") url.searchParams.set("availability_zone", input.availabilityZone);
+  if (typeof input.limit === "number") url.searchParams.set("limit", String(input.limit));
+  if (typeof input.marker === "string") url.searchParams.set("marker", input.marker);
+  const response = await fetch(url, { method: "GET", headers: signSdkRequest("GET", url) });
+  return responseBody(response);
+}
+
 export async function startEcsServers(input: JsonObject): Promise<unknown> {
   if (!Array.isArray(input.serverIds) || input.serverIds.length === 0 || input.serverIds.length > 1000 || input.serverIds.some((id) => typeof id !== "string" || !id)) {
     throw new Error("serverIds must contain between 1 and 1000 ECS IDs.");
