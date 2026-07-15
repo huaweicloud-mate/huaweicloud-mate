@@ -133,7 +133,7 @@ export function discover(query?: string): ServiceDefinition[] {
 
 export function provision(serviceId: string): unknown {
   const service = findService(serviceId);
-  return { service: service.id, status: "provisioned", operations: service.operations.map(({ id, description, isReadOnly, inputSchema }) => ({ id, description, isReadOnly, inputSchema })) };
+  return { service: service.id, status: "provisioned", operations: service.operations.map(({ id, description, isReadOnly, inputSchema, sourceUrl }) => ({ id, description, isReadOnly, inputSchema, sourceUrl })) };
 }
 
 export async function call(serviceId: string, operationId: string, input: unknown, confirmationToken?: string): Promise<unknown> {

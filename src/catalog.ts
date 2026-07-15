@@ -3,6 +3,7 @@ import type { ServiceDefinition, ServiceOperation } from "./gateway";
 
 export interface CatalogOperation extends ServiceOperation {
   inputSchema: JsonObject;
+  sourceUrl?: string;
   execute(input: JsonObject): Promise<unknown>;
 }
 
@@ -23,6 +24,7 @@ export const serviceCatalog: CatalogService[] = [
         description: "List ECS server details in one project.",
         isReadOnly: true,
         inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, limit: { type: "number", minimum: 1, maximum: 1000 }, name: { type: "string" }, status: { type: "string" } } },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=ListServersDetails",
         execute: listEcsServers,
       },
       {
@@ -30,6 +32,7 @@ export const serviceCatalog: CatalogService[] = [
         description: "Start up to 1,000 ECS servers asynchronously. This operation always requires explicit user confirmation.",
         isReadOnly: false,
         inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverIds: { type: "array", minItems: 1, maxItems: 1000, items: { type: "string" } } }, required: ["serverIds"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=BatchStartServers",
         execute: startEcsServers,
       },
       {
@@ -37,6 +40,7 @@ export const serviceCatalog: CatalogService[] = [
         description: "Get the details of one ECS server.",
         isReadOnly: true,
         inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverId: { type: "string" } }, required: ["serverId"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=ShowServer",
         execute: getEcsServer,
       },
       {
@@ -44,6 +48,7 @@ export const serviceCatalog: CatalogService[] = [
         description: "Stop up to 1,000 ECS servers asynchronously. The default type is SOFT; this operation always requires explicit user confirmation.",
         isReadOnly: false,
         inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverIds: { type: "array", minItems: 1, maxItems: 1000, items: { type: "string" } }, type: { type: "string", enum: ["SOFT", "HARD"] } }, required: ["serverIds"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=BatchStopServers",
         execute: stopEcsServers,
       },
       {
@@ -51,6 +56,7 @@ export const serviceCatalog: CatalogService[] = [
         description: "Reboot up to 1,000 ECS servers asynchronously. Select SOFT or HARD and explicitly confirm before execution.",
         isReadOnly: false,
         inputSchema: { type: "object", properties: { region: { type: "string" }, projectId: { type: "string" }, serverIds: { type: "array", minItems: 1, maxItems: 1000, items: { type: "string" } }, type: { type: "string", enum: ["SOFT", "HARD"] } }, required: ["serverIds", "type"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=BatchRebootServers",
         execute: rebootEcsServers,
       },
     ],
@@ -67,6 +73,7 @@ export const serviceCatalog: CatalogService[] = [
         description: "List all OBS buckets available to the authenticated account.",
         isReadOnly: true,
         inputSchema: { type: "object", properties: { region: { type: "string" } } },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=ListBuckets",
         execute: listObsBuckets,
       },
       {
@@ -74,6 +81,7 @@ export const serviceCatalog: CatalogService[] = [
         description: "List up to 1,000 objects in one OBS bucket.",
         isReadOnly: true,
         inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" }, prefix: { type: "string" }, marker: { type: "string" }, delimiter: { type: "string" }, maxKeys: { type: "number", minimum: 1, maximum: 1000 } }, required: ["bucket"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=ListObjects",
         execute: listObsObjects,
       },
       {
@@ -81,6 +89,7 @@ export const serviceCatalog: CatalogService[] = [
         description: "Get OBS object metadata without downloading the object content.",
         isReadOnly: true,
         inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" }, key: { type: "string" }, versionId: { type: "string" } }, required: ["bucket", "key"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=HeadObject",
         execute: getObsObjectMetadata,
       },
     ],
