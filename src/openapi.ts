@@ -60,17 +60,22 @@ export function signSdkRequest(method: string, url: URL, body = "", extraHeaders
   return headers;
 }
 
-export function signObsRequest(method: string, url: URL, now = new Date()): Record<string, string> {
+export function signObsRequest(method: string, url: URL, extraHeadersOrNow: Record<string, string> | Date = {}, suppliedNow = new Date()): Record<string, string> {
   const { accessKey, secretKey } = credentials();
+  const now = extraHeadersOrNow instanceof Date ? extraHeadersOrNow : suppliedNow;
+  const suppliedHeaders = extraHeadersOrNow instanceof Date ? {} : extraHeadersOrNow;
+  const headers = Object.fromEntries(Object.entries(suppliedHeaders).map(([name, value]) => [name.toLowerCase(), value.trim()]));
   const date = now.toUTCString();
   const bucketMarker = ".obs.";
   const markerIndex = url.hostname.indexOf(bucketMarker);
   const bucket = markerIndex > 0 ? url.hostname.slice(0, markerIndex) : "";
   const signedQuery = [...url.searchParams.entries()].filter(([key]) => OBS_SIGNED_QUERY_PARAMETERS.has(key)).sort(([leftKey, leftValue], [rightKey, rightValue]) => leftKey.localeCompare(rightKey) || leftValue.localeCompare(rightValue)).map(([key, value]) => `${key}${value ? `=${value}` : ""}`).join("&");
   const canonicalResource = `/${bucket}${url.pathname || "/"}${signedQuery ? `?${signedQuery}` : ""}`;
-  const stringToSign = [method.toUpperCase(), "", "", date, canonicalResource].join("\n");
+  const canonicalHeaders = Object.entries(headers).filter(([name]) => name.startsWith("x-obs-")).sort(([left], [right]) => left.localeCompare(right)).map(([name, value]) => `${name}:${value}\n`).join("");
+  const effectiveDate = headers["x-obs-date"] ? "" : date;
+  const stringToSign = [method.toUpperCase(), headers["content-md5"] ?? "", headers["content-type"] ?? "", effectiveDate, `${canonicalHeaders}${canonicalResource}`].join("\n");
   const signature = createHmac("sha1", secretKey).update(stringToSign, "utf8").digest("base64");
-  return { host: url.host, date, authorization: `OBS ${accessKey}:${signature}` };
+  return { host: url.host, date, ...headers, authorization: `OBS ${accessKey}:${signature}` };
 }
 
 async function responseBody(response: Response): Promise<unknown> {
@@ -198,6 +203,36 @@ export async function deleteObsBucket(input: JsonObject): Promise<unknown> {
   if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
   const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/`);
   const response = await fetch(url, { method: "DELETE", headers: signObsRequest("DELETE", url) });
+  return responseMetadata(response);
+}
+
+export async function createObsBucket(input: JsonObject): Promise<unknown> {
+  if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
+  const bucketRegion = region(input);
+  const url = new URL(`https://${input.bucket}.obs.${bucketRegion}.myhuaweicloud.com/`);
+  const body = `<CreateBucketConfiguration xmlns="http://obs.${bucketRegion}.myhuaweicloud.com/doc/2015-06-30/"><Location>${bucketRegion}</Location></CreateBucketConfiguration>`;
+  const headers = signObsRequest("PUT", url, { "content-type": "application/xml" });
+  const response = await fetch(url, { method: "PUT", headers, body });
+  return responseMetadata(response);
+}
+
+function decodeBase64(value: unknown): Buffer {
+  if (typeof value !== "string" || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) throw new Error("contentBase64 must be a valid base64 string.");
+  return Buffer.from(value, "base64");
+}
+
+export async function appendObsObject(input: JsonObject): Promise<unknown> {
+  if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
+  if (typeof input.key !== "string" || !input.key) throw new Error("key is required.");
+  if (typeof input.position !== "number" || !Number.isSafeInteger(input.position) || input.position < 0) throw new Error("position must be a non-negative integer.");
+  if (input.contentType !== undefined && typeof input.contentType !== "string") throw new Error("contentType must be a string.");
+  const body = decodeBase64(input.contentBase64);
+  const objectPath = input.key.split("/").map(encode).join("/");
+  const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/${objectPath}?append&position=${input.position}`);
+  const headers = signObsRequest("POST", url, { "content-type": typeof input.contentType === "string" ? input.contentType : "application/octet-stream", "content-md5": createHash("md5").update(body).digest("base64") });
+  const requestBody = new Uint8Array(body.byteLength);
+  requestBody.set(body);
+  const response = await fetch(url, { method: "POST", headers, body: requestBody });
   return responseMetadata(response);
 }
 

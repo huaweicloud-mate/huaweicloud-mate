@@ -29,5 +29,5 @@
 ## 当前实现边界
 
 - KooCLI fallback 已实现为网关运行时能力。
-- ECS 已提供 `list_servers`、`get_server`、`get_job` 与受二次确认保护的 `start_servers`、`stop_servers`、`reboot_servers`；OBS 已提供 `list_buckets`、`get_bucket_metadata`、`get_bucket_location`、`list_objects`、`get_object_metadata` 和受二次确认保护的 `delete_object`、`delete_bucket`。完整 OpenAPI catalog 仍未导入，不能声称已覆盖 API 全量。
+- ECS 已提供 `list_servers`、`get_server`、`get_job` 与受二次确认保护的 `start_servers`、`stop_servers`、`reboot_servers`；OBS 已提供 `list_buckets`、`get_bucket_metadata`、`get_bucket_location`、`list_objects`、`get_object_metadata` 和受二次确认保护的 `create_bucket`、`append_object`、`delete_object`、`delete_bucket`。完整 OpenAPI catalog 仍未导入，不能声称已覆盖 API 全量。
 - 后续产品部提供正式 MCP 时，应以相同服务 id 替换对应 adapter，而不改变 Agent 的 discover/provision/call 调用方式。

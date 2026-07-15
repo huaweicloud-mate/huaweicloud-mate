@@ -1,4 +1,4 @@
-import { deleteObsBucket, deleteObsObject, getEcsJob, getEcsServer, getObsBucketLocation, getObsBucketMetadata, getObsObjectMetadata, JsonObject, listEcsServers, listObsBuckets, listObsObjects, rebootEcsServers, startEcsServers, stopEcsServers } from "./openapi";
+import { appendObsObject, createObsBucket, deleteObsBucket, deleteObsObject, getEcsJob, getEcsServer, getObsBucketLocation, getObsBucketMetadata, getObsObjectMetadata, JsonObject, listEcsServers, listObsBuckets, listObsObjects, rebootEcsServers, startEcsServers, stopEcsServers } from "./openapi";
 import type { ServiceDefinition, ServiceOperation } from "./gateway";
 
 export interface CatalogOperation extends ServiceOperation {
@@ -101,6 +101,14 @@ export const serviceCatalog: CatalogService[] = [
         execute: getObsBucketLocation,
       },
       {
+        id: "create_bucket",
+        description: "Create an OBS bucket in the selected region. This operation always requires explicit user confirmation.",
+        isReadOnly: false,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" } }, required: ["bucket"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=CreateBucket",
+        execute: createObsBucket,
+      },
+      {
         id: "delete_bucket",
         description: "Delete one empty OBS bucket. This operation always requires explicit user confirmation.",
         isReadOnly: false,
@@ -131,6 +139,14 @@ export const serviceCatalog: CatalogService[] = [
         inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" }, key: { type: "string" }, versionId: { type: "string" } }, required: ["bucket", "key"] },
         sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=DeleteObject",
         execute: deleteObsObject,
+      },
+      {
+        id: "append_object",
+        description: "Append base64-encoded content to an OBS appendable object at an explicit byte position. This operation always requires explicit user confirmation.",
+        isReadOnly: false,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" }, key: { type: "string" }, position: { type: "integer", minimum: 0 }, contentBase64: { type: "string", format: "base64" }, contentType: { type: "string" } }, required: ["bucket", "key", "position", "contentBase64"] },
+        sourceUrl: "https://console.huaweicloud.com/apiexplorer/#/openapi/OBS/doc?api=AppendObject",
+        execute: appendObsObject,
       },
     ],
   },
