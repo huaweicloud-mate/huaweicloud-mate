@@ -9,7 +9,7 @@
 - ECS/OBS 已有独立的官方 AK/SK 签名器与首批动态 catalog 操作：ECS 可用区/规格/查询/单机详情/异步任务/批量启停/重启/删除、OBS 列桶/桶元数据/桶区域/列对象/对象元数据/限量内容读取/受确认保护的桶创建、标准上传、服务端复制、追加写与对象/桶删除。
 - 两个子 MCP 都提供受控 `openapi_request`：用于调用强类型目录之外的 ECS/OBS API Explorer 接口。请求始终固定到对应服务域名；响应限制为最多 1 MiB；`GET`/`HEAD` 只读，其余 HTTP 方法均须二次确认。优先使用已列出的强类型操作。
 - 每个 ECS/OBS catalog 操作均携带其对应的 API Explorer 来源链接；新操作应以 `https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=<operation>` 或 OBS 同格式页面为准。
-- ECS、OBS 的完整 OpenAPI catalog 和正式产品 MCP 尚未实现；本仓库不会将当前少量操作误标为全量 API 支持。
+- ECS 99 项、OBS 81 项 operation catalog 已由锁定版本的官方 Node.js SDK 自动生成，并随服务 provision 按需加载；每项携带 API Explorer 来源链接、独立入口 schema 与 method 驱动的确认策略。嵌套 schema/请求序列化和本地模拟仍在持续补齐，尚未完成真实账号逐接口验收，因此不得宣称“全量 OpenAPI 已验收”。
 - 自动安装仅支持 Windows。
 
 ## 安装
