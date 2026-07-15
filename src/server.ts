@@ -2,97 +2,52 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { HwObsClient } from "./client";
-import { loadConfig } from "./utils";
-import { ObsTool } from "./types";
+import { call, discover, provision } from "./gateway";
+import { runInstaller } from "./installer";
 
-function createTools(client: HwObsClient): ObsTool[] {
-  return [
-    {
-      name: "obs_list_buckets",
-      description: "查询所有OBS桶列表。",
-      isRead: true,
-      inputSchema: { type: "object" as const, properties: {} },
-      handler: async () => {
-        const result = await client.listBuckets();
-        return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
-      },
-    },
-    {
-      name: "obs_get_bucket_location",
-      description: "查询桶的区域位置。",
-      isRead: true,
-      inputSchema: { type: "object" as const, properties: { bucket: { type: "string" } }, required: ["bucket"] },
-      handler: async (args: any) => {
-        const result = await client.getBucketLocation(args.bucket);
-        return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
-      },
-    },
-    {
-      name: "obs_get_bucket_metadata",
-      description: "查询桶的元数据。",
-      isRead: true,
-      inputSchema: { type: "object" as const, properties: { bucket: { type: "string" } }, required: ["bucket"] },
-      handler: async (args: any) => {
-        const result = await client.getBucketMetadata(args.bucket);
-        return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
-      },
-    },
-    {
-      name: "obs_list_objects",
-      description: "列举桶内对象。",
-      isRead: true,
-      inputSchema: { type: "object" as const, properties: { bucket: { type: "string" }, prefix: { type: "string" }, max_keys: { type: "number" } }, required: ["bucket"] },
-      handler: async (args: any) => {
-        const result = await client.listObjects({ bucket: args.bucket, prefix: args.prefix, maxKeys: args.max_keys });
-        return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
-      },
-    },
-    {
-      name: "obs_create_bucket",
-      description: "创建OBS桶。",
-      isRead: false,
-      inputSchema: { type: "object" as const, properties: { bucket: { type: "string" }, region: { type: "string" } }, required: ["bucket"] },
-      handler: async (args: any) => {
-        const result = await client.createBucket({ bucket: args.bucket, region: args.region });
-        return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
-      },
-    },
-    {
-      name: "obs_delete_bucket",
-      description: "删除OBS桶（桶必须为空）。",
-      isRead: false,
-      inputSchema: { type: "object" as const, properties: { bucket: { type: "string" } }, required: ["bucket"] },
-      handler: async (args: any) => {
-        const result = await client.deleteBucket({ bucket: args.bucket });
-        return { content: [{ type: "text" as const, text: JSON.stringify(result) }] };
-      },
-    },
-  ];
+const tools = [
+  { name: "huaweicloud_discover", description: "Search Huawei Cloud capability modules without loading every service schema.", inputSchema: { type: "object", properties: { query: { type: "string" } } } },
+  { name: "huaweicloud_provision", description: "Get one service operation catalog after discovery.", inputSchema: { type: "object", properties: { service: { type: "string" } }, required: ["service"] } },
+  { name: "huaweicloud_call", description: "Call one Huawei Cloud operation. Mutating operations require a confirmation token after explicit user confirmation.", inputSchema: { type: "object", properties: { service: { type: "string" }, operation: { type: "string" }, input: { type: "object" }, confirmationToken: { type: "string" } }, required: ["service", "operation", "input"] } },
+];
+
+function asObject(value: unknown): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("Tool arguments must be an object.");
+  return value as Record<string, unknown>;
 }
 
-async function main() {
-  const config = loadConfig();
-  const client = new HwObsClient(config);
-  const tools = createTools(client);
-
+async function startMcp(): Promise<void> {
   const server = new Server({ name: "huaweicloud-mate", version: "1.0.0" }, { capabilities: { tools: {} } });
-
   server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools }));
-
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const { name, arguments: args } = request.params;
-    const tool = tools.find((t) => t.name === name);
-    if (!tool) throw new Error(`Unknown tool: ${name}`);
-    return tool.handler(args);
+    const args = asObject(request.params.arguments ?? {});
+    let result: unknown;
+    if (request.params.name === "huaweicloud_discover") result = discover(typeof args.query === "string" ? args.query : undefined);
+    else if (request.params.name === "huaweicloud_provision") {
+      if (typeof args.service !== "string") throw new Error("service is required.");
+      result = provision(args.service);
+    } else if (request.params.name === "huaweicloud_call") {
+      if (typeof args.service !== "string" || typeof args.operation !== "string") throw new Error("service and operation are required.");
+      result = await call(args.service, args.operation, args.input, typeof args.confirmationToken === "string" ? args.confirmationToken : undefined);
+    } else throw new Error(`Unknown tool: ${request.params.name}`);
+    return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
   });
-
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  process.stderr.write("[huaweicloud-mate] MCP server started\n");
+  await server.connect(new StdioServerTransport());
+  process.stderr.write("[huaweicloud-mate] Dynamic MCP gateway started.\n");
 }
 
-main().catch((err) => {
-  process.stderr.write(`[huaweicloud-mate] Fatal error: ${err.message}\n`);
+async function main(): Promise<void> {
+  const [command, ...args] = process.argv.slice(2);
+  if (command === "install") return runInstaller(args);
+  if (command === "--help" || command === "-h") {
+    process.stdout.write("huaweicloud-mate [install --agent codex|claude-code|opencode]\n");
+    process.stdout.write("Without a command, starts the stdio MCP gateway.\n");
+    return;
+  }
+  return startMcp();
+}
+
+main().catch((error: unknown) => {
+  process.stderr.write(`[huaweicloud-mate] Fatal error: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exit(1);
 });

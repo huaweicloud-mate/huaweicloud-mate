@@ -1,16 +1,17 @@
 {
   "name": "@hd_vector/huaweicloud-meta",
   "version": "1.0.0",
-  "description": "Huawei Cloud AI Assistant — OBS/ECS tools, MCP server, and SDK",
+  "description": "Huawei Cloud Agent plugin with a dynamic MCP gateway and KooCLI fallback",
   "private": false,
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
   "bin": {
-    "huaweicloud-meta": "dist/server.js"
+    "huaweicloud-mate": "build/server.js"
   },
   "files": [
-    "dist",
-    "README.md"
+    "build",
+    "README.md",
+    "agent.md"
   ],
   "scripts": {
     "build": "tsc",
@@ -23,12 +24,13 @@
     "obs",
     "ecs",
     "mcp",
-    "cloudmate"
+    "cloudmate",
+    "koocli",
+    "agent-plugin"
   ],
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "esdk-obs-nodejs": "^3.26.2"
+    "@modelcontextprotocol/sdk": "^1.29.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
