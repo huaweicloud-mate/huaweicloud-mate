@@ -1,4 +1,4 @@
-import { getEcsServer, JsonObject, listEcsServers, listObsBuckets, listObsObjects, startEcsServers } from "./openapi";
+import { getEcsServer, getObsObjectMetadata, JsonObject, listEcsServers, listObsBuckets, listObsObjects, startEcsServers } from "./openapi";
 import type { ServiceDefinition, ServiceOperation } from "./gateway";
 
 export interface CatalogOperation extends ServiceOperation {
@@ -61,6 +61,13 @@ export const serviceCatalog: CatalogService[] = [
         isReadOnly: true,
         inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" }, prefix: { type: "string" }, marker: { type: "string" }, delimiter: { type: "string" }, maxKeys: { type: "number", minimum: 1, maximum: 1000 } }, required: ["bucket"] },
         execute: listObsObjects,
+      },
+      {
+        id: "get_object_metadata",
+        description: "Get OBS object metadata without downloading the object content.",
+        isReadOnly: true,
+        inputSchema: { type: "object", properties: { region: { type: "string" }, bucket: { type: "string" }, key: { type: "string" }, versionId: { type: "string" } }, required: ["bucket", "key"] },
+        execute: getObsObjectMetadata,
       },
     ],
   },

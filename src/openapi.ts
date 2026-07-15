@@ -7,6 +7,8 @@ interface Credentials {
   secretKey: string;
 }
 
+const OBS_SIGNED_QUERY_PARAMETERS = new Set(["acl", "append", "cors", "customdomain", "delete", "inventory", "lifecycle", "location", "logging", "metadata", "mirrorback", "modify", "notification", "partNumber", "policy", "position", "quota", "rename", "replication", "requestPayment", "response-cache-control", "response-content-disposition", "response-content-encoding", "response-content-language", "response-content-type", "response-expires", "restore", "storageClass", "storageinfo", "tagging", "torrent", "uploadId", "uploads", "versionId", "versioning", "versions", "website"]);
+
 function credentials(): Credentials {
   const accessKey = process.env.HUAWEICLOUD_AK ?? process.env.HUAWEICLOUD_SDK_AK;
   const secretKey = process.env.HUAWEICLOUD_SK ?? process.env.HUAWEICLOUD_SDK_SK;
@@ -64,8 +66,7 @@ export function signObsRequest(method: string, url: URL, now = new Date()): Reco
   const bucketMarker = ".obs.";
   const markerIndex = url.hostname.indexOf(bucketMarker);
   const bucket = markerIndex > 0 ? url.hostname.slice(0, markerIndex) : "";
-  const signedQueryParameters = new Set(["acl", "append", "cors", "customdomain", "delete", "inventory", "lifecycle", "location", "logging", "metadata", "mirrorback", "modify", "notification", "partNumber", "policy", "position", "quota", "rename", "replication", "requestPayment", "response-cache-control", "response-content-disposition", "response-content-encoding", "response-content-language", "response-content-type", "response-expires", "restore", "storageClass", "storageinfo", "tagging", "torrent", "uploadId", "uploads", "versionId", "versioning", "versions", "website"]);
-  const signedQuery = [...url.searchParams.entries()].filter(([key]) => signedQueryParameters.has(key)).sort(([leftKey, leftValue], [rightKey, rightValue]) => leftKey.localeCompare(rightKey) || leftValue.localeCompare(rightValue)).map(([key, value]) => `${key}${value ? `=${value}` : ""}`).join("&");
+  const signedQuery = [...url.searchParams.entries()].filter(([key]) => OBS_SIGNED_QUERY_PARAMETERS.has(key)).sort(([leftKey, leftValue], [rightKey, rightValue]) => leftKey.localeCompare(rightKey) || leftValue.localeCompare(rightValue)).map(([key, value]) => `${key}${value ? `=${value}` : ""}`).join("&");
   const canonicalResource = `/${bucket}${url.pathname || "/"}${signedQuery ? `?${signedQuery}` : ""}`;
   const stringToSign = [method.toUpperCase(), "", "", date, canonicalResource].join("\n");
   const signature = createHmac("sha1", secretKey).update(stringToSign, "utf8").digest("base64");
@@ -81,6 +82,15 @@ async function responseBody(response: Response): Promise<unknown> {
   }
   if (!response.ok) throw new Error(`Huawei Cloud API returned ${response.status}: ${typeof body === "string" ? body : JSON.stringify(body)}`);
   return { status: response.status, requestId: response.headers.get("x-request-id") ?? undefined, body };
+}
+
+async function responseMetadata(response: Response): Promise<unknown> {
+  if (!response.ok) return responseBody(response);
+  return {
+    status: response.status,
+    requestId: response.headers.get("x-obs-request-id") ?? response.headers.get("x-request-id") ?? undefined,
+    headers: Object.fromEntries(response.headers.entries()),
+  };
 }
 
 function region(input: JsonObject): string {
@@ -140,4 +150,14 @@ export async function listObsObjects(input: JsonObject): Promise<unknown> {
   if (typeof input.maxKeys === "number") url.searchParams.set("max-keys", String(input.maxKeys));
   const response = await fetch(url, { method: "GET", headers: signObsRequest("GET", url) });
   return responseBody(response);
+}
+
+export async function getObsObjectMetadata(input: JsonObject): Promise<unknown> {
+  if (typeof input.bucket !== "string" || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(input.bucket)) throw new Error("bucket must be a valid OBS bucket name.");
+  if (typeof input.key !== "string" || !input.key) throw new Error("key is required.");
+  const objectPath = input.key.split("/").map(encode).join("/");
+  const url = new URL(`https://${input.bucket}.obs.${region(input)}.myhuaweicloud.com/${objectPath}`);
+  if (typeof input.versionId === "string") url.searchParams.set("versionId", input.versionId);
+  const response = await fetch(url, { method: "HEAD", headers: signObsRequest("HEAD", url) });
+  return responseMetadata(response);
 }
