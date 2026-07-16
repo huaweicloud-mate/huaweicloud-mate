@@ -1,42 +1,54 @@
 {
   "name": "huaweicloud-mate",
   "version": "1.0.0",
-  "description": "Huawei Cloud AI Assistant — OBS/ECS tools, MCP server, and SDK",
+  "description": "huaweicloud-mate — Huawei Cloud Agent Plugin. Tool Router + MCP + KooCLI + Skills for AI agents.",
   "private": false,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "huaweicloud-mate": "dist/server.js"
+    "huaweicloud-mate": "dist/router/index.js"
   },
   "files": [
     "dist",
+    "data",
+    "skills",
+    "adapters",
     "README.md"
   ],
   "scripts": {
     "build": "tsc",
+    "build:catalog": "python3 scripts/build-capability-index.py",
     "prepare": "npm run build",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "doctor": "node dist/router/index.js --doctor 2>/dev/null; echo ''"
   },
   "keywords": [
     "huaweicloud",
     "huawei-cloud",
-    "obs",
-    "ecs",
     "mcp",
-    "cloudmate"
+    "model-context-protocol",
+    "agent",
+    "ai-agent",
+    "router",
+    "koocli",
+    "cloud"
   ],
   "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "esdk-obs-nodejs": "^3.26.2"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "pptxgenjs": "^4.0.1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hd-vector/huaweicloud-mate.git"
+    "url": "https://github.com/huaweicloud-mate/huaweicloud-mate.git"
   },
   "publishConfig": {
     "access": "public"

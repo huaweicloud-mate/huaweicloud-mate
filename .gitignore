@@ -1,2 +1,5 @@
 node_modules/
 dist/
+# Generated — rebuild with: npm run build:catalog
+# Audit logs
+~/.hcloud-agent/logs/
