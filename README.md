@@ -17,12 +17,12 @@
 当前仓库仍处于私有开发验证阶段，用户的 Agent 无法读取公开安装指南。因此现在把下面这段话原样发给你正在使用的 Agent；用户无需说明或选择 Agent 类型：
 
 ```text
-请为当前环境安装并配置华为云 Agent 插件。执行 `npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --configure-koocli`，并完成验证。
-不要要求我在聊天中发送 AK/SK；需要凭证、默认 Region 或 Project ID 时，请在用户可见的安全交互终端中向我索取。
+请为当前环境安装华为云 Agent 插件。执行 `npx -y @hd_vector/huaweicloud-meta install --agent auto`，并验证 KooCLI 二进制和 MCP 配置已完成。
+不要在非交互 Agent shell 中执行凭证或 KooCLI 初始化，也不要要求我在聊天中发送 AK/SK。只有获得用户可见的安全交互输入通道后，才能执行凭证配置。
 如发现旧的 huaweicloud-mate MCP 配置，请说明差异并让我选择更新或保留。完成后告诉我是否需要重启或新开会话。
 ```
 
-安装器会通过当前运行环境自动选择适配器；若无法识别，当前 Agent 应自行识别其宿主并使用内部兼容参数重试，不能要求用户判断 Agent 类型。新增其他 Agent 时只需增加内部适配器，以上提示词保持不变。
+安装器会通过当前运行环境自动选择适配器；若无法识别，当前 Agent 应自行识别其宿主并使用内部兼容参数重试，不能要求用户判断 Agent 类型。新增其他 Agent 时只需增加内部适配器，以上提示词保持不变。若 Agent shell 没有交互 TTY，传入的 `--configure-openapi` 或 `--configure-koocli` 会被安全地延后，而不会使安装失败。
 
 开源发布后，此处将切换为更短的提示词：`请阅读并严格执行华为云 Agent 插件安装指南：<PUBLIC_AGENT_INSTALL_GUIDE_URL>`。发布前替换该 URL 并验证匿名可访问；详细切换清单见 [agent-install.md](agent-install.md)。
 

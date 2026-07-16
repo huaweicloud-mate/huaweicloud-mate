@@ -9,12 +9,12 @@
 当用户要求安装本插件时，用户只需提供通用请求，不应要求其选择或理解 Agent 类型。当前私有仓开发验证阶段，用户提示词与开源发布切换清单见 [agent-install.md](agent-install.md)。当前 Agent 应执行：
 
 ```powershell
-npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --configure-koocli
+npx -y @hd_vector/huaweicloud-meta install --agent auto
 ```
 
 安装器会识别当前运行环境并选择内部适配器。若无法识别，Agent 必须自行识别其宿主后使用内部兼容参数重试；不得把这项判断交给用户。新增 Agent 时仅扩展内部适配器，用户提示词不变。
 
-凭证、Region 与 Project ID 必须通过用户可见的安全交互终端输入，不能要求用户在聊天中发送 AK/SK。Windows 使用 DPAPI 保存 OpenAPI 凭证；Linux 优先写入系统密钥环，密钥环不可用时必须说明风险并取得用户确认后才可写入 owner-only `600` 凭证文件。遇到旧的 `huaweicloud-mate` 配置时，说明差异并让用户选择更新或保留；安装结束后验证结果，并说明是否需要重启或新开会话。
+凭证、Region 与 Project ID 必须通过用户可见的安全交互终端输入，不能要求用户在聊天中发送 AK/SK。不得在没有 TTY 的 Agent shell 中运行 `--configure-openapi` 或 `--configure-koocli`；若用户提示词仍带有这些参数，安装器会延后它们而继续完成插件安装。Windows 使用 DPAPI 保存 OpenAPI 凭证；Linux 优先写入系统密钥环，密钥环不可用时必须说明风险并取得用户确认后才可写入 owner-only `600` 凭证文件。遇到旧的 `huaweicloud-mate` 配置时，说明差异并让用户选择更新或保留；安装结束后验证结果，并说明是否需要重启或新开会话。
 
 ## 安装与凭证
 

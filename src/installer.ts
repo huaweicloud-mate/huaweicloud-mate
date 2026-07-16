@@ -59,6 +59,10 @@ export function resolveAgent(args: string[], environment: NodeJS.ProcessEnv = pr
   throw new Error("Could not detect the current Agent. The Agent should identify its own host and retry with its internal adapter id; the user does not need to choose one.");
 }
 
+export function shouldDeferInteractiveSetup(args: string[], inputIsTty = Boolean(stdin.isTTY), outputIsTty = Boolean(stdout.isTTY)): boolean {
+  return (args.includes("--configure-koocli") || args.includes("--configure-openapi")) && (!inputIsTty || !outputIsTty);
+}
+
 type JsonObject = Record<string, unknown>;
 type AgentConfigStatus = "created" | "updated" | "already-configured" | "kept";
 
@@ -304,14 +308,22 @@ export async function runInstaller(args: string[]): Promise<void> {
   const executable = await ensureKooCli();
   await execFileAsync(executable, ["version"]);
   process.stdout.write(`KooCLI is ready at ${executable}.\n`);
-  if (args.includes("--configure-koocli")) await configureKooCli(executable);
-  if (args.includes("--configure-openapi")) configureStoredCredentials();
+  const deferredInteractiveSetup = shouldDeferInteractiveSetup(args);
+  if (deferredInteractiveSetup) {
+    process.stdout.write("Interactive KooCLI and OpenAPI credential setup was deferred because this Agent shell has no interactive terminal. Plugin installation will continue.\n");
+  } else {
+    if (args.includes("--configure-koocli")) await configureKooCli(executable);
+    if (args.includes("--configure-openapi")) configureStoredCredentials();
+  }
   if (args.includes("--skip-agent-config")) {
     process.stdout.write(`Skipped ${agent} MCP configuration.\n`);
   } else {
     const configured = await configureAgent(agent, args.includes("--force-agent-config"));
     process.stdout.write(`${agent} MCP configuration ${configured.status}: ${configured.path}\n`);
   }
-  process.stdout.write("KooCLI fallback uses its local profile. To configure it now, add --configure-koocli; otherwise run `hcloud configure init` in a user-visible terminal.\n");
-  process.stdout.write("The self-built ECS/OBS adapter reads encrypted local credentials configured by --configure-openapi. Explicit HUAWEICLOUD_AK, HUAWEICLOUD_SK, HUAWEICLOUD_REGION, and HUAWEICLOUD_PROJECT_ID environment variables take precedence for a temporary override. Do not put these values in project or Agent configuration files.\n");
+  if (deferredInteractiveSetup) process.stdout.write("KooCLI fallback and ECS/OBS OpenAPI calls remain unconfigured until the user completes credential setup in a secure interactive channel. Do not ask for AK/SK in chat or pass them as command-line arguments.\n");
+  else {
+    process.stdout.write("KooCLI fallback uses its local profile. To configure it now, add --configure-koocli; otherwise run `hcloud configure init` in a user-visible terminal.\n");
+    process.stdout.write("The self-built ECS/OBS adapter reads encrypted local credentials configured by --configure-openapi. Explicit HUAWEICLOUD_AK, HUAWEICLOUD_SK, HUAWEICLOUD_REGION, and HUAWEICLOUD_PROJECT_ID environment variables take precedence for a temporary override. Do not put these values in project or Agent configuration files.\n");
+  }
 }
