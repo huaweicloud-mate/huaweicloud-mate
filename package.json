@@ -1,6 +1,6 @@
 {
   "name": "huaweicloud-mate",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "huaweicloud-mate — Huawei Cloud Agent Plugin. Tool Router + MCP + KooCLI + Skills for AI agents.",
   "private": false,
   "main": "dist/index.js",

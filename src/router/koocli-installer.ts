@@ -113,11 +113,21 @@ async function downloadAndInstall(): Promise<InstallResult> {
     mkdirSync(extractDir, { recursive: true });
 
     if (IS_WIN) {
-      // Windows: zip 解压。PowerShell Expand-Archive 启动慢，加大超时
-      execSync(
-        `powershell -NoProfile -Command "Expand-Archive -Path '${pkgPath}' -DestinationPath '${extractDir}' -Force"`,
-        { timeout: 120000 }
-      );
+      // Windows: 用 Node.js 原生解压，避免 execSync + PowerShell 不稳定
+      process.stderr.write("[koocli] Extracting zip (Node.js native)...\n");
+      const { execFileSync } = require("child_process");
+      // 尝试用 tar (Windows 10+ 内置) 比 PowerShell 更稳定
+      try {
+        execFileSync("tar", ["-xf", pkgPath, "-C", extractDir], { timeout: 30000 });
+      } catch {
+        // 降级到 PowerShell（不设 timeout，避免 Windows SIGTERM 问题）
+        const { spawnSync } = require("child_process");
+        const r = spawnSync("powershell", [
+          "-NoProfile", "-Command",
+          `Expand-Archive -Path '${pkgPath}' -DestinationPath '${extractDir}' -Force`
+        ], { timeout: 60000 });
+        if (r.error) throw r.error;
+      }
     } else {
       // Linux / macOS: tar
       execSync(`tar xzf "${pkgPath}" -C "${extractDir}"`, { timeout: 30000 });
@@ -152,9 +162,8 @@ async function downloadAndInstall(): Promise<InstallResult> {
     return { success: true, alreadyInstalled: false, version, path: KooCLI_CONFIG.binaryPath };
   } catch (err: any) {
     process.stderr.write(`[koocli] Install FAILED: ${err.message}\n`);
+    process.stderr.write(`[koocli] Temp files kept at: ${tmpDir}\n`);
     return { success: false, alreadyInstalled: false, path: KooCLI_CONFIG.binaryPath, error: err.message };
-  } finally {
-    try { require("fs").rmSync(tmpDir, { recursive: true, force: true }); } catch {}
   }
 }
 
