@@ -1,13 +1,13 @@
 # @hd_vector/huaweicloud-meta
 
-华为云 Agent 插件的首版代码骨架。它以本地 stdio MCP 网关向 OpenCode、Claude Code 和 Codex 提供一致的华为云能力入口。
+华为云 Agent 插件首版。它以本地 stdio MCP 网关向 OpenCode、Claude Code 和 Codex 提供一致的华为云能力入口。
 
 ## 当前范围
 
 - 固定暴露 `huaweicloud_discover`、`huaweicloud_provision`、`huaweicloud_call` 三个主 MCP 工具；主路由只发现和按需加载两个子 MCP：ECS、OBS，避免一次性向 Agent 注入全量服务 schema。
 - 已提供 KooCLI 共享 fallback：以非 shell 的结构化命令调用其他华为云服务，并强制二次确认；它不是第三个业务子 MCP。
-- ECS/OBS 已有独立的官方 AK/SK 签名器与首批动态 catalog 操作：ECS 可用区/规格/查询/单机详情/异步任务/批量启停/重启/删除、OBS 列桶/桶元数据/桶区域/列对象/对象元数据/限量内容读取/受确认保护的桶创建、标准上传、服务端复制、追加写与对象/桶删除。
-- 两个子 MCP 都提供受控 `openapi_request`：用于调用强类型目录之外的 ECS/OBS API Explorer 接口。请求始终固定到对应服务域名；响应限制为最多 1 MiB；`GET`/`HEAD` 只读，其余 HTTP 方法均须二次确认。优先使用已列出的强类型操作。
+- ECS/OBS 使用各自的官方 AK/SK 签名方式；高频 ECS/OBS 操作保留为便捷入口，并由完整动态 catalog 补齐其余接口。
+- 两个子 MCP 都提供受控 `openapi_request`：用于调用强类型目录之外的 ECS/OBS API Explorer 接口。请求始终固定到对应服务域名；响应限制为最多 1 MiB；`GET`、`HEAD`、`OPTIONS` 视为只读，其余 HTTP 方法均须二次确认。优先使用已列出的强类型操作。
 - 每个 ECS/OBS catalog 操作均携带其对应的 API Explorer 来源链接；新操作应以 `https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=<operation>` 或 OBS 同格式页面为准。
 - ECS 99 项、OBS 81 项 operation catalog 已由锁定版本的官方 Node.js SDK 自动生成，并随服务 provision 按需加载；每项携带 API Explorer 来源链接、独立入口 schema 与 method 驱动的确认策略。回归会以 mock transport 验证全部 180 个生成 operation 的路径、签名和写操作确认；尚未完成真实账号逐接口验收，因此不得宣称“全量 OpenAPI 已验收”。
 - 自动安装仅支持 Windows。
@@ -18,7 +18,7 @@
 npx -y @hd_vector/huaweicloud-meta install --agent codex --configure-openapi
 ```
 
-将 `codex` 改为 `claude-code` 或 `opencode` 可得到对应配置。安装器把 KooCLI 安装到当前用户目录，并输出 Agent 的 MCP 配置命令或 JSON。`--configure-openapi` 会交互收集 AK、SK、默认 Region 和可选 Project ID，并以 Windows 当前用户的 DPAPI 加密保存，供 ECS/OBS 子 MCP 使用。若希望立即进行 KooCLI 交互配置，可额外传入 `--configure-koocli`；也可以在用户可见的终端中运行：
+将 `codex` 改为 `claude-code` 或 `opencode` 可得到对应配置。安装器把 KooCLI 安装到当前用户目录，并输出对应 Agent 的 MCP 配置命令或配置内容；它不会把 AK/SK 写入 Agent 配置。`--configure-openapi` 会交互收集 AK、SK、默认 Region 和可选 Project ID，并以 Windows 当前用户的 DPAPI 加密保存，供 ECS/OBS 子 MCP 使用。若希望立即进行 KooCLI 交互配置，可额外传入 `--configure-koocli`；也可以在用户可见的终端中运行：
 
 ```powershell
 hcloud configure init
@@ -36,9 +36,23 @@ KooCLI 将交互收集 AK、SK 和默认 Region，并加密保存在其本地 pr
 npx -y @hd_vector/huaweicloud-meta
 ```
 
-- Codex：`codex mcp add huaweicloud-mate -- npx -y @hd_vector/huaweicloud-meta`
+- Codex CLI：`codex mcp add huaweicloud-mate -- npx -y @hd_vector/huaweicloud-meta`
 - Claude Code：`claude mcp add --transport stdio --scope user huaweicloud-mate -- npx -y @hd_vector/huaweicloud-meta`
 - OpenCode：在 `opencode.json` 添加 `{ "mcp": { "huaweicloud-mate": { "type": "local", "command": ["npx", "-y", "@hd_vector/huaweicloud-meta"] } } }`。
+
+### Codex Desktop
+
+在使用 npm 安装的项目中，创建或更新项目根目录的 `.codex/config.toml`：
+
+```toml
+[mcp_servers.huaweicloud_mate]
+command = "npx"
+args = ["-y", "@hd_vector/huaweicloud-meta"]
+enabled = true
+startup_timeout_sec = 15
+```
+
+重新打开该项目或新建 Codex 任务后，Desktop 才会加载新 MCP 配置。仓库内自带的 `.codex/config.toml` 是开发配置，使用 `node build/server.js` 启动当前工作区的代码；它不适用于 npm 用户。
 
 ## 安全调用流程
 

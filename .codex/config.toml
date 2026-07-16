@@ -1,4 +1,4 @@
-[mcp_servers.huaweicloud_mate_e2e]
+[mcp_servers.huaweicloud_mate]
 command = "node"
 args = ["build/server.js"]
 enabled = true
