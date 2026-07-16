@@ -276,6 +276,20 @@ test("root discovery exposes exactly the ECS and OBS child MCPs", { concurrency:
   assert.ok(discover().every((child) => child.provider === "openapi-child-mcp"));
 });
 
+test("an uncovered service resolves to a provisionable KooCLI fallback without repeated discovery", { concurrency: false }, async () => {
+  const { discover, provision } = require("../build/gateway.js");
+  const discovered = discover("EIP");
+  assert.deepEqual(discovered.map((service) => service.id), ["koocli"]);
+  assert.equal(discovered[0].provider, "koocli-fallback");
+  assert.match(discovered[0].description, /Do not repeat discovery/);
+  const fallback = await provision("koocli");
+  assert.equal(fallback.subMcp, "koocli");
+  assert.equal(fallback.provider, "koocli-fallback");
+  const run = fallback.operations.find((operation) => operation.id === "run");
+  assert.equal(run.isReadOnly, false);
+  assert.deepEqual(run.inputSchema.required, ["command"]);
+});
+
 test("agent installation config merges only the Huawei Cloud MCP entry", { concurrency: false }, () => {
   const installer = require("../build/installer.js");
   const openCode = JSON.parse(installer.mergeOpenCodeConfig(JSON.stringify({ model: "example/model", mcp: { existing: { type: "local", command: ["existing"] } } })));

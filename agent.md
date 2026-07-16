@@ -38,10 +38,11 @@ npx -y @hd_vector/huaweicloud-meta install --agent auto
 
 ## MCP 工作流
 
-1. 始终先调用 `huaweicloud_discover`，再按需调用 `huaweicloud_provision`。
-2. 仅调用 provision 返回的可用操作；不要猜测未注册的 ECS/OBS API。
-3. 使用 `huaweicloud_call` 发起资源操作。
-4. 收到 `confirmation_required` 时，向用户清楚说明资源、区域、动作和可能影响，获得明确确认后，使用同一 service、operation、input 和返回的 `confirmationToken` 重试。
+1. 每个目标服务最多调用一次 `huaweicloud_discover`，再按需调用 `huaweicloud_provision`。
+2. 若带服务关键词的 discover 返回 `koocli` fallback，立即 provision `koocli`；不得再次 discover、猜测子 MCP 服务名，或尝试用 ECS/OBS endpoint 代理其他服务。
+3. 仅调用 provision 返回的可用操作。对 `koocli` fallback，使用 `huaweicloud_call(service: "koocli", operation: "run")`，将官方 KooCLI 命令拆为字符串数组。
+4. 使用 `huaweicloud_call` 发起资源操作。
+5. 收到 `confirmation_required` 时，向用户清楚说明资源、区域、动作和可能影响，获得明确确认后，使用同一 service、operation、input 和返回的 `confirmationToken` 重试。
 
 ## 强制安全规则
 
@@ -54,7 +55,7 @@ npx -y @hd_vector/huaweicloud-meta install --agent auto
 ## 当前实现边界
 
 - 主 MCP 路由层只管理 ECS、OBS 两个按需加载的子 MCP；KooCLI 是共享 fallback 执行器，不是第三个业务子 MCP。
-- 对两个子 MCP 暂未覆盖的产品，可调用主工具的 `service: "koocli"`、`operation: "run"`；必须将命令拆为字符串数组，禁止传入 AK/SK 参数，且必须等待用户二次确认。
+- 对两个子 MCP 暂未覆盖的产品，discover 会返回 `koocli` fallback。必须立即调用其 `run` 操作，不得反复查询 MCP 或猜测 `VPC`、`EIP` 等服务名；命令必须拆为字符串数组，禁止传入 AK/SK 参数，且必须等待用户二次确认。
 - 对 ECS/OBS 的已知但尚未强类型化的 API，可使用对应子 MCP 的 `openapi_request`。必须先根据 API Explorer 填写请求方法和参数；只允许对应服务域名，`GET`/`HEAD`/`OPTIONS` 以外的方法必须等待用户二次确认。优先使用强类型 operation，避免把整个 API 定义加载到 Agent 上下文。
 - ECS 已提供 `list_availability_zones`、`list_flavors`、`list_servers`、`get_server`、`get_job` 与受二次确认保护的 `start_servers`、`stop_servers`、`reboot_servers`、`delete_servers`；OBS 已提供 `list_buckets`、`get_bucket_metadata`、`get_bucket_location`、`list_objects`、`get_object_metadata`、最多读取 1 MiB 的 `get_object`，以及受二次确认保护的 `create_bucket`、`put_object`、`copy_object`、`append_object`、`delete_object`、`delete_bucket`。此外，已从锁定版本的官方 Node.js SDK 生成 ECS 99 项、OBS 81 项 API Explorer operation 目录；这些条目按服务动态加载，含独立入口 schema、来源链接、ECS header 映射与 OBS XML/subresource 序列化。回归会对全部 180 项生成 operation 执行 mock 签名请求，写操作也会验证二次确认。真实账号逐接口调用验收尚未完成，不能宣称 API 全量已验收。
 - 后续产品部提供正式 MCP 时，应以相同服务 id 替换对应 adapter，而不改变 Agent 的 discover/provision/call 调用方式。

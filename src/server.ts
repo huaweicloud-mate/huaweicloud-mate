@@ -7,9 +7,9 @@ import { runInstaller, runLocalSetupServer } from "./installer";
 import { clearStoredCredentials, configureStoredCredentials } from "./credentials";
 
 const tools = [
-  { name: "huaweicloud_discover", description: "Search Huawei Cloud capability modules without loading every service schema.", inputSchema: { type: "object", properties: { query: { type: "string" } } } },
-  { name: "huaweicloud_provision", description: "Get one service operation catalog after discovery.", inputSchema: { type: "object", properties: { service: { type: "string" } }, required: ["service"] } },
-  { name: "huaweicloud_call", description: "Call one Huawei Cloud operation. Mutating operations require a confirmation token after explicit user confirmation.", inputSchema: { type: "object", properties: { service: { type: "string" }, operation: { type: "string" }, input: { type: "object" }, confirmationToken: { type: "string" } }, required: ["service", "operation", "input"] } },
+  { name: "huaweicloud_discover", description: "Search ECS/OBS child MCP capability modules without loading every schema. Call at most once per requested service. If a non-empty query returns the koocli fallback, do not retry discovery or guess MCP service names: provision koocli and use huaweicloud_call with service=koocli, operation=run.", inputSchema: { type: "object", properties: { query: { type: "string" } } } },
+  { name: "huaweicloud_provision", description: "Get one service operation catalog after discovery. When discovery returns koocli, provision koocli to obtain its fallback run operation; do not try alternative child-MCP spellings.", inputSchema: { type: "object", properties: { service: { type: "string" } }, required: ["service"] } },
+  { name: "huaweicloud_call", description: "Call one Huawei Cloud operation. Mutating operations require a confirmation token after explicit user confirmation. For services not covered by ECS/OBS, use service=koocli and operation=run with an official KooCLI command string array; never put AK/SK in that array.", inputSchema: { type: "object", properties: { service: { type: "string" }, operation: { type: "string" }, input: { type: "object" }, confirmationToken: { type: "string" } }, required: ["service", "operation", "input"] } },
 ];
 
 function asObject(value: unknown): Record<string, unknown> {

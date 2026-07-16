@@ -22,6 +22,17 @@ export interface ServiceDefinition {
   sourceUrl: string;
 }
 
+export interface KooCliFallbackDefinition {
+  id: "koocli";
+  title: "KooCLI fallback";
+  provider: "koocli-fallback";
+  status: "available";
+  description: string;
+  sourceUrl: string;
+}
+
+export type DiscoverResult = ServiceDefinition | KooCliFallbackDefinition;
+
 interface PendingConfirmation {
   service: string;
   operation: string;
@@ -33,6 +44,23 @@ const confirmationTokens = new Map<string, PendingConfirmation>();
 const CONFIRMATION_TTL_MS = 5 * 60 * 1000;
 const MAX_OUTPUT_LENGTH = 20_000;
 const SECRET_ARGUMENTS = ["--cli-access-key", "--cli-secret-key", "--cli-security-token"];
+const KOOCLI_SOURCE_URL = "https://support.huaweicloud.com/intl/zh-cn/qs-hcli/hcli_02_003_01.html";
+const KOOCLI_FALLBACK: KooCliFallbackDefinition = {
+  id: "koocli",
+  title: "KooCLI fallback",
+  provider: "koocli-fallback",
+  status: "available",
+  description: "No matching ECS/OBS child MCP was found. Do not repeat discovery or guess a child MCP name. Provision this fallback, then call koocli/run with the official KooCLI command as a string array. The call always requires explicit confirmation.",
+  sourceUrl: KOOCLI_SOURCE_URL,
+};
+const KOOCLI_RUN_INPUT_SCHEMA: JsonObject = {
+  type: "object",
+  properties: {
+    command: { type: "array", items: { type: "string" } },
+    profile: { type: "string" },
+  },
+  required: ["command"],
+};
 
 function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -137,14 +165,27 @@ function consumeConfirmation(token: string | undefined, service: string, operati
   return Boolean(pending && pending.service === service && pending.operation === operation && stableJson(pending.input) === stableJson(input));
 }
 
-export function discover(query?: string): ServiceDefinition[] {
+export function discover(query?: string): DiscoverResult[] {
   const keyword = query?.trim().toLowerCase();
-  return subMcpDescriptors
+  const services = subMcpDescriptors
     .filter((service) => !keyword || `${service.id} ${service.title} ${service.description}`.toLowerCase().includes(keyword))
     .map((service) => ({ ...service, provider: "openapi-child-mcp" as const, status: "available" as const }));
+  return keyword && services.length === 0 ? [KOOCLI_FALLBACK] : services;
 }
 
 export async function provision(serviceId: string): Promise<unknown> {
+  if (serviceId === "koocli") {
+    return {
+      subMcp: "koocli",
+      provider: "koocli-fallback",
+      status: "provisioned",
+      sourceUrl: KOOCLI_SOURCE_URL,
+      operations: [
+        { id: "run", description: "Run an official KooCLI command for a service not covered by the ECS/OBS child MCPs. command must be a non-empty string array and this operation always requires explicit confirmation.", isReadOnly: false, inputSchema: KOOCLI_RUN_INPUT_SCHEMA, sourceUrl: KOOCLI_SOURCE_URL },
+        { id: "version", description: "Show the installed KooCLI version.", isReadOnly: true, inputSchema: { type: "object", properties: {} }, sourceUrl: KOOCLI_SOURCE_URL },
+      ],
+    };
+  }
   const descriptor = findSubMcpDescriptor(serviceId);
   const service = await loadSubMcp(descriptor.id);
   return { subMcp: service.id, status: "provisioned", sourceUrl: service.sourceUrl, operations: service.operations.map(({ id, description, isReadOnly, inputSchema, sourceUrl }) => ({ id, description, isReadOnly, inputSchema, sourceUrl })) };
@@ -155,7 +196,7 @@ export async function call(serviceId: string, operationId: string, input: unknow
   if (serviceId === "koocli") {
     if (operationId === "version") return runKooCli({ command: ["version"] });
     if (operationId === "run") {
-      validateInput(input, { type: "object", properties: { command: { type: "array", items: { type: "string" } }, profile: { type: "string" } }, required: ["command"] });
+      validateInput(input, KOOCLI_RUN_INPUT_SCHEMA);
       if (!consumeConfirmation(confirmationToken, serviceId, operationId, input)) return confirmationRequired(serviceId, operationId, input);
       return runKooCli(input);
     }

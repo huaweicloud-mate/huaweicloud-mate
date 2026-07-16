@@ -81,12 +81,13 @@ startup_timeout_sec = 15
 
 ## 安全调用流程
 
-1. 调用 `huaweicloud_discover` 查询两个子 MCP（`ecs`、`obs`）。
-2. 调用 `huaweicloud_provision` 按需加载其中一个子 MCP 的操作目录。
-3. 调用 `huaweicloud_call`，以子 MCP id 和 operation 调用 OpenAPI。
-4. 对有副作用的调用，网关先返回五分钟有效的 `confirmationToken`；Agent 必须在用户明确确认后原样携带令牌再次调用。
+1. 对每个目标服务只调用一次 `huaweicloud_discover` 查询子 MCP（`ecs`、`obs`）。
+2. 如果非空查询结果为 `koocli` fallback，立即调用 `huaweicloud_provision(service: "koocli")`；不要反复查询、猜测 MCP 服务名，或通过 ECS/OBS endpoint 调用其他服务。
+3. 否则调用 `huaweicloud_provision` 按需加载相应子 MCP 的操作目录。
+4. 调用 `huaweicloud_call`，以子 MCP id 和 operation 调用 OpenAPI。
+5. 对有副作用的调用，网关先返回五分钟有效的 `confirmationToken`；Agent 必须在用户明确确认后原样携带令牌再次调用。
 
-对于当前两个子 MCP 未覆盖的服务，可直接通过主工具调用共享 fallback：`service: "koocli"`、`operation: "run"`、`input: { "command": ["<service>", "<operation>", "..."] }`。该路径不会出现在子 MCP 发现列表，且始终要求二次确认。
+对于当前两个子 MCP 未覆盖的服务，带服务关键词的 discover 会返回共享 fallback `koocli`；随后 provision `koocli`，并通过主工具调用 `service: "koocli"`、`operation: "run"`、`input: { "command": ["<service>", "<operation>", "..."] }`。该路径始终要求二次确认。
 
 当需要已知 ECS 或 OBS 接口、但子 MCP 没有强类型 operation 时，使用其 `openapi_request`，并以对应 API Explorer 页面确认 `method`、`path`、`query`、`body` 或 OBS `headers`。ECS `path` 可使用 `{project_id}` 或 `{projectId}` 占位符；OBS 对象内容使用 `contentBase64`，对象 GET 会自动附加受限的 `Range` 请求头。
 
