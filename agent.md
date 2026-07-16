@@ -9,7 +9,7 @@
 当用户要求安装本插件时，用户只需提供通用请求，不应要求其选择或理解 Agent 类型。当前私有仓开发验证阶段，用户提示词与开源发布切换清单见 [agent-install.md](agent-install.md)。当前 Agent 应执行：
 
 ```powershell
-npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --configure-koocli
+npx -y @hd_vector/huaweicloud-meta install --agent auto
 ```
 
 安装器会识别当前运行环境并选择内部适配器。若无法识别，Agent 必须自行识别其宿主后使用内部兼容参数重试；不得把这项判断交给用户。新增 Agent 时仅扩展内部适配器，用户提示词不变。
@@ -22,17 +22,17 @@ npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --co
 
    ```powershell
    # OpenCode
-   npx -y @hd_vector/huaweicloud-meta install --agent opencode --configure-openapi --configure-koocli
+   npx -y @hd_vector/huaweicloud-meta install --agent opencode
 
    # Claude Code
-   npx -y @hd_vector/huaweicloud-meta install --agent claude-code --configure-openapi --configure-koocli
+   npx -y @hd_vector/huaweicloud-meta install --agent claude-code
 
    # Codex Desktop / CLI
-   npx -y @hd_vector/huaweicloud-meta install --agent codex --configure-openapi --configure-koocli
+   npx -y @hd_vector/huaweicloud-meta install --agent codex
    ```
 
-   如暂不需要 KooCLI fallback，可删除 `--configure-koocli`。
-2. 安装器自动下载 KooCLI，并自动合并当前 Agent 的 MCP 配置：OpenCode 优先更新用户已有的 `~/.config/opencode/opencode.jsonc`，其次是 `opencode.json`（或 `OPENCODE_CONFIG`）；Claude Code 写入用户的 `~/.claude.json`；Codex 写入当前项目的 `.codex/config.toml`。它不直接把凭证写入 Agent 配置或仓库。遇到同名旧配置时必须向用户确认更新或保留；非交互场景默认保留，只有 `--force-agent-config` 可覆盖。Codex Desktop 用户配置后应重新打开项目或新建任务使配置生效。非 TTY 的 `--configure-openapi --configure-koocli` 会自动打开本机安全配置页，在用户输入后完成两个配置。
+   仅 CI 或暂不配置凭据时才传入 `--skip-credentials`。
+2. 安装器自动下载 KooCLI，并自动合并当前 Agent 的 MCP 配置：OpenCode 优先更新用户已有的 `~/.config/opencode/opencode.jsonc`，其次是 `opencode.json`（或 `OPENCODE_CONFIG`）；Claude Code 写入用户的 `~/.claude.json`；Codex 写入当前项目的 `.codex/config.toml`。它不直接把凭证写入 Agent 配置或仓库。遇到同名旧配置时必须向用户确认更新或保留；非交互场景默认保留，只有 `--force-agent-config` 可覆盖。Codex Desktop 用户配置后应重新打开项目或新建任务使配置生效。默认安装会配置 KooCLI 与 OpenAPI；非 TTY 时会自动打开本机安全配置页，在用户输入后完成两个配置。
 3. KooCLI fallback 的 AK/SK 与默认 Region 必须由用户在安装器的可见安全输入界面中输入；不得要求用户把 AK/SK 贴到对话、项目配置、命令行参数或日志中，也不得要求用户另行执行 `hcloud configure init`。
 4. 不读取、复制或展示 KooCLI 的加密本地凭证文件。需修改 ECS/OBS 凭证时，指引用户运行 `npx -y @hd_vector/huaweicloud-meta configure`；需删除时运行 `clear-credentials`。显式 MCP 进程环境变量仅作临时覆盖，且这些值不得持久化到项目或 Agent 配置。
 

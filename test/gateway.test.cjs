@@ -332,6 +332,9 @@ test("agent-assisted installation selects an adapter without exposing it to user
   assert.equal(installer.shouldDeferInteractiveSetup(["--configure-koocli"], true, false), true);
   assert.equal(installer.shouldDeferInteractiveSetup(["--configure-openapi", "--configure-koocli"], true, true), false);
   assert.equal(installer.shouldDeferInteractiveSetup([], false, false), false);
+  assert.deepEqual(installer.withDefaultCredentialSetup(["--agent", "auto"]), ["--agent", "auto", "--configure-koocli", "--configure-openapi"]);
+  assert.deepEqual(installer.withDefaultCredentialSetup(["--agent", "auto", "--skip-credentials"]), ["--agent", "auto", "--skip-credentials"]);
+  assert.deepEqual(installer.withDefaultCredentialSetup(["--agent", "auto", "--configure-openapi"]), ["--agent", "auto", "--configure-openapi"]);
 });
 
 test("Linux installation helpers select user-scoped paths and supported KooCLI archives", { concurrency: false }, () => {

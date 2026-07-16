@@ -17,12 +17,12 @@
 当前仓库仍处于私有开发验证阶段，用户的 Agent 无法读取公开安装指南。因此现在把下面这段话原样发给你正在使用的 Agent；用户无需说明或选择 Agent 类型：
 
 ```text
-请为当前环境安装华为云 Agent 插件。执行 `npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --configure-koocli`，并验证 KooCLI 二进制和 MCP 配置已完成。
+请为当前环境安装华为云 Agent 插件。执行 `npx -y @hd_vector/huaweicloud-meta install --agent auto`，并验证 KooCLI、凭据和 MCP 配置已完成。
 不要在聊天中索取或记录 AK/SK。若 Agent shell 没有交互终端，安装器会自动打开本机安全配置页；请让用户仅在该页面中输入凭据并完成配置。
 如发现旧的 huaweicloud-mate MCP 配置，请说明差异并让我选择更新或保留。完成后告诉我是否需要重启或新开会话。
 ```
 
-安装器会通过当前运行环境自动选择适配器；若无法识别，当前 Agent 应自行识别其宿主并使用内部兼容参数重试，不能要求用户判断 Agent 类型。新增其他 Agent 时只需增加内部适配器，以上提示词保持不变。若 Agent shell 没有交互 TTY，传入的 `--configure-openapi` 或 `--configure-koocli` 会自动启动仅监听 `127.0.0.1` 的安全配置页，而不会另建错误的配置文件或要求用户执行额外命令。
+安装器会通过当前运行环境自动选择适配器；若无法识别，当前 Agent 应自行识别其宿主并使用内部兼容参数重试，不能要求用户判断 Agent 类型。新增其他 Agent 时只需增加内部适配器，以上提示词保持不变。安装默认配置 KooCLI 与 ECS/OBS 凭据；若 Agent shell 没有交互 TTY，会自动启动仅监听 `127.0.0.1` 的安全配置页，而不会另建错误的配置文件或要求用户执行额外命令。
 
 开源发布后，此处将切换为更短的提示词：`请阅读并严格执行华为云 Agent 插件安装指南：<PUBLIC_AGENT_INSTALL_GUIDE_URL>`。发布前替换该 URL 并验证匿名可访问；详细切换清单见 [agent-install.md](agent-install.md)。
 
@@ -32,22 +32,22 @@
 
 ```powershell
 # OpenCode：优先更新已存在的 ~/.config/opencode/opencode.jsonc，其次是 opencode.json（或 OPENCODE_CONFIG 指定文件）
-npx -y @hd_vector/huaweicloud-meta install --agent opencode --configure-openapi --configure-koocli
+npx -y @hd_vector/huaweicloud-meta install --agent opencode
 
 # Claude Code：写入 ~/.claude.json
-npx -y @hd_vector/huaweicloud-meta install --agent claude-code --configure-openapi --configure-koocli
+npx -y @hd_vector/huaweicloud-meta install --agent claude-code
 
 # Codex Desktop / CLI：写入当前项目的 .codex/config.toml
-npx -y @hd_vector/huaweicloud-meta install --agent codex --configure-openapi --configure-koocli
+npx -y @hd_vector/huaweicloud-meta install --agent codex
 ```
 
 Linux Bash 使用相同命令：
 
 ```bash
-npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --configure-koocli
+npx -y @hd_vector/huaweicloud-meta install --agent auto
 ```
 
-安装器不会把 AK/SK 写入 Agent 配置。`--configure-openapi` 会收集 AK、SK、默认 Region 和可选 Project ID：Windows 使用当前用户的 DPAPI；Linux 优先使用系统密钥环（需要 `secret-tool`，通常由发行版的 `libsecret-tools` 提供）。如果 Linux 密钥环不可用或未解锁，安装器会说明风险并征得用户确认后，写入 `~/.config/huaweicloud-mate/openapi-credentials.json`（或 `$XDG_CONFIG_HOME`）的 owner-only `600` 文件。`--configure-koocli` 会配置 KooCLI。正常终端中它直接交互；Agent 无交互终端时，安装器会自动打开本机 `127.0.0.1` 安全配置页，在同一次安装中同时完成 KooCLI 与 OpenAPI 凭据配置，不需要用户另行执行 `hcloud configure init`。
+安装器不会把 AK/SK 写入 Agent 配置。默认安装会收集 AK、SK、默认 Region 和可选 Project ID：Windows 使用当前用户的 DPAPI；Linux 优先使用系统密钥环（需要 `secret-tool`，通常由发行版的 `libsecret-tools` 提供）。如果 Linux 密钥环不可用或未解锁，安装器会说明风险并征得用户确认后，写入 `~/.config/huaweicloud-mate/openapi-credentials.json`（或 `$XDG_CONFIG_HOME`）的 owner-only `600` 文件。正常终端中安装器直接交互；Agent 无交互终端时，安装器会自动打开本机 `127.0.0.1` 安全配置页，在同一次安装中同时完成 KooCLI 与 OpenAPI 凭据配置，不需要用户另行执行 `hcloud configure init`。只有 CI 或无需凭据的场景才传入 `--skip-credentials`。
 
 ```powershell
 hcloud configure init

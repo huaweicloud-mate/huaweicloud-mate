@@ -66,6 +66,16 @@ export function shouldDeferInteractiveSetup(args: string[], inputIsTty = Boolean
   return (args.includes("--configure-koocli") || args.includes("--configure-openapi")) && (!inputIsTty || !outputIsTty);
 }
 
+/**
+ * An installation is meant to be usable immediately. Unless explicitly
+ * skipped, a bare install configures both credential consumers as well.
+ * Explicit configuration flags preserve the caller's narrower selection.
+ */
+export function withDefaultCredentialSetup(args: string[]): string[] {
+  if (args.includes("--skip-credentials") || args.includes("--configure-koocli") || args.includes("--configure-openapi")) return args;
+  return [...args, "--configure-koocli", "--configure-openapi"];
+}
+
 type JsonObject = Record<string, unknown>;
 type AgentConfigStatus = "created" | "updated" | "already-configured" | "kept";
 
@@ -463,20 +473,22 @@ async function launchLocalSetup(executable: string, args: string[]): Promise<str
 
 export async function runInstaller(args: string[]): Promise<void> {
   if (args.includes("--help") || args.includes("-h")) {
-    process.stdout.write("Usage: huaweicloud-mate install [--agent auto|codex|claude-code|opencode] [--configure-koocli] [--configure-openapi] [--force-agent-config] [--skip-agent-config]\n");
+    process.stdout.write("Usage: huaweicloud-mate install [--agent auto|codex|claude-code|opencode] [--skip-credentials] [--configure-koocli] [--configure-openapi] [--force-agent-config] [--skip-agent-config]\n");
     return;
   }
   const agent = resolveAgent(args);
+  const setupArgs = withDefaultCredentialSetup(args);
+  const configuresCredentials = setupArgs.includes("--configure-koocli") || setupArgs.includes("--configure-openapi");
   const executable = await ensureKooCli();
   await execFileAsync(executable, ["version"]);
   process.stdout.write(`KooCLI is ready at ${executable}.\n`);
-  const deferredInteractiveSetup = shouldDeferInteractiveSetup(args);
+  const deferredInteractiveSetup = shouldDeferInteractiveSetup(setupArgs);
   if (deferredInteractiveSetup) {
-    const url = await launchLocalSetup(executable, args);
+    const url = await launchLocalSetup(executable, setupArgs);
     process.stdout.write(`This Agent shell has no interactive terminal, so a local secure setup page was started: ${url}\n`);
   } else {
-    if (args.includes("--configure-koocli")) await configureKooCli(executable);
-    if (args.includes("--configure-openapi")) configureStoredCredentials();
+    if (setupArgs.includes("--configure-koocli")) await configureKooCli(executable);
+    if (setupArgs.includes("--configure-openapi")) configureStoredCredentials();
   }
   if (args.includes("--skip-agent-config")) {
     process.stdout.write(`Skipped ${agent} MCP configuration.\n`);
@@ -485,8 +497,8 @@ export async function runInstaller(args: string[]): Promise<void> {
     process.stdout.write(`${agent} MCP configuration ${configured.status}: ${configured.path}\n`);
   }
   if (deferredInteractiveSetup) process.stdout.write("Complete the local setup page to finish KooCLI and ECS/OBS credential configuration. Do not ask for AK/SK in chat or pass them as command-line arguments.\n");
+  else if (configuresCredentials) process.stdout.write("KooCLI and ECS/OBS credentials were configured during this installation. Do not put AK/SK in project or Agent configuration files.\n");
   else {
-    process.stdout.write("KooCLI fallback uses its local profile. To configure it now, add --configure-koocli; otherwise run `hcloud configure init` in a user-visible terminal.\n");
-    process.stdout.write("The self-built ECS/OBS adapter reads encrypted local credentials configured by --configure-openapi. Explicit HUAWEICLOUD_AK, HUAWEICLOUD_SK, HUAWEICLOUD_REGION, and HUAWEICLOUD_PROJECT_ID environment variables take precedence for a temporary override. Do not put these values in project or Agent configuration files.\n");
+    process.stdout.write("Credential setup was skipped. Re-run without --skip-credentials to complete KooCLI and ECS/OBS configuration.\n");
   }
 }
