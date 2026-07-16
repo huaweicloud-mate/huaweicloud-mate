@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   if (command === "configure") return configureStoredCredentials();
   if (command === "clear-credentials") return clearStoredCredentials();
   if (command === "--help" || command === "-h") {
-    process.stdout.write("huaweicloud-mate [install --agent codex|claude-code|opencode] | configure | clear-credentials\n");
+    process.stdout.write("huaweicloud-mate [install --agent auto|codex|claude-code|opencode] | configure | clear-credentials\n");
     process.stdout.write("Without a command, starts the stdio MCP gateway.\n");
     return;
   }

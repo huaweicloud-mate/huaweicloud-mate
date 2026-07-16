@@ -276,6 +276,34 @@ test("root discovery exposes exactly the ECS and OBS child MCPs", { concurrency:
   assert.ok(discover().every((child) => child.provider === "openapi-child-mcp"));
 });
 
+test("agent installation config merges only the Huawei Cloud MCP entry", { concurrency: false }, () => {
+  const installer = require("../build/installer.js");
+  const openCode = JSON.parse(installer.mergeOpenCodeConfig(JSON.stringify({ model: "example/model", mcp: { existing: { type: "local", command: ["existing"] } } })));
+  assert.equal(openCode.model, "example/model");
+  assert.deepEqual(openCode.mcp.existing, { type: "local", command: ["existing"] });
+  assert.deepEqual(openCode.mcp["huaweicloud-mate"], { type: "local", command: ["npx", "-y", "@hd_vector/huaweicloud-meta"] });
+
+  const claude = JSON.parse(installer.mergeClaudeCodeConfig(JSON.stringify({ projects: { example: {} }, mcpServers: { existing: { command: "existing", args: [] } } })));
+  assert.deepEqual(claude.projects, { example: {} });
+  assert.deepEqual(claude.mcpServers.existing, { command: "existing", args: [] });
+  assert.deepEqual(claude.mcpServers["huaweicloud-mate"], { type: "stdio", command: "npx", args: ["-y", "@hd_vector/huaweicloud-meta"] });
+
+  const codex = installer.mergeCodexConfig("model = \"gpt-5\"\n\n[mcp_servers.existing]\ncommand = \"existing\"\n\n[mcp_servers.huaweicloud_mate]\ncommand = \"node\"\nargs = [\"old.js\"]\n");
+  assert.match(codex, /model = "gpt-5"/);
+  assert.match(codex, /\[mcp_servers\.existing\]\ncommand = "existing"/);
+  assert.match(codex, /\[mcp_servers\.huaweicloud_mate\]\ncommand = "npx"\nargs = \["-y", "@hd_vector\/huaweicloud-meta"\]/);
+  assert.doesNotMatch(codex, /old\.js/);
+});
+
+test("agent-assisted installation selects an adapter without exposing it to users", { concurrency: false }, () => {
+  const installer = require("../build/installer.js");
+  assert.equal(installer.resolveAgent([], { CODEX_THREAD_ID: "desktop-task" }), "codex");
+  assert.equal(installer.resolveAgent(["--agent", "auto"], { CLAUDE_PROJECT_DIR: "D:\\project" }), "claude-code");
+  assert.equal(installer.resolveAgent([], { OPENCODE_CONFIG: "D:\\config\\opencode.json" }), "opencode");
+  assert.equal(installer.resolveAgent(["--agent", "opencode"], { CODEX_THREAD_ID: "desktop-task" }), "opencode");
+  assert.throws(() => installer.resolveAgent([], {}), /Could not detect the current Agent/);
+});
+
 test("each dynamically loaded child MCP returns API Explorer source URLs", { concurrency: false }, async () => {
   const { provision } = require("../build/gateway.js");
   for (const service of ["ecs", "obs"]) {

@@ -12,13 +12,36 @@
 - ECS 99 项、OBS 81 项 operation catalog 已由锁定版本的官方 Node.js SDK 自动生成，并随服务 provision 按需加载；每项携带 API Explorer 来源链接、独立入口 schema 与 method 驱动的确认策略。回归会以 mock transport 验证全部 180 个生成 operation 的路径、签名和写操作确认；尚未完成真实账号逐接口验收，因此不得宣称“全量 OpenAPI 已验收”。
 - 自动安装仅支持 Windows。
 
-## 安装
+## 让 Agent 协助安装
 
-```powershell
-npx -y @hd_vector/huaweicloud-meta install --agent codex --configure-openapi
+当前仓库仍处于私有开发验证阶段，用户的 Agent 无法读取公开安装指南。因此现在把下面这段话原样发给你正在使用的 Agent；用户无需说明或选择 Agent 类型：
+
+```text
+请为当前环境安装并配置华为云 Agent 插件。执行 `npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --configure-koocli`，并完成验证。
+不要要求我在聊天中发送 AK/SK；需要凭证、默认 Region 或 Project ID 时，请在用户可见的安全交互终端中向我索取。
+如发现旧的 huaweicloud-mate MCP 配置，请说明差异并让我选择更新或保留。完成后告诉我是否需要重启或新开会话。
 ```
 
-将 `codex` 改为 `claude-code` 或 `opencode` 可得到对应配置。安装器把 KooCLI 安装到当前用户目录，并输出对应 Agent 的 MCP 配置命令或配置内容；它不会把 AK/SK 写入 Agent 配置。`--configure-openapi` 会交互收集 AK、SK、默认 Region 和可选 Project ID，并以 Windows 当前用户的 DPAPI 加密保存，供 ECS/OBS 子 MCP 使用。若希望立即进行 KooCLI 交互配置，可额外传入 `--configure-koocli`；也可以在用户可见的终端中运行：
+安装器会通过当前运行环境自动选择适配器；若无法识别，当前 Agent 应自行识别其宿主并使用内部兼容参数重试，不能要求用户判断 Agent 类型。新增其他 Agent 时只需增加内部适配器，以上提示词保持不变。
+
+开源发布后，此处将切换为更短的提示词：`请阅读并严格执行华为云 Agent 插件安装指南：<PUBLIC_AGENT_INSTALL_GUIDE_URL>`。发布前替换该 URL 并验证匿名可访问；详细切换清单见 [agent-install.md](agent-install.md)。
+
+## 安装
+
+在项目目录的 PowerShell 中执行下列对应命令。三者都会安装 KooCLI、配置 ECS/OBS 的本地加密凭证，并自动合并 MCP 配置。通常应优先使用上面的 Agent 协助安装入口：
+
+```powershell
+# OpenCode：写入 ~/.config/opencode/opencode.json（或 OPENCODE_CONFIG 指定文件）
+npx -y @hd_vector/huaweicloud-meta install --agent opencode --configure-openapi --configure-koocli
+
+# Claude Code：写入 ~/.claude.json
+npx -y @hd_vector/huaweicloud-meta install --agent claude-code --configure-openapi --configure-koocli
+
+# Codex Desktop / CLI：写入当前项目的 .codex/config.toml
+npx -y @hd_vector/huaweicloud-meta install --agent codex --configure-openapi --configure-koocli
+```
+
+安装器不会把 AK/SK 写入 Agent 配置。`--configure-openapi` 会交互收集 AK、SK、默认 Region 和可选 Project ID，并以 Windows 当前用户的 DPAPI 加密保存，供 ECS/OBS 子 MCP 使用。`--configure-koocli` 会立即启动 KooCLI 的交互配置；如暂不需要 KooCLI fallback，可移除该参数，之后也能在用户可见的终端中运行：
 
 ```powershell
 hcloud configure init
@@ -30,19 +53,15 @@ KooCLI 将交互收集 AK、SK 和默认 Region，并加密保存在其本地 pr
 
 ## Agent 配置
 
-三种 Agent 使用同一个 MCP server：
+三种 Agent 使用同一个 MCP server。安装器默认会自动合并配置；如果发现同名的旧配置，会询问是否更新，选择保留不会影响其他 MCP。非交互终端默认保留旧配置，可传入 `--force-agent-config` 强制更新，或用 `--skip-agent-config` 跳过 Agent 配置。
 
-```powershell
-npx -y @hd_vector/huaweicloud-meta
-```
-
-- Codex CLI：`codex mcp add huaweicloud-mate -- npx -y @hd_vector/huaweicloud-meta`
-- Claude Code：`claude mcp add --transport stdio --scope user huaweicloud-mate -- npx -y @hd_vector/huaweicloud-meta`
-- OpenCode：在 `opencode.json` 添加 `{ "mcp": { "huaweicloud-mate": { "type": "local", "command": ["npx", "-y", "@hd_vector/huaweicloud-meta"] } } }`。
+- Codex Desktop/CLI：当前项目 `.codex/config.toml` 的 `huaweicloud_mate` MCP 段。
+- Claude Code：当前用户 `~/.claude.json` 的 `mcpServers.huaweicloud-mate`。
+- OpenCode：当前用户 `~/.config/opencode/opencode.json` 的 `mcp.huaweicloud-mate`。
 
 ### Codex Desktop
 
-在使用 npm 安装的项目中，创建或更新项目根目录的 `.codex/config.toml`：
+安装命令使用 `--agent codex` 时会自动创建或更新项目根目录的 `.codex/config.toml`：
 
 ```toml
 [mcp_servers.huaweicloud_mate]
