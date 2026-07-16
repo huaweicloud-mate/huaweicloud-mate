@@ -113,8 +113,11 @@ async function downloadAndInstall(): Promise<InstallResult> {
     mkdirSync(extractDir, { recursive: true });
 
     if (IS_WIN) {
-      // Windows: unzip
-      execSync(`powershell -Command "Expand-Archive -Path '${pkgPath}' -DestinationPath '${extractDir}'"`, { timeout: 30000 });
+      // Windows: zip 解压。PowerShell Expand-Archive 启动慢，加大超时
+      execSync(
+        `powershell -NoProfile -Command "Expand-Archive -Path '${pkgPath}' -DestinationPath '${extractDir}' -Force"`,
+        { timeout: 120000 }
+      );
     } else {
       // Linux / macOS: tar
       execSync(`tar xzf "${pkgPath}" -C "${extractDir}"`, { timeout: 30000 });
