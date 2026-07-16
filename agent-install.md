@@ -1,6 +1,6 @@
 # 华为云 Agent 插件安装指南
 
-本指南供 Agent 执行华为云 Agent 插件安装。它不要求用户理解 Agent 类型、MCP 配置文件或安装命令。
+本指南供 Agent 在 Windows、Linux AMD64 或 Linux ARM64 上执行华为云 Agent 插件安装。它不要求用户理解 Agent 类型、MCP 配置文件或安装命令。
 
 ## 当前：私有仓开发验证阶段
 
@@ -26,7 +26,7 @@
 
 1. 执行 `npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --configure-koocli`。
 2. 通过运行环境自动选择内部 Agent 适配器；若识别失败，Agent 自行选择其宿主适配器重试，不能要求用户判断。
-3. AK/SK、默认 Region、Project ID 仅能在用户可见的安全交互终端中输入，不能在聊天、项目文件、配置文件或日志中索取/记录。
+3. AK/SK、默认 Region、Project ID 仅能在用户可见的安全交互终端中输入，不能在聊天、项目文件、配置文件或日志中索取/记录。Linux 优先使用系统密钥环；密钥环不可用时，必须说明 owner-only `600` 文件兜底的风险并取得用户确认。
 4. 如发现旧的 `huaweicloud-mate` MCP 配置，说明差异并等待用户选择更新或保留。
 5. 安装后确认 KooCLI、MCP 配置和本地凭证配置结果，并提示用户重启或新开会话（若当前 Agent 需要）。
 

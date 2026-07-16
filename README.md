@@ -10,7 +10,7 @@
 - 两个子 MCP 都提供受控 `openapi_request`：用于调用强类型目录之外的 ECS/OBS API Explorer 接口。请求始终固定到对应服务域名；响应限制为最多 1 MiB；`GET`、`HEAD`、`OPTIONS` 视为只读，其余 HTTP 方法均须二次确认。优先使用已列出的强类型操作。
 - 每个 ECS/OBS catalog 操作均携带其对应的 API Explorer 来源链接；新操作应以 `https://console.huaweicloud.com/apiexplorer/#/openapi/ECS/doc?api=<operation>` 或 OBS 同格式页面为准。
 - ECS 99 项、OBS 81 项 operation catalog 已由锁定版本的官方 Node.js SDK 自动生成，并随服务 provision 按需加载；每项携带 API Explorer 来源链接、独立入口 schema 与 method 驱动的确认策略。回归会以 mock transport 验证全部 180 个生成 operation 的路径、签名和写操作确认；尚未完成真实账号逐接口验收，因此不得宣称“全量 OpenAPI 已验收”。
-- 自动安装仅支持 Windows。
+- 自动安装支持 Windows，以及 Linux AMD64 / ARM64。
 
 ## 让 Agent 协助安装
 
@@ -28,7 +28,7 @@
 
 ## 安装
 
-在项目目录的 PowerShell 中执行下列对应命令。三者都会安装 KooCLI、配置 ECS/OBS 的本地加密凭证，并自动合并 MCP 配置。通常应优先使用上面的 Agent 协助安装入口：
+在项目目录的终端中执行下列对应命令。三者都会安装 KooCLI、配置 ECS/OBS 凭证，并自动合并 MCP 配置。通常应优先使用上面的 Agent 协助安装入口：
 
 ```powershell
 # OpenCode：写入 ~/.config/opencode/opencode.json（或 OPENCODE_CONFIG 指定文件）
@@ -41,13 +41,19 @@ npx -y @hd_vector/huaweicloud-meta install --agent claude-code --configure-opena
 npx -y @hd_vector/huaweicloud-meta install --agent codex --configure-openapi --configure-koocli
 ```
 
-安装器不会把 AK/SK 写入 Agent 配置。`--configure-openapi` 会交互收集 AK、SK、默认 Region 和可选 Project ID，并以 Windows 当前用户的 DPAPI 加密保存，供 ECS/OBS 子 MCP 使用。`--configure-koocli` 会立即启动 KooCLI 的交互配置；如暂不需要 KooCLI fallback，可移除该参数，之后也能在用户可见的终端中运行：
+Linux Bash 使用相同命令：
+
+```bash
+npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --configure-koocli
+```
+
+安装器不会把 AK/SK 写入 Agent 配置。`--configure-openapi` 会交互收集 AK、SK、默认 Region 和可选 Project ID：Windows 使用当前用户的 DPAPI；Linux 优先使用系统密钥环（需要 `secret-tool`，通常由发行版的 `libsecret-tools` 提供）。如果 Linux 密钥环不可用或未解锁，安装器会说明风险并征得用户确认后，写入 `~/.config/huaweicloud-mate/openapi-credentials.json`（或 `$XDG_CONFIG_HOME`）的 owner-only `600` 文件。`--configure-koocli` 会立即启动 KooCLI 的交互配置；如暂不需要 KooCLI fallback，可移除该参数，之后也能在用户可见的终端中运行：
 
 ```powershell
 hcloud configure init
 ```
 
-KooCLI 将交互收集 AK、SK 和默认 Region，并加密保存在其本地 profile 中；它供 KooCLI fallback 使用。KooCLI profile 与 ECS/OBS 的 DPAPI 本地凭证存储彼此独立，插件不会读取或解密 KooCLI profile。
+KooCLI 将交互收集 AK、SK 和默认 Region，并加密保存在其本地 profile 中；它供 KooCLI fallback 使用。KooCLI profile 与 ECS/OBS 的本地凭证存储彼此独立，插件不会读取或解密 KooCLI profile。Linux KooCLI 下载到 `$XDG_DATA_HOME/huaweicloud-mate/koocli`（默认 `~/.local/share/huaweicloud-mate/koocli`），不要求 sudo。
 
 需要修改账号、Region 或 Project ID 时，重新运行 `npx -y @hd_vector/huaweicloud-meta configure`，它会安全覆盖旧值；需要删除时运行 `npx -y @hd_vector/huaweicloud-meta clear-credentials`。显式设置的 `HUAWEICLOUD_AK`、`HUAWEICLOUD_SK`、`HUAWEICLOUD_REGION` 和 `HUAWEICLOUD_PROJECT_ID` 只对当前 MCP 进程生效，并优先于本地加密存储，适合临时切换账号。不要把密钥放入项目文件、Agent 配置、日志或命令行参数。
 

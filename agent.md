@@ -2,7 +2,7 @@
 
 ## 使用范围
 
-`huaweicloud-mate` 是一个本地 stdio MCP gateway。首版面向 Windows，兼容 OpenCode、Claude Code 与 Codex。
+`huaweicloud-mate` 是一个本地 stdio MCP gateway，支持 Windows、Linux AMD64 与 Linux ARM64，兼容 OpenCode、Claude Code 与 Codex。
 
 ## Agent 协助安装协议
 
@@ -14,11 +14,11 @@ npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --co
 
 安装器会识别当前运行环境并选择内部适配器。若无法识别，Agent 必须自行识别其宿主后使用内部兼容参数重试；不得把这项判断交给用户。新增 Agent 时仅扩展内部适配器，用户提示词不变。
 
-凭证、Region 与 Project ID 必须通过用户可见的安全交互终端输入，不能要求用户在聊天中发送 AK/SK。遇到旧的 `huaweicloud-mate` 配置时，说明差异并让用户选择更新或保留；安装结束后验证结果，并说明是否需要重启或新开会话。
+凭证、Region 与 Project ID 必须通过用户可见的安全交互终端输入，不能要求用户在聊天中发送 AK/SK。Windows 使用 DPAPI 保存 OpenAPI 凭证；Linux 优先写入系统密钥环，密钥环不可用时必须说明风险并取得用户确认后才可写入 owner-only `600` 凭证文件。遇到旧的 `huaweicloud-mate` 配置时，说明差异并让用户选择更新或保留；安装结束后验证结果，并说明是否需要重启或新开会话。
 
 ## 安装与凭证
 
-1. 根据当前 Agent，在项目目录的 PowerShell 中执行完整安装命令：
+1. 根据当前 Agent，在项目目录的终端中执行完整安装命令：
 
    ```powershell
    # OpenCode
@@ -65,5 +65,5 @@ npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --co
 
 1. ECS、OBS API Explorer 的全量 operation catalog 已导入；每个 operation 具备独立输入 schema、来源链接和调用验证。`openapi_request` 仅是过渡性受控入口，不能替代全量逐接口 catalog 验收。
 2. 使用非生产测试账号完成 ECS、OBS 的真实只读调用与受二次确认保护的写操作验证；不得在对话中索取或展示 AK/SK。
-3. 在干净的 Windows 环境中，从目标 npm registry 完成 `npx` 安装、KooCLI 安装与凭证配置验证。
+3. 在干净的 Windows 和 Linux AMD64/ARM64 环境中，从目标 npm registry 完成 `npx` 安装、KooCLI 安装与凭证配置验证。
 4. 在 OpenCode、Claude Code、Codex 中分别完成真实 MCP 安装、discover/provision/call 调用与写操作确认流程验证。

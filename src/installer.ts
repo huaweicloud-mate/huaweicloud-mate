@@ -1,6 +1,6 @@
 import { execFile, spawn } from "node:child_process";
-import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { chmod, rename, rm } from "node:fs/promises";
 import { get } from "node:https";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
@@ -17,6 +17,7 @@ const PACKAGE_NAME = "@hd_vector/huaweicloud-meta";
 const MCP_NAME = "huaweicloud-mate";
 const CODEX_MCP_NAME = "huaweicloud_mate";
 const DEFAULT_WINDOWS_KOOCLI_URL = "https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest/huaweicloud-cli-windows-amd64.zip";
+const DEFAULT_LINUX_KOOCLI_BASE_URL = "https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest";
 
 function agentFrom(args: string[]): AgentSelection | undefined {
   const index = args.indexOf("--agent");
@@ -174,12 +175,23 @@ async function configureAgent(agent: AgentName, force: boolean): Promise<{ path:
 }
 
 function koocliRoot(): string {
-  return join(process.env.LOCALAPPDATA ?? process.env.APPDATA ?? process.cwd(), "huaweicloud-mate", "koocli");
+  if (process.platform === "win32") return join(process.env.LOCALAPPDATA ?? process.env.APPDATA ?? process.cwd(), "huaweicloud-mate", "koocli");
+  return join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"), "huaweicloud-mate", "koocli");
+}
+
+function koocliExecutableName(): string {
+  return process.platform === "win32" ? "hcloud.exe" : "hcloud";
+}
+
+export function linuxKooCliUrl(architecture = process.arch, baseUrl = process.env.HUAWEICLOUD_KOOCLI_LINUX_BASE_URL ?? DEFAULT_LINUX_KOOCLI_BASE_URL): string {
+  const asset = architecture === "x64" ? "amd64" : architecture === "arm64" ? "arm64" : undefined;
+  if (!asset) throw new Error(`Automatic KooCLI installation does not support Linux architecture ${architecture}.`);
+  return `${baseUrl}/huaweicloud-cli-linux-${asset}.tar.gz`;
 }
 
 async function existingKooCli(): Promise<string | undefined> {
-  const localExecutable = join(koocliRoot(), "hcloud.exe");
-  const candidates = [process.env.HUAWEICLOUD_KOOCLI_PATH, existsSync(localExecutable) ? localExecutable : undefined, "hcloud.exe", "hcloud"];
+  const localExecutable = join(koocliRoot(), koocliExecutableName());
+  const candidates = [process.env.HUAWEICLOUD_KOOCLI_PATH, existsSync(localExecutable) ? localExecutable : undefined, koocliExecutableName(), "hcloud"];
   for (const candidate of candidates) {
     if (!candidate) continue;
     try {
@@ -232,6 +244,49 @@ async function ensureWindowsKooCli(): Promise<string> {
   return executable;
 }
 
+function findFile(root: string, name: string): string | undefined {
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const path = join(root, entry.name);
+    if (entry.isFile() && entry.name === name) return path;
+    if (entry.isDirectory()) {
+      const nested = findFile(path, name);
+      if (nested) return nested;
+    }
+  }
+  return undefined;
+}
+
+async function ensureLinuxKooCli(): Promise<string> {
+  if (process.platform !== "linux") throw new Error("Automatic Linux KooCLI installation can run on Linux only.");
+  const existing = await existingKooCli();
+  if (existing) return existing;
+  const root = koocliRoot();
+  const executable = join(root, "hcloud");
+  const archive = join(root, "koocli.tar.gz");
+  const extracted = join(root, "extracted");
+  mkdirSync(root, { recursive: true });
+  await rm(extracted, { recursive: true, force: true });
+  await rm(archive, { force: true });
+  mkdirSync(extracted, { recursive: true });
+  process.stderr.write(`[huaweicloud-mate] Downloading KooCLI for Linux ${process.arch}...\n`);
+  await download(linuxKooCliUrl(), archive);
+  await execFileAsync("tar", ["-xzf", archive, "-C", extracted]);
+  const extractedExecutable = findFile(extracted, "hcloud");
+  if (!extractedExecutable) throw new Error("hcloud was not found in the downloaded Linux KooCLI archive.");
+  await rm(executable, { force: true });
+  await rename(extractedExecutable, executable);
+  await chmod(executable, 0o700);
+  await rm(archive, { force: true });
+  await rm(extracted, { recursive: true, force: true });
+  return executable;
+}
+
+async function ensureKooCli(): Promise<string> {
+  if (process.platform === "win32") return ensureWindowsKooCli();
+  if (process.platform === "linux") return ensureLinuxKooCli();
+  throw new Error("Automatic KooCLI installation is supported on Windows and Linux only in this release.");
+}
+
 async function configureKooCli(executable: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const child = spawn(executable, ["configure", "init"], { shell: false, stdio: "inherit", windowsHide: false });
@@ -246,7 +301,7 @@ export async function runInstaller(args: string[]): Promise<void> {
     return;
   }
   const agent = resolveAgent(args);
-  const executable = await ensureWindowsKooCli();
+  const executable = await ensureKooCli();
   await execFileAsync(executable, ["version"]);
   process.stdout.write(`KooCLI is ready at ${executable}.\n`);
   if (args.includes("--configure-koocli")) await configureKooCli(executable);

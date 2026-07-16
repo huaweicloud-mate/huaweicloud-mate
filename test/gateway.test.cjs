@@ -304,6 +304,15 @@ test("agent-assisted installation selects an adapter without exposing it to user
   assert.throws(() => installer.resolveAgent([], {}), /Could not detect the current Agent/);
 });
 
+test("Linux installation helpers select user-scoped paths and supported KooCLI archives", { concurrency: false }, () => {
+  const { linuxCredentialFilePath } = require("../build/credentials.js");
+  const { linuxKooCliUrl } = require("../build/installer.js");
+  assert.equal(linuxCredentialFilePath({ XDG_CONFIG_HOME: join("/tmp", "config") }, "/unused"), join("/tmp", "config", "huaweicloud-mate", "openapi-credentials.json"));
+  assert.equal(linuxKooCliUrl("x64", "https://example.invalid/cli/latest"), "https://example.invalid/cli/latest/huaweicloud-cli-linux-amd64.tar.gz");
+  assert.equal(linuxKooCliUrl("arm64", "https://example.invalid/cli/latest"), "https://example.invalid/cli/latest/huaweicloud-cli-linux-arm64.tar.gz");
+  assert.throws(() => linuxKooCliUrl("ia32", "https://example.invalid/cli/latest"), /does not support Linux architecture ia32/);
+});
+
 test("each dynamically loaded child MCP returns API Explorer source URLs", { concurrency: false }, async () => {
   const { provision } = require("../build/gateway.js");
   for (const service of ["ecs", "obs"]) {

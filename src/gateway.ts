@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { join } from "node:path";
 import type { JsonObject } from "./openapi";
 import { findSubMcpDescriptor, loadSubMcp, subMcpDescriptors } from "./submcp";
@@ -82,7 +83,9 @@ function validateInput(input: JsonObject, schema: JsonObject): void {
 
 function commandPath(): string {
   if (process.env.HUAWEICLOUD_KOOCLI_PATH) return process.env.HUAWEICLOUD_KOOCLI_PATH;
-  const installedPath = join(process.env.LOCALAPPDATA ?? process.env.APPDATA ?? "", "huaweicloud-mate", "koocli", "hcloud.exe");
+  const installedPath = process.platform === "win32"
+    ? join(process.env.LOCALAPPDATA ?? process.env.APPDATA ?? "", "huaweicloud-mate", "koocli", "hcloud.exe")
+    : join(process.env.XDG_DATA_HOME ?? join(homedir(), ".local", "share"), "huaweicloud-mate", "koocli", "hcloud");
   return existsSync(installedPath) ? installedPath : "hcloud";
 }
 
