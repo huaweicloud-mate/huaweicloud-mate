@@ -344,16 +344,35 @@ function assertSingleLine(value: string, label: string): void {
   if (!value || /[\r\n\0]/.test(value)) throw new Error(`${label} is required and cannot contain a line break.`);
 }
 
-async function configureKooCliFromSetup(executable: string, credentials: StoredCredentials): Promise<void> {
+export function kooCliConfigureInput(credentials: StoredCredentials): string {
   assertSingleLine(credentials.accessKey, "AK");
   assertSingleLine(credentials.secretKey, "SK");
   assertSingleLine(credentials.region ?? "", "Default Region");
+  return `y\n${credentials.accessKey}\n${credentials.secretKey}\n${credentials.region}\n`;
+}
+
+async function runKooCliWithInput(executable: string, args: string[], input: string, action: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
-    const child = spawn(executable, ["configure", "init"], { shell: false, stdio: ["pipe", "ignore", "ignore"], windowsHide: true });
+    const child = spawn(executable, args, { shell: false, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
+    let output = "";
+    const collect = (chunk: Buffer) => { if (output.length < 16 * 1024) output += chunk.toString("utf8"); };
+    child.stdout.on("data", collect);
+    child.stderr.on("data", collect);
     child.once("error", reject);
-    child.once("close", (code) => code === 0 ? resolve() : reject(new Error(`KooCLI configuration exited with code ${code ?? "unknown"}.`)));
-    child.stdin.end(`y\n${credentials.accessKey}\n${credentials.secretKey}\n${credentials.region}\n`);
+    child.once("close", (code) => {
+      if (code === 0 && !/\[(?:USE|CLI|SDK)_ERROR\]/.test(output)) resolve();
+      else reject(new Error(`KooCLI ${action} did not complete successfully.`));
+    });
+    child.stdin.end(input);
   });
+}
+
+async function configureKooCliFromSetup(executable: string, credentials: StoredCredentials): Promise<void> {
+  // A fresh KooCLI asks for privacy-policy consent before it accepts any
+  // configure command. Handle that prompt in a separate process so the
+  // configure input always begins with its own destructive-reset confirmation.
+  await runKooCliWithInput(executable, ["version"], "y\n", "privacy-policy consent");
+  await runKooCliWithInput(executable, ["configure", "init"], kooCliConfigureInput(credentials), "credential initialization");
 }
 
 function setupPage(options: LocalSetupOptions, token: string, message?: string, success = false): string {
@@ -364,9 +383,12 @@ function setupPage(options: LocalSetupOptions, token: string, message?: string, 
   const fallback = options.configureOpenApi && process.platform === "linux"
     ? `<label class="check"><input type="checkbox" name="allowFileFallback" value="yes"> 若系统密钥环不可用，允许保存到仅当前用户可读的 600 凭据文件</label>`
     : "";
+  const privacy = options.configureKooCli
+    ? `<label class="check"><input type="checkbox" name="agreeKooCliPrivacy" value="yes" required> 我同意 KooCLI 的隐私政策，并允许安装器初始化其本地配置</label>`
+    : "";
   const content = message ? `<p class="error">${message}</p>` : "";
   if (success) return `<!doctype html><meta charset="utf-8"><title>华为云插件配置完成</title><style>body{font:16px system-ui;max-width:640px;margin:60px auto;padding:0 20px;color:#172033}p{line-height:1.6}.ok{color:#176b3a}</style><h1>配置完成</h1><p class="ok">${detail}</p>`;
-  return `<!doctype html><meta charset="utf-8"><title>华为云插件安全配置</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font:16px system-ui;max-width:640px;margin:36px auto;padding:0 20px;color:#172033}p,label{line-height:1.5}form{display:grid;gap:14px;margin-top:24px}input{box-sizing:border-box;width:100%;padding:9px;font:inherit}.check input{width:auto;margin-right:8px}button{width:max-content;padding:10px 18px;font:inherit;background:#1769e0;color:#fff;border:0;border-radius:5px}.error{color:#b42318;background:#fef3f2;padding:10px;border-radius:5px}</style><h1>完成华为云插件配置</h1><p>${detail}</p>${content}<form method="post" action="/configure"><input type="hidden" name="token" value="${token}"><label>Access Key ID (AK)<input name="accessKey" autocomplete="off" required></label><label>Secret Access Key (SK)<input name="secretKey" type="password" autocomplete="new-password" required></label><label>默认 Region<input name="region" value="cn-north-4" required></label>${fallback}<button type="submit">安全保存并完成安装</button></form>`;
+  return `<!doctype html><meta charset="utf-8"><title>华为云插件安全配置</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font:16px system-ui;max-width:640px;margin:36px auto;padding:0 20px;color:#172033}p,label{line-height:1.5}form{display:grid;gap:14px;margin-top:24px}input{box-sizing:border-box;width:100%;padding:9px;font:inherit}.check input{width:auto;margin-right:8px}button{width:max-content;padding:10px 18px;font:inherit;background:#1769e0;color:#fff;border:0;border-radius:5px}.error{color:#b42318;background:#fef3f2;padding:10px;border-radius:5px}</style><h1>完成华为云插件配置</h1><p>${detail}</p>${content}<form method="post" action="/configure"><input type="hidden" name="token" value="${token}"><label>Access Key ID (AK)<input name="accessKey" autocomplete="off" required></label><label>Secret Access Key (SK)<input name="secretKey" type="password" autocomplete="new-password" required></label><label>默认 Region<input name="region" value="cn-north-4" required></label>${privacy}${fallback}<button type="submit">安全保存并完成安装</button></form>`;
 }
 
 function responseHtml(response: import("node:http").ServerResponse, body: string, status = 200): void {
@@ -418,8 +440,9 @@ export async function runLocalSetupServer(args: string[]): Promise<string> {
       assertSingleLine(credentials.accessKey, "AK");
       assertSingleLine(credentials.secretKey, "SK");
       assertSingleLine(credentials.region ?? "", "Default Region");
-      if (options.configureOpenApi) saveStoredCredentials(credentials, form.get("allowFileFallback") === "yes");
+      if (options.configureKooCli && form.get("agreeKooCliPrivacy") !== "yes") throw new Error("Please agree to the KooCLI privacy policy before initialization.");
       if (options.configureKooCli) await configureKooCliFromSetup(options.executable, credentials);
+      if (options.configureOpenApi) saveStoredCredentials(credentials, form.get("allowFileFallback") === "yes");
       complete = true;
       responseHtml(response, setupPage(options, token, undefined, true));
       setTimeout(() => server.close(), 100).unref();
@@ -480,7 +503,6 @@ export async function runInstaller(args: string[]): Promise<void> {
   const setupArgs = withDefaultCredentialSetup(args);
   const configuresCredentials = setupArgs.includes("--configure-koocli") || setupArgs.includes("--configure-openapi");
   const executable = await ensureKooCli();
-  await execFileAsync(executable, ["version"]);
   process.stdout.write(`KooCLI is ready at ${executable}.\n`);
   const deferredInteractiveSetup = shouldDeferInteractiveSetup(setupArgs);
   if (deferredInteractiveSetup) {

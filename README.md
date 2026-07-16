@@ -47,7 +47,7 @@ Linux Bash 使用相同命令：
 npx -y @hd_vector/huaweicloud-meta install --agent auto
 ```
 
-安装器不会把 AK/SK 写入 Agent 配置。默认安装会收集 AK、SK、默认 Region 和可选 Project ID：Windows 使用当前用户的 DPAPI；Linux 优先使用系统密钥环（需要 `secret-tool`，通常由发行版的 `libsecret-tools` 提供）。如果 Linux 密钥环不可用或未解锁，安装器会说明风险并征得用户确认后，写入 `~/.config/huaweicloud-mate/openapi-credentials.json`（或 `$XDG_CONFIG_HOME`）的 owner-only `600` 文件。正常终端中安装器直接交互；Agent 无交互终端时，安装器会自动打开本机 `127.0.0.1` 安全配置页，在同一次安装中同时完成 KooCLI 与 OpenAPI 凭据配置，不需要用户另行执行 `hcloud configure init`。只有 CI 或无需凭据的场景才传入 `--skip-credentials`。
+安装器不会把 AK/SK 写入 Agent 配置。默认安装会收集 AK、SK、默认 Region 和可选 Project ID：Windows 使用当前用户的 DPAPI；Linux 优先使用系统密钥环（需要 `secret-tool`，通常由发行版的 `libsecret-tools` 提供）。如果 Linux 密钥环不可用或未解锁，安装器会说明风险并征得用户确认后，写入 `~/.config/huaweicloud-mate/openapi-credentials.json`（或 `$XDG_CONFIG_HOME`）的 owner-only `600` 文件。正常终端中安装器直接交互；Agent 无交互终端时，安装器会自动打开本机 `127.0.0.1` 安全配置页，在同一次安装中同时完成 KooCLI 与 OpenAPI 凭据配置。页面会要求用户确认 KooCLI 隐私政策，并在真正完成两项持久化配置后才显示成功；不需要用户另行执行 `hcloud configure init`。只有 CI 或无需凭据的场景才传入 `--skip-credentials`。
 
 ```powershell
 hcloud configure init
