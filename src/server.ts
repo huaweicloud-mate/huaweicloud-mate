@@ -3,7 +3,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { call, discover, provision } from "./gateway";
-import { runInstaller } from "./installer";
+import { runInstaller, runLocalSetupServer } from "./installer";
 import { clearStoredCredentials, configureStoredCredentials } from "./credentials";
 
 const tools = [
@@ -40,6 +40,10 @@ async function startMcp(): Promise<void> {
 async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2);
   if (command === "install") return runInstaller(args);
+  if (command === "setup") {
+    await runLocalSetupServer(args);
+    return;
+  }
   if (command === "configure") return configureStoredCredentials();
   if (command === "clear-credentials") return clearStoredCredentials();
   if (command === "--help" || command === "-h") {

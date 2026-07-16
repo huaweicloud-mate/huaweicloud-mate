@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync, rmSync, statSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -133,20 +133,73 @@ esac
   if (result.status !== 0) throw new Error(`Linux credential configuration exited with code ${result.status ?? "unknown"}.`);
 }
 
+function resetCredentialCache(): void {
+  attemptedRead = false;
+  cachedCredentials = undefined;
+}
+
+function credentialPayload(input: StoredCredentials): string {
+  const credentials = validateStoredCredentials(input);
+  return JSON.stringify({
+    version: 1,
+    accessKey: credentials.accessKey,
+    secretKey: credentials.secretKey,
+    region: credentials.region ?? "",
+    projectId: credentials.projectId ?? "",
+  });
+}
+
+function saveWindowsCredentials(credentialFile: string, payload: string): void {
+  const script = `$ErrorActionPreference = 'Stop'; $payload = [Console]::In.ReadToEnd(); $secure = ConvertTo-SecureString -String $payload -AsPlainText -Force; $cipher = ConvertFrom-SecureString -SecureString $secure; [System.IO.Directory]::CreateDirectory(${quotedPowerShell(dirname(credentialFile))}) | Out-Null; [System.IO.File]::WriteAllText(${quotedPowerShell(credentialFile)}, $cipher, [System.Text.UTF8Encoding]::new($false))`;
+  try {
+    execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { input: payload, encoding: "utf8", windowsHide: true, stdio: ["pipe", "pipe", "pipe"] });
+  } catch {
+    throw new Error("Unable to save encrypted credentials for the current Windows user.");
+  }
+}
+
+function saveLinuxCredentials(credentialFile: string, payload: string, allowFileFallback: boolean): void {
+  try {
+    execFileSync("secret-tool", ["store", "--label=Huawei Cloud Agent credentials", "service", "huaweicloud-mate", "type", "openapi-credentials"], { input: payload, encoding: "utf8", stdio: ["pipe", "ignore", "ignore"] });
+    return;
+  } catch {
+    if (!allowFileFallback) {
+      throw new Error("Linux system keyring is unavailable or locked. Re-open the local setup page and explicitly allow the owner-only credential-file fallback.");
+    }
+  }
+  const directory = dirname(credentialFile);
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  chmodSync(directory, 0o700);
+  writeFileSync(credentialFile, payload, { encoding: "utf8", mode: 0o600 });
+  chmodSync(credentialFile, 0o600);
+}
+
+/**
+ * Saves credentials supplied through an installer-owned local UI. Secrets are
+ * passed to the OS credential store on stdin only; they are never command-line
+ * arguments, Agent configuration, or log output.
+ */
+export function saveStoredCredentials(input: StoredCredentials, allowLinuxFileFallback = false): void {
+  const payload = credentialPayload(input);
+  const credentialFile = credentialFilePath();
+  if (process.platform === "win32") saveWindowsCredentials(credentialFile, payload);
+  else if (process.platform === "linux") saveLinuxCredentials(credentialFile, payload, allowLinuxFileFallback);
+  else throw new Error("Persistent OpenAPI credentials are supported on Windows and Linux only in this release.");
+  resetCredentialCache();
+}
+
 export function configureStoredCredentials(): void {
   const credentialFile = credentialFilePath();
   if (process.platform === "win32") configureWindowsCredentials(credentialFile);
   else if (process.platform === "linux") configureLinuxCredentials(credentialFile);
   else throw new Error("Persistent OpenAPI credentials are supported on Windows and Linux only in this release.");
-  attemptedRead = false;
-  cachedCredentials = undefined;
+  resetCredentialCache();
 }
 
 export function clearStoredCredentials(): void {
   const credentialFile = credentialFilePath();
   if (existsSync(credentialFile)) rmSync(credentialFile, { force: true });
   if (process.platform === "linux") spawnSync("secret-tool", ["clear", "service", "huaweicloud-mate", "type", "openapi-credentials"], { stdio: "ignore", windowsHide: true });
-  attemptedRead = false;
-  cachedCredentials = undefined;
+  resetCredentialCache();
   process.stdout.write("Encrypted OpenAPI credentials were removed for the current Windows user.\n");
 }

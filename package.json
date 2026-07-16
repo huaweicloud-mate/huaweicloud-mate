@@ -1,6 +1,6 @@
 {
   "name": "@hd_vector/huaweicloud-meta",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Huawei Cloud Agent plugin with a dynamic MCP gateway and KooCLI fallback",
   "private": false,
   "main": "build/index.js",
@@ -33,7 +33,8 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "jsonc-parser": "^3.3.1"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",

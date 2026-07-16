@@ -295,6 +295,32 @@ test("agent installation config merges only the Huawei Cloud MCP entry", { concu
   assert.doesNotMatch(codex, /old\.js/);
 });
 
+test("OpenCode JSONC configuration is updated in place without dropping comments", { concurrency: false }, () => {
+  const installer = require("../build/installer.js");
+  const source = `{
+  // Existing OpenCode setting
+  "plugin": ["example"],
+  "mcp": {
+    "existing": { "type": "local", "command": ["existing"] },
+  },
+}`;
+  const merged = installer.mergeOpenCodeConfig(source);
+  assert.match(merged, /\/\/ Existing OpenCode setting/);
+  assert.match(merged, /"plugin": \["example"\]/);
+  const errors = [];
+  const parsed = require("jsonc-parser").parse(merged, errors, { allowTrailingComma: true });
+  assert.deepEqual(errors, []);
+  assert.deepEqual(parsed.mcp.existing, { type: "local", command: ["existing"] });
+  assert.deepEqual(parsed.mcp["huaweicloud-mate"], { type: "local", command: ["npx", "-y", "@hd_vector/huaweicloud-meta"] });
+});
+
+test("OpenCode installation selects the active JSONC configuration before creating JSON", { concurrency: false }, () => {
+  const { resolveOpenCodeConfigPath } = require("../build/installer.js");
+  assert.equal(resolveOpenCodeConfigPath({}, "/home/example", (path) => path.endsWith("opencode.jsonc")), join("/home/example", ".config", "opencode", "opencode.jsonc"));
+  assert.equal(resolveOpenCodeConfigPath({}, "/home/example", () => false), join("/home/example", ".config", "opencode", "opencode.json"));
+  assert.equal(resolveOpenCodeConfigPath({ OPENCODE_CONFIG: "/custom/opencode.jsonc" }, "/home/example"), "/custom/opencode.jsonc");
+});
+
 test("agent-assisted installation selects an adapter without exposing it to users", { concurrency: false }, () => {
   const installer = require("../build/installer.js");
   assert.equal(installer.resolveAgent([], { CODEX_THREAD_ID: "desktop-task" }), "codex");

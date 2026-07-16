@@ -2,12 +2,15 @@ import { execFile, spawn } from "node:child_process";
 import { createWriteStream, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { chmod, rename, rm } from "node:fs/promises";
 import { get } from "node:https";
+import { createServer } from "node:http";
+import { randomBytes } from "node:crypto";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { isDeepStrictEqual, promisify } from "node:util";
-import { configureStoredCredentials } from "./credentials";
+import { applyEdits, modify, parse, type ParseError } from "jsonc-parser";
+import { configureStoredCredentials, saveStoredCredentials, type StoredCredentials } from "./credentials";
 
 type AgentName = "codex" | "claude-code" | "opencode";
 type AgentSelection = AgentName | "auto";
@@ -84,11 +87,15 @@ function codexMcpTable(): string {
 }
 
 export function mergeOpenCodeConfig(source: string): string {
-  const config = source.trim() ? objectValue(JSON.parse(source), "OpenCode configuration") : {};
-  const mcp = config.mcp === undefined ? {} : objectValue(config.mcp, "OpenCode mcp");
-  mcp[MCP_NAME] = mcpEntry();
-  config.mcp = mcp;
-  return `${JSON.stringify(config, null, 2)}\n`;
+  if (!source.trim()) return `${JSON.stringify({ mcp: { [MCP_NAME]: mcpEntry() } }, null, 2)}\n`;
+  const errors: ParseError[] = [];
+  const config = objectValue(parse(source, errors, { allowTrailingComma: true, disallowComments: false }), "OpenCode configuration");
+  if (errors.length) throw new Error("OpenCode configuration contains invalid JSONC.");
+  if (config.mcp !== undefined) objectValue(config.mcp, "OpenCode mcp");
+  const updated = applyEdits(source, modify(source, ["mcp", MCP_NAME], mcpEntry(), {
+    formattingOptions: { insertSpaces: true, tabSize: 2, eol: "\n" },
+  }));
+  return updated.endsWith("\n") ? updated : `${updated}\n`;
 }
 
 export function mergeClaudeCodeConfig(source: string): string {
@@ -116,6 +123,15 @@ function jsonEntry(source: string, property: "mcp" | "mcpServers"): unknown {
   return objectValue(config[property], property)[MCP_NAME];
 }
 
+function openCodeEntry(source: string): unknown {
+  if (!source.trim()) return undefined;
+  const errors: ParseError[] = [];
+  const config = objectValue(parse(source, errors, { allowTrailingComma: true, disallowComments: false }), "OpenCode configuration");
+  if (errors.length) throw new Error("OpenCode configuration contains invalid JSONC.");
+  if (config.mcp === undefined) return undefined;
+  return objectValue(config.mcp, "mcp")[MCP_NAME];
+}
+
 function codexTable(source: string): string | undefined {
   const header = `[mcp_servers.${CODEX_MCP_NAME}]`;
   const start = source.search(new RegExp(`^${header.replace(/[.[\]{}()*+?^$\\|]/g, "\\$&")}\\s*$`, "m"));
@@ -140,10 +156,10 @@ async function allowReplace(path: string, force: boolean): Promise<boolean> {
   }
 }
 
-async function mergeJsonConfig(path: string, property: "mcp" | "mcpServers", expected: JsonObject, merge: (source: string) => string, force: boolean): Promise<AgentConfigStatus> {
+async function mergeJsonConfig(path: string, property: "mcp" | "mcpServers", expected: JsonObject, merge: (source: string) => string, force: boolean, readEntry = jsonEntry): Promise<AgentConfigStatus> {
   const existed = existsSync(path);
   const source = existed ? readFileSync(path, "utf8") : "";
-  const current = jsonEntry(source, property);
+  const current = readEntry(source, property);
   if (isDeepStrictEqual(current, expected)) return "already-configured";
   if (current !== undefined && !await allowReplace(path, force)) return "kept";
   mkdirSync(dirname(path), { recursive: true });
@@ -151,9 +167,14 @@ async function mergeJsonConfig(path: string, property: "mcp" | "mcpServers", exp
   return existed ? "updated" : "created";
 }
 
+export function resolveOpenCodeConfigPath(environment: NodeJS.ProcessEnv = process.env, home = homedir(), fileExists: (path: string) => boolean = existsSync): string {
+  const directory = environment.OPENCODE_CONFIG_DIR || join(home, ".config", "opencode");
+  return environment.OPENCODE_CONFIG || [join(directory, "opencode.jsonc"), join(directory, "opencode.json")].find(fileExists) || join(directory, "opencode.json");
+}
+
 async function configureOpenCode(force: boolean): Promise<{ path: string; status: AgentConfigStatus }> {
-  const path = process.env.OPENCODE_CONFIG || join(homedir(), ".config", "opencode", "opencode.json");
-  return { path, status: await mergeJsonConfig(path, "mcp", mcpEntry(), mergeOpenCodeConfig, force) };
+  const path = resolveOpenCodeConfigPath();
+  return { path, status: await mergeJsonConfig(path, "mcp", mcpEntry(), mergeOpenCodeConfig, force, (source) => openCodeEntry(source)) };
 }
 
 async function configureClaudeCode(force: boolean): Promise<{ path: string; status: AgentConfigStatus }> {
@@ -299,6 +320,147 @@ async function configureKooCli(executable: string): Promise<void> {
   });
 }
 
+interface LocalSetupOptions {
+  executable: string;
+  configureKooCli: boolean;
+  configureOpenApi: boolean;
+}
+
+function setupValue(value: string | null): string {
+  return value?.trim() ?? "";
+}
+
+function assertSingleLine(value: string, label: string): void {
+  if (!value || /[\r\n\0]/.test(value)) throw new Error(`${label} is required and cannot contain a line break.`);
+}
+
+async function configureKooCliFromSetup(executable: string, credentials: StoredCredentials): Promise<void> {
+  assertSingleLine(credentials.accessKey, "AK");
+  assertSingleLine(credentials.secretKey, "SK");
+  assertSingleLine(credentials.region ?? "", "Default Region");
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(executable, ["configure", "init"], { shell: false, stdio: ["pipe", "ignore", "ignore"], windowsHide: true });
+    child.once("error", reject);
+    child.once("close", (code) => code === 0 ? resolve() : reject(new Error(`KooCLI configuration exited with code ${code ?? "unknown"}.`)));
+    child.stdin.end(`y\n${credentials.accessKey}\n${credentials.secretKey}\n${credentials.region}\n`);
+  });
+}
+
+function setupPage(options: LocalSetupOptions, token: string, message?: string, success = false): string {
+  const requested = [options.configureKooCli ? "KooCLI" : "", options.configureOpenApi ? "ECS/OBS OpenAPI" : ""].filter(Boolean).join(" 和 ");
+  const detail = success
+    ? `${requested} 已配置完成。此窗口可以关闭；请回到 Agent 并新开会话以加载 MCP 配置。`
+    : `这一步会在本机完成 ${requested} 配置。AK/SK 只会通过本机回环地址传给安装器，不会发送到 Agent 聊天、配置文件或命令行。`;
+  const fallback = options.configureOpenApi && process.platform === "linux"
+    ? `<label class="check"><input type="checkbox" name="allowFileFallback" value="yes"> 若系统密钥环不可用，允许保存到仅当前用户可读的 600 凭据文件</label>`
+    : "";
+  const content = message ? `<p class="error">${message}</p>` : "";
+  if (success) return `<!doctype html><meta charset="utf-8"><title>华为云插件配置完成</title><style>body{font:16px system-ui;max-width:640px;margin:60px auto;padding:0 20px;color:#172033}p{line-height:1.6}.ok{color:#176b3a}</style><h1>配置完成</h1><p class="ok">${detail}</p>`;
+  return `<!doctype html><meta charset="utf-8"><title>华为云插件安全配置</title><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{font:16px system-ui;max-width:640px;margin:36px auto;padding:0 20px;color:#172033}p,label{line-height:1.5}form{display:grid;gap:14px;margin-top:24px}input{box-sizing:border-box;width:100%;padding:9px;font:inherit}.check input{width:auto;margin-right:8px}button{width:max-content;padding:10px 18px;font:inherit;background:#1769e0;color:#fff;border:0;border-radius:5px}.error{color:#b42318;background:#fef3f2;padding:10px;border-radius:5px}</style><h1>完成华为云插件配置</h1><p>${detail}</p>${content}<form method="post" action="/configure"><input type="hidden" name="token" value="${token}"><label>Access Key ID (AK)<input name="accessKey" autocomplete="off" required></label><label>Secret Access Key (SK)<input name="secretKey" type="password" autocomplete="new-password" required></label><label>默认 Region<input name="region" value="cn-north-4" required></label>${fallback}<button type="submit">安全保存并完成安装</button></form>`;
+}
+
+function responseHtml(response: import("node:http").ServerResponse, body: string, status = 200): void {
+  response.writeHead(status, {
+    "content-type": "text/html; charset=utf-8",
+    "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'",
+    "referrer-policy": "no-referrer",
+  });
+  response.end(body);
+}
+
+function readSetupBody(request: import("node:http").IncomingMessage): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    request.setEncoding("utf8");
+    request.on("data", (chunk: string) => {
+      body += chunk;
+      if (body.length > 16 * 1024) reject(new Error("The setup form is too large."));
+    });
+    request.once("end", () => resolve(body));
+    request.once("error", reject);
+  });
+}
+
+/** Starts the one-time loopback setup page used when an Agent shell has no TTY. */
+export async function runLocalSetupServer(args: string[]): Promise<string> {
+  const executableIndex = args.indexOf("--koocli-path");
+  const executable = executableIndex >= 0 ? args[executableIndex + 1] : undefined;
+  const options: LocalSetupOptions = {
+    executable: executable ?? "",
+    configureKooCli: args.includes("--configure-koocli"),
+    configureOpenApi: args.includes("--configure-openapi"),
+  };
+  if (!options.executable || (!options.configureKooCli && !options.configureOpenApi)) throw new Error("Local setup requires a KooCLI path and at least one configuration target.");
+  const token = process.env.HUAWEICLOUD_SETUP_TOKEN;
+  if (!token) throw new Error("Local setup token is missing.");
+  let complete = false;
+  const server = createServer(async (request, response) => {
+    try {
+      if (request.method === "GET" && request.url === "/") return responseHtml(response, setupPage(options, token));
+      if (request.method !== "POST" || request.url !== "/configure") return responseHtml(response, "Not found", 404);
+      const form = new URLSearchParams(await readSetupBody(request));
+      if (form.get("token") !== token) return responseHtml(response, "Invalid setup request.", 403);
+      const credentials: StoredCredentials = {
+        accessKey: setupValue(form.get("accessKey")),
+        secretKey: setupValue(form.get("secretKey")),
+        region: setupValue(form.get("region")),
+      };
+      assertSingleLine(credentials.accessKey, "AK");
+      assertSingleLine(credentials.secretKey, "SK");
+      assertSingleLine(credentials.region ?? "", "Default Region");
+      if (options.configureOpenApi) saveStoredCredentials(credentials, form.get("allowFileFallback") === "yes");
+      if (options.configureKooCli) await configureKooCliFromSetup(options.executable, credentials);
+      complete = true;
+      responseHtml(response, setupPage(options, token, undefined, true));
+      setTimeout(() => server.close(), 100).unref();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Configuration failed.";
+      responseHtml(response, setupPage(options, token, message));
+    }
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Local setup did not receive a loopback port.");
+  const url = `http://127.0.0.1:${address.port}/`;
+  if (typeof process.send === "function") process.send({ type: "huaweicloud-mate-setup", url });
+  const timeout = setTimeout(() => {
+    if (!complete) server.close();
+  }, 20 * 60 * 1000);
+  timeout.unref();
+  return url;
+}
+
+async function launchLocalSetup(executable: string, args: string[]): Promise<string> {
+  const token = randomBytes(32).toString("hex");
+  const setupArgs = [process.argv[1], "setup", "--koocli-path", executable, ...args.filter((arg) => arg === "--configure-koocli" || arg === "--configure-openapi")];
+  const child = spawn(process.execPath, setupArgs, { detached: true, stdio: ["ignore", "ignore", "ignore", "ipc"], env: { ...process.env, HUAWEICLOUD_SETUP_TOKEN: token }, windowsHide: true });
+  const url = await new Promise<string>((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("The local setup page did not start within 10 seconds.")), 10_000);
+    child.once("error", reject);
+    child.on("message", (message: unknown) => {
+      if (typeof message === "object" && message !== null && (message as { type?: string }).type === "huaweicloud-mate-setup" && typeof (message as { url?: string }).url === "string") {
+        clearTimeout(timeout);
+        resolve((message as { url: string }).url);
+      }
+    });
+    child.once("exit", (code) => {
+      clearTimeout(timeout);
+      reject(new Error(`The local setup page exited before it was ready (code ${code ?? "unknown"}).`));
+    });
+  });
+  child.disconnect();
+  child.unref();
+  const opened = process.platform === "win32"
+    ? spawn("cmd.exe", ["/d", "/c", "start", "", url], { detached: true, stdio: "ignore", windowsHide: true })
+    : spawn("xdg-open", [url], { detached: true, stdio: "ignore", windowsHide: true });
+  opened.once("error", () => { /* The printed loopback URL remains usable. */ });
+  opened.unref();
+  return url;
+}
+
 export async function runInstaller(args: string[]): Promise<void> {
   if (args.includes("--help") || args.includes("-h")) {
     process.stdout.write("Usage: huaweicloud-mate install [--agent auto|codex|claude-code|opencode] [--configure-koocli] [--configure-openapi] [--force-agent-config] [--skip-agent-config]\n");
@@ -310,7 +472,8 @@ export async function runInstaller(args: string[]): Promise<void> {
   process.stdout.write(`KooCLI is ready at ${executable}.\n`);
   const deferredInteractiveSetup = shouldDeferInteractiveSetup(args);
   if (deferredInteractiveSetup) {
-    process.stdout.write("Interactive KooCLI and OpenAPI credential setup was deferred because this Agent shell has no interactive terminal. Plugin installation will continue.\n");
+    const url = await launchLocalSetup(executable, args);
+    process.stdout.write(`This Agent shell has no interactive terminal, so a local secure setup page was started: ${url}\n`);
   } else {
     if (args.includes("--configure-koocli")) await configureKooCli(executable);
     if (args.includes("--configure-openapi")) configureStoredCredentials();
@@ -321,7 +484,7 @@ export async function runInstaller(args: string[]): Promise<void> {
     const configured = await configureAgent(agent, args.includes("--force-agent-config"));
     process.stdout.write(`${agent} MCP configuration ${configured.status}: ${configured.path}\n`);
   }
-  if (deferredInteractiveSetup) process.stdout.write("KooCLI fallback and ECS/OBS OpenAPI calls remain unconfigured until the user completes credential setup in a secure interactive channel. Do not ask for AK/SK in chat or pass them as command-line arguments.\n");
+  if (deferredInteractiveSetup) process.stdout.write("Complete the local setup page to finish KooCLI and ECS/OBS credential configuration. Do not ask for AK/SK in chat or pass them as command-line arguments.\n");
   else {
     process.stdout.write("KooCLI fallback uses its local profile. To configure it now, add --configure-koocli; otherwise run `hcloud configure init` in a user-visible terminal.\n");
     process.stdout.write("The self-built ECS/OBS adapter reads encrypted local credentials configured by --configure-openapi. Explicit HUAWEICLOUD_AK, HUAWEICLOUD_SK, HUAWEICLOUD_REGION, and HUAWEICLOUD_PROJECT_ID environment variables take precedence for a temporary override. Do not put these values in project or Agent configuration files.\n");

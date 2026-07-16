@@ -7,8 +7,8 @@
 仓库尚未公开，用户的 Agent 无法通过公开 URL 读取本指南。因此用户应直接发送以下提示词：
 
 ```text
-请为当前环境安装华为云 Agent 插件。执行 `npx -y @hd_vector/huaweicloud-meta install --agent auto`，并完成验证。
-不要要求我在聊天中发送 AK/SK，也不要在没有交互 TTY 的 Agent shell 中执行凭证或 KooCLI 初始化。
+请为当前环境安装华为云 Agent 插件。执行 `npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --configure-koocli`，并完成验证。
+不要要求我在聊天中发送 AK/SK。没有交互 TTY 时，使用安装器自动打开的本机安全配置页完成凭据输入。
 如发现旧的 huaweicloud-mate MCP 配置，请说明差异并让我选择更新或保留。完成后告诉我是否需要重启或新开会话。
 ```
 
@@ -24,9 +24,9 @@
 
 ## Agent 执行要求
 
-1. 执行 `npx -y @hd_vector/huaweicloud-meta install --agent auto`，先完成 KooCLI 二进制和 MCP 配置安装。
+1. 执行 `npx -y @hd_vector/huaweicloud-meta install --agent auto --configure-openapi --configure-koocli`，完成 KooCLI、ECS/OBS 本地凭据和 MCP 配置安装。
 2. 通过运行环境自动选择内部 Agent 适配器；若识别失败，Agent 自行选择其宿主适配器重试，不能要求用户判断。
-3. AK/SK、默认 Region、Project ID 仅能在用户可见的安全交互终端中输入，不能在聊天、项目文件、配置文件或日志中索取/记录。没有这类输入通道时，必须将凭证配置标记为待完成，不能让它阻断插件安装或假称已完成。Linux 优先使用系统密钥环；密钥环不可用时，必须说明 owner-only `600` 文件兜底的风险并取得用户确认。
+3. AK/SK、默认 Region、Project ID 仅能在用户可见的安全输入界面中输入，不能在聊天、项目文件、配置文件或日志中索取/记录。没有交互 TTY 时，安装器会自动启动仅监听 `127.0.0.1` 的安全配置页；让用户在该页完成输入，不得将配置标记为“需要手动执行命令”。Linux 优先使用系统密钥环；密钥环不可用时，页面必须取得用户对 owner-only `600` 文件兜底的确认。
 4. 如发现旧的 `huaweicloud-mate` MCP 配置，说明差异并等待用户选择更新或保留。
 5. 安装后确认 KooCLI、MCP 配置和本地凭证配置结果，并提示用户重启或新开会话（若当前 Agent 需要）。
 
