@@ -40,7 +40,7 @@ npx -y @hd_vector/huaweicloud-meta install --agent auto
 
 1. 每个目标服务最多调用一次 `huaweicloud_discover`，再按需调用 `huaweicloud_provision`。
 2. 若带服务关键词的 discover 返回 `koocli` fallback，立即 provision `koocli`；不得再次 discover、猜测子 MCP 服务名，或尝试用 ECS/OBS endpoint 代理其他服务。
-3. 仅调用 provision 返回的可用操作。对 `koocli` fallback，使用 `huaweicloud_call(service: "koocli", operation: "run")`，将官方 KooCLI 命令拆为字符串数组。
+3. 仅调用 provision 返回的可用操作。对 `koocli` fallback，使用 `huaweicloud_call(service: "koocli", operation: "run")`，将官方 KooCLI 命令中 `hcloud` 之后的参数拆为字符串数组；例如 `hcloud EIP ListPublicips --region cn-north-4` 必须传为 `["EIP", "ListPublicips", "--region", "cn-north-4"]`。
 4. 使用 `huaweicloud_call` 发起资源操作。
 5. 收到 `confirmation_required` 时，向用户清楚说明资源、区域、动作和可能影响，获得明确确认后，使用同一 service、operation、input 和返回的 `confirmationToken` 重试。
 

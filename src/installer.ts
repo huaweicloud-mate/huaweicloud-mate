@@ -368,10 +368,9 @@ async function runKooCliWithInput(executable: string, args: string[], input: str
 }
 
 async function configureKooCliFromSetup(executable: string, credentials: StoredCredentials): Promise<void> {
-  // A fresh KooCLI asks for privacy-policy consent before it accepts any
-  // configure command. Handle that prompt in a separate process so the
-  // configure input always begins with its own destructive-reset confirmation.
-  await runKooCliWithInput(executable, ["version"], "y\n", "privacy-policy consent");
+  // KooCLI documents this as the non-interactive way to record privacy-policy
+  // consent. Calling `version` and piping `y` is not reliable in an Agent.
+  await runKooCliWithInput(executable, ["configure", "set", "--cli-agree-privacy-statement=true"], "", "privacy-policy consent");
   await runKooCliWithInput(executable, ["configure", "init"], kooCliConfigureInput(credentials), "credential initialization");
 }
 

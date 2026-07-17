@@ -277,7 +277,7 @@ test("root discovery exposes exactly the ECS and OBS child MCPs", { concurrency:
 });
 
 test("an uncovered service resolves to a provisionable KooCLI fallback without repeated discovery", { concurrency: false }, async () => {
-  const { discover, provision } = require("../build/gateway.js");
+  const { call, discover, provision } = require("../build/gateway.js");
   const discovered = discover("EIP");
   assert.deepEqual(discovered.map((service) => service.id), ["koocli"]);
   assert.equal(discovered[0].provider, "koocli-fallback");
@@ -288,6 +288,8 @@ test("an uncovered service resolves to a provisionable KooCLI fallback without r
   const run = fallback.operations.find((operation) => operation.id === "run");
   assert.equal(run.isReadOnly, false);
   assert.deepEqual(run.inputSchema.required, ["command"]);
+  assert.match(run.inputSchema.properties.command.description, /after hcloud/);
+  await assert.rejects(() => call("koocli", "run", { command: ["hcloud", "EIP", "ListPublicips"] }), /Remove the leading hcloud executable name/);
 });
 
 test("agent installation config merges only the Huawei Cloud MCP entry", { concurrency: false }, () => {

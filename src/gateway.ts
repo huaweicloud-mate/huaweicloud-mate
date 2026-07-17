@@ -50,13 +50,13 @@ const KOOCLI_FALLBACK: KooCliFallbackDefinition = {
   title: "KooCLI fallback",
   provider: "koocli-fallback",
   status: "available",
-  description: "No matching ECS/OBS child MCP was found. Do not repeat discovery or guess a child MCP name. Provision this fallback, then call koocli/run with the official KooCLI command as a string array. The call always requires explicit confirmation.",
+  description: "No matching ECS/OBS child MCP was found. Do not repeat discovery or guess a child MCP name. Provision this fallback, then call koocli/run with the official KooCLI arguments as a string array. Do not include the hcloud executable itself. The call always requires explicit confirmation.",
   sourceUrl: KOOCLI_SOURCE_URL,
 };
 const KOOCLI_RUN_INPUT_SCHEMA: JsonObject = {
   type: "object",
   properties: {
-    command: { type: "array", items: { type: "string" } },
+    command: { type: "array", items: { type: "string" }, description: "Arguments after hcloud, for example [\"EIP\", \"ListPublicips\", \"--region\", \"cn-north-4\"]. Do not include \"hcloud\"." },
     profile: { type: "string" },
   },
   required: ["command"],
@@ -121,21 +121,33 @@ function trim(value: string): string {
   return value.length > MAX_OUTPUT_LENGTH ? value.slice(-MAX_OUTPUT_LENGTH) : value;
 }
 
-async function runKooCli(input: JsonObject): Promise<unknown> {
+function kooCliCommand(input: JsonObject): string[] {
   const supplied = input.command;
   if (!Array.isArray(supplied) || supplied.length === 0 || supplied.some((part) => typeof part !== "string" || !part)) throw new Error("KooCLI input.command must be a non-empty string array.");
   const command = supplied as string[];
+  if (command[0].toLowerCase() === "hcloud" || command[0].toLowerCase() === "hcloud.exe") throw new Error("KooCLI input.command contains arguments after hcloud. Remove the leading hcloud executable name.");
   if (command.some((part) => SECRET_ARGUMENTS.some((secret) => part.startsWith(secret)))) throw new Error("Credentials must not be passed as KooCLI command arguments. Use a KooCLI profile or environment variables.");
+  return command;
+}
+
+async function runKooCli(input: JsonObject): Promise<unknown> {
+  const command = kooCliCommand(input);
   const profile = typeof input.profile === "string" && input.profile ? input.profile : process.env.HUAWEICLOUD_KOOCLI_PROFILE;
   const args = profile ? [...command, `--cli-profile=${profile}`] : command;
   return new Promise((resolve, reject) => {
-    const child = spawn(commandPath(), args, { shell: false, windowsHide: true });
+    // KooCLI prompts for privacy consent on stdin when no profile is present.
+    // An MCP server cannot answer that prompt; close stdin and return its
+    // diagnostic immediately instead of waiting for the caller timeout.
+    const child = spawn(commandPath(), args, { shell: false, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     let stdout = "";
     let stderr = "";
     child.stdout.on("data", (chunk: Buffer) => { stdout = trim(stdout + chunk.toString()); });
     child.stderr.on("data", (chunk: Buffer) => { stderr = trim(stderr + chunk.toString()); });
     child.once("error", (error) => reject(new Error(`Unable to start KooCLI: ${error.message}`)));
-    child.once("close", (exitCode) => exitCode === 0 ? resolve({ command: [commandPath(), ...args], stdout, stderr }) : reject(new Error(`KooCLI exited with code ${exitCode}: ${stderr || stdout}`)));
+    child.once("close", (exitCode) => {
+      if (exitCode === 0 && !/\[(?:USE|CLI|SDK)_ERROR\]/.test(`${stdout}\n${stderr}`)) resolve({ command: [commandPath(), ...args], stdout, stderr });
+      else reject(new Error(`KooCLI exited with code ${exitCode ?? "unknown"}: ${stderr || stdout || "no output"}`));
+    });
   });
 }
 
@@ -181,7 +193,7 @@ export async function provision(serviceId: string): Promise<unknown> {
       status: "provisioned",
       sourceUrl: KOOCLI_SOURCE_URL,
       operations: [
-        { id: "run", description: "Run an official KooCLI command for a service not covered by the ECS/OBS child MCPs. command must be a non-empty string array and this operation always requires explicit confirmation.", isReadOnly: false, inputSchema: KOOCLI_RUN_INPUT_SCHEMA, sourceUrl: KOOCLI_SOURCE_URL },
+        { id: "run", description: "Run an official KooCLI command for a service not covered by the ECS/OBS child MCPs. command contains only arguments after hcloud, must be a non-empty string array, and always requires explicit confirmation.", isReadOnly: false, inputSchema: KOOCLI_RUN_INPUT_SCHEMA, sourceUrl: KOOCLI_SOURCE_URL },
         { id: "version", description: "Show the installed KooCLI version.", isReadOnly: true, inputSchema: { type: "object", properties: {} }, sourceUrl: KOOCLI_SOURCE_URL },
       ],
     };
@@ -197,6 +209,7 @@ export async function call(serviceId: string, operationId: string, input: unknow
     if (operationId === "version") return runKooCli({ command: ["version"] });
     if (operationId === "run") {
       validateInput(input, KOOCLI_RUN_INPUT_SCHEMA);
+      kooCliCommand(input);
       if (!consumeConfirmation(confirmationToken, serviceId, operationId, input)) return confirmationRequired(serviceId, operationId, input);
       return runKooCli(input);
     }
