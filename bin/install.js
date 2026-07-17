@@ -59,14 +59,14 @@ async function main() {
 
   if (!mcpConfig.mcpServers) mcpConfig.mcpServers = {};
 
-  if (mcpConfig.mcpServers["huaweicloud-mate"]) {
-    log("huaweicloud-mate already configured in Codex");
+  if (mcpConfig.mcpServers["华为云"]) {
+    log("华为云 already configured in Codex");
   } else {
-    mcpConfig.mcpServers["huaweicloud-mate"] = {
+    mcpConfig.mcpServers["华为云"] = {
       command: "huaweicloud-mate",
     };
     writeFileSync(mcpJsonPath, JSON.stringify(mcpConfig, null, 2));
-    log(`Added huaweicloud-mate to ${mcpJsonPath}`);
+    log(`Added 华为云 to ${mcpJsonPath}`);
   }
 
   // ─── 4. Credential reminder ───
