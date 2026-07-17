@@ -1,0 +1,35 @@
+{
+  "name": "huaweicloud-mate-codex",
+  "version": "0.0.1",
+  "description": "Huawei Cloud plugin for Codex — one-command install, zero config.",
+  "bin": {
+    "huaweicloud-mate-codex": "bin/install.js"
+  },
+  "files": [
+    "bin",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "echo 'No build needed — pure Node.js'",
+    "install:codex": "node bin/install.js"
+  },
+  "keywords": [
+    "codex",
+    "openai-codex",
+    "huaweicloud",
+    "huawei-cloud",
+    "mcp",
+    "agent",
+    "plugin"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "huaweicloud-mate": "^0.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
