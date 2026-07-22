@@ -1,7 +1,6 @@
 terraform {
   required_providers {
     huaweicloud = { source = "huaweicloud/huaweicloud", version = ">= 1.70" }
-    random = { source = "hashicorp/random" }
   }
 }
 
@@ -33,6 +32,7 @@ resource "huaweicloud_vpc_eip" "agent_eip" {
 # CCE Cluster
 resource "huaweicloud_cce_cluster" "agent_cluster" {
   name                   = var.cluster_name
+  flavor_id              = "cce.s1.small"
   cluster_type           = "VirtualMachine"
   cluster_version        = var.cluster_version
   vpc_id                 = huaweicloud_vpc.agent_vpc.id
@@ -49,6 +49,7 @@ resource "huaweicloud_cce_node_pool" "agent_nodes" {
 
   flavor_id = var.node_flavor
   os        = var.node_os
+  password  = "Huawei@123456"
 
   root_volume {
     size       = 40
@@ -58,10 +59,6 @@ resource "huaweicloud_cce_node_pool" "agent_nodes" {
   data_volumes {
     size       = 100
     volumetype = "SSD"
-  }
-
-  runtime {
-    name = "containerd"
   }
 }
 
