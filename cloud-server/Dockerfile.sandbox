@@ -11,8 +11,12 @@ RUN wget -q ${KOO_CLI_URL} -O /tmp/install-koocli.sh \
 RUN npm install -g @opencode-ai/opencode
 RUN npm install -g huaweicloud-mate@latest
 
-RUN mkdir -p /workspace /opencode-config/skills/hw-agent-rules
+RUN mkdir -p /workspace /opencode-config/skills/hw-agent-rules /skills
 WORKDIR /workspace
+
+# Agent skills + config
+COPY ../opencode-config/skills/hw-agent-rules/SKILL.md /opencode-config/skills/hw-agent-rules/
+COPY ../huaweicloud-skills/skills/ /skills/
 
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh

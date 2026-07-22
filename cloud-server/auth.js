@@ -24,15 +24,16 @@ userStore.set("demo-user", {
   createdAt: Date.now(),
 });
 
-// 预注册测试用户（本地 MCP 插件使用）
-userStore.set("test-user", {
-  userId: "test-user",
-  ak: "test-ak",
-  sk: "test-sk",
-  projectId: "test-project",
-  openaiKey: "",
-  createdAt: Date.now(),
-});
+// 预注册 demo 用户（从环境变量注入，POC 阶段用）
+if (process.env.DEMO_AK && process.env.DEMO_SK) {
+  userStore.set("demo-user", {
+    userId: "demo-user",
+    ak: process.env.DEMO_AK,
+    sk: process.env.DEMO_SK,
+    projectId: process.env.DEMO_PROJECT_ID || "",
+    createdAt: Date.now(),
+  });
+}
 
 // ========== AK/SK ǩ����֤ ==========
 // ��Ϊ�� SigV4 ǩ����֤�߼����ο���Ϊ�� API ǩ���ĵ���

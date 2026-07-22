@@ -1,22 +1,16 @@
 // cloud-server/mcp-routes.js — MCP over HTTP 端点
-// 将 huaweicloud_invoke 转为 A2A task，参考 Demo 的 mcp-bridge/server.ts
 import { createTask, streamTask } from "./task-manager.js";
+import { authFlexible } from "./auth.js";
 
 export function mcpRouter(app) {
 
-  // MCP 请求统一走 /mcp (POST only)
-  app.post("/mcp", async (req, res) => {
+  // MCP initialize / tools/list — 无需认证（能力发现）
+  app.post("/mcp", (req, res, next) => {
     const call = req.body;
-
-    if (!call || !call.method) {
-      return res.status(400).json({ error: "invalid MCP request" });
-    }
-
-    // initialize
+    if (!call || !call.method) return next();
     if (call.method === "initialize") {
       return res.json({
-        jsonrpc: "2.0",
-        id: call.id,
+        jsonrpc: "2.0", id: call.id,
         result: {
           protocolVersion: "2024-11-05",
           capabilities: { tools: {} },
@@ -24,12 +18,9 @@ export function mcpRouter(app) {
         },
       });
     }
-
-    // tools/list
     if (call.method === "tools/list") {
       return res.json({
-        jsonrpc: "2.0",
-        id: call.id,
+        jsonrpc: "2.0", id: call.id,
         result: {
           tools: [{
             name: "huaweicloud_invoke",
@@ -47,71 +38,67 @@ export function mcpRouter(app) {
         },
       });
     }
-
-    // notifications/initialized
     if (call.method === "notifications/initialized") {
       return res.json({ jsonrpc: "2.0", id: call.id, result: {} });
     }
+    next();
+  });
 
-    // tools/call — the main handler
-    if (call.method === "tools/call") {
-      const { name, arguments: args } = call.params || {};
-      if (name !== "huaweicloud_invoke") {
-        return res.json({
-          jsonrpc: "2.0", id: call.id,
-          error: { code: -32601, message: `Unknown tool: ${name}` },
-        });
-      }
+  // tools/call — 需要认证
+  app.post("/mcp", authFlexible, async (req, res) => {
+    const call = req.body;
 
-      const intent = args?.intent || "";
-      if (!intent) {
-        return res.json({
-          jsonrpc: "2.0", id: call.id,
-          result: { content: [{ type: "text", text: "Error: 请提供 intent" }], isError: true },
-        });
-      }
-
-      try {
-        // 创建 A2A task (复用 task-manager)
-        const task = await createTask(req.userId, intent, {}, req.user);
-
-        // 等待任务完成 (streamTask → SSE)
-        const text = await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            unsubscribe();
-            reject(new Error("任务超时"));
-          }, 300000); // 5min
-
-          const unsubscribe = streamTask(task.id, (event) => {
-            if (event.status === "completed") {
-              clearTimeout(timeout);
-              unsubscribe();
-              resolve(event.message || task.output || "任务完成");
-            } else if (event.status === "failed") {
-              clearTimeout(timeout);
-              unsubscribe();
-              reject(new Error(event.error || "任务失败"));
-            }
-          });
-        });
-
-        return res.json({
-          jsonrpc: "2.0",
-          id: call.id,
-          result: { content: [{ type: "text", text }] },
-        });
-      } catch (err) {
-        return res.json({
-          jsonrpc: "2.0",
-          id: call.id,
-          result: { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true },
-        });
-      }
+    if (!call || call.method !== "tools/call") {
+      return res.status(400).json({ error: "invalid MCP request" });
     }
 
-    return res.json({
-      jsonrpc: "2.0", id: call.id,
-      error: { code: -32601, message: `Unknown method: ${call.method}` },
-    });
+    const { name, arguments: args } = call.params || {};
+    if (name !== "huaweicloud_invoke") {
+      return res.json({
+        jsonrpc: "2.0", id: call.id,
+        error: { code: -32601, message: `Unknown tool: ${name}` },
+      });
+    }
+
+    const intent = args?.intent || "";
+    if (!intent) {
+      return res.json({
+        jsonrpc: "2.0", id: call.id,
+        result: { content: [{ type: "text", text: "Error: 请提供 intent" }], isError: true },
+      });
+    }
+
+    try {
+      const task = await createTask(req.userId, intent, { source: "mcp" }, req.user);
+
+      const text = await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          unsubscribe();
+          reject(new Error("任务超时"));
+        }, 300000);
+
+        const unsubscribe = streamTask(task.id, (event) => {
+          if (event.status === "completed") {
+            clearTimeout(timeout);
+            unsubscribe();
+            resolve(event.message || task.output || "任务完成");
+          } else if (event.status === "failed") {
+            clearTimeout(timeout);
+            unsubscribe();
+            reject(new Error(event.error || "任务失败"));
+          }
+        });
+      });
+
+      return res.json({
+        jsonrpc: "2.0", id: call.id,
+        result: { content: [{ type: "text", text }] },
+      });
+    } catch (err) {
+      return res.json({
+        jsonrpc: "2.0", id: call.id,
+        result: { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true },
+      });
+    }
   });
 }
