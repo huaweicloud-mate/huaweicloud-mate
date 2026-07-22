@@ -20,6 +20,7 @@ import { PolicyEngine } from "./policy.js";
 import { CredentialBroker } from "./credential.js";
 import { JsonlAuditWriter } from "./audit.js";
 import { ExecutorRouter } from "./executor-router.js";
+import { searchSkills } from "./skill-search.js";
 import type { RouterTool, ExecuteParams } from "./types.js";
 
 // ─── 5 个 Router 工具定义 ─────────────────────────────────────────
@@ -187,6 +188,35 @@ function createTools(
         };
       },
     },
+
+    // ═══ 工具 6: cloud_skill_search ═══
+    {
+      name: "cloud_skill_search",
+      description: `搜索华为云操作技能。输入自然语言描述（如"创建OBS桶"、"配置ECS"），返回匹配的Skill全文。
+Skill包含操作步骤、CLI命令、IAM权限需求、验证方法。`,
+      isRead: true,
+      inputSchema: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "自然语言查询，如'创建OBS桶'、'ECS密码登录'",
+          },
+        },
+        required: ["query"],
+      },
+      handler: async (args: any) => {
+        const { match, fullContent } = searchSkills(args.query);
+        if (!match) {
+          return {
+            content: [{ type: "text", text: JSON.stringify({ found: false, message: "未找到匹配的Skill" }) }],
+          };
+        }
+        return {
+          content: [{ type: "text", text: JSON.stringify({ found: true, name: match.name, skill: fullContent }) }],
+        };
+      },
+    },
   ];
 }
 
@@ -307,7 +337,7 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  process.stderr.write("[huaweicloud-mate] Router started (5 tools)\n");
+  process.stderr.write("[huaweicloud-mate] Router started (6 tools)\n");
 }
 
 main().catch((err) => {
