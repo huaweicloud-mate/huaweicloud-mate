@@ -5,7 +5,7 @@
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import { authFlexible, authWithAkSk, issueJwt } from "./auth.js";
+import { authFlexible, issueJwt } from "./auth.js";
 import { createTask, getTask, streamTask, cancelTask, listUserTasks } from "./task-manager.js";
 import { getConcurrencyStats } from "./sandbox.js";
 import { getAgentCard } from "./agent-card.js";

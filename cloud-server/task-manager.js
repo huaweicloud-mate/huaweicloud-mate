@@ -4,7 +4,6 @@
 import crypto from "node:crypto";
 import {
   getOrCreateContainer,
-  execInContainer,
   destroyContainer,
   releaseContainer,
 } from "./sandbox.js";
