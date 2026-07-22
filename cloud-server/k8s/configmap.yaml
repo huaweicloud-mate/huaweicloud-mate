@@ -6,4 +6,4 @@ metadata:
 data:
   JWT_SECRET: "change-in-production"
   DEEPSEEK_API_KEY: "sk-change-me"
-  SANDBOX_IMAGE: "swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/sandbox:latest"
+  SANDBOX_IMAGE: "swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:latest"

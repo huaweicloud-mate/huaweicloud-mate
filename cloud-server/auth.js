@@ -61,7 +61,7 @@ function verifySignature(ak, signature, timestamp, method, path, headers, body) 
 
   // ���¼���ǩ��
   const sk = user.sk;
-  const region = user.projectId ? "cn-north-4" : "cn-north-4"; // �ɴ����ö�ȡ
+  const region = "cn-south-1";
   const service = "codex-agent";
 
   // �򻯵Ļ�Ϊ�� SigV4 ��ǩ

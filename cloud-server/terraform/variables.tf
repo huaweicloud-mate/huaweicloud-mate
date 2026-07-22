@@ -1,4 +1,4 @@
-variable "region" { default = "cn-north-4" }
+variable "region" { default = "cn-south-1" }
 variable "cluster_name" { default = "huaweicloud-agent" }
 variable "cluster_version" { default = "v1.29" }
 variable "node_count" { default = 3 }

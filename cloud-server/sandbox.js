@@ -9,7 +9,7 @@ const batchApi = kc.makeApiClient(k8s.BatchV1Api);
 const coreApi = kc.makeApiClient(k8s.CoreV1Api);
 const NAMESPACE = process.env.NAMESPACE || "default";
 const MAX_CONCURRENT = parseInt(process.env.MAX_SANDBOXES || "5");
-const SANDBOX_IMAGE = process.env.SANDBOX_IMAGE || "swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/sandbox:latest";
+const SANDBOX_IMAGE = process.env.SANDBOX_IMAGE || "swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:latest";
 
 const activeJobs = new Map();
 const jobStatusCache = new Map();

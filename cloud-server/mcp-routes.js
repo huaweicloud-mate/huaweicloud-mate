@@ -26,7 +26,7 @@ export function mcpRouter(app) {
             name: "huaweicloud_invoke",
             description:
               "使用自然语言操作华为云资源。支持查询、创建、修改、删除资源。\n" +
-              "示例: '查 cn-north-4 的 ECS' / '列出 OBS 桶' / '查看 VPC'",
+              "示例: '查 cn-south-1 的 ECS' / '列出 OBS 桶' / '查看 VPC'",
             inputSchema: {
               type: "object",
               properties: {

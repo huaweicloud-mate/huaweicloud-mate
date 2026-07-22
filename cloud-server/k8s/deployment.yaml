@@ -16,7 +16,7 @@ spec:
       serviceAccountName: job-creator
       containers:
         - name: server
-          image: swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/server:latest
+          image: swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/server:latest
           ports:
             - containerPort: 3000
           envFrom:
