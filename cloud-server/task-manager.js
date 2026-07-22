@@ -50,38 +50,36 @@ async function executeTask(taskId, user) {
     updateTask(taskId, { status: "working", progress: 5, currentStep: "正在初始化沙箱环境..." });
     publishEvent(taskId, { type: "status", status: "working", message: "开始分配沙箱..." });
 
-    const container = await getOrCreateContainer(user.userId, user.openaiKey, user);
+    const container = await getOrCreateContainer(user.userId, user);
     updateTask(taskId, { progress: 10, currentStep: "沙箱就绪，正在执行任务..." });
     publishEvent(taskId, { type: "progress", progress: 10, message: "沙箱就绪" });
 
-    // 构建 opencode 命令（非交互模式）
-    const escapedDesc = task.description.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    const cmd = `opencode run "${escapedDesc}" --auto --model maas/glm-5.2 2>&1 | tee /workspace/output.txt`;
-
-    updateTask(taskId, { progress: 20, currentStep: "opencode 正在执行任务..." });
-    publishEvent(taskId, { type: "progress", progress: 20, message: "opencode 开始执行" });
-
-    const result = await execInContainer(container, cmd);
-
-    updateTask(taskId, {
-      progress: 90,
-      currentStep: "任务执行完成，正在整理结果...",
-      output: result,
+    const podIp = container.podIp;
+    const sResp = await fetch(`http://${podIp}:3005/session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
     });
+    const session = await sResp.json();
 
-    // 尝试读取 output.txt
-    try {
-      const outputFile = await execInContainer(container, "cat /workspace/output.txt 2>/dev/null || echo ''");
-      if (outputFile.trim()) {
-        task.output = outputFile.trim();
-      }
-    } catch (_) {}
+    updateTask(taskId, { progress: 20, currentStep: "正在分析意图..." });
+    publishEvent(taskId, { type: "progress", progress: 20, message: "LLM 分析中" });
+
+    const mResp = await fetch(`http://${podIp}:3005/session/${session.id}/message`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parts: [{ type: "text", text: task.description }] }),
+    });
+    const data = await mResp.json();
+
+    const texts = (data.parts || []).filter(p => p.type === "text").map(p => p.text);
+    const output = texts.join("\n") || JSON.stringify(data);
 
     updateTask(taskId, {
       status: "completed",
       progress: 100,
       currentStep: "任务完成",
-      output: task.output || result,
+      output,
     });
     publishEvent(taskId, { type: "completed", status: "completed", message: "任务执行完成" });
 
