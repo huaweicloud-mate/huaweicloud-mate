@@ -1,6 +1,6 @@
-// cloud-server/server.js ¡ª A2A Server£¨Agent-to-Agent Ð­Òé£©
-// ²¿Êðµ½»ªÎªÔÆ£¬±©Â¶±ê×¼ A2A ½Ó¿Ú
-// ÄÚ²¿Í¨¹ý Docker É³ÏäÔËÐÐ Codex CLI£¬CLI ¿Éµ÷ÓÃ koocli/MCP/Skills/API
+// cloud-server/server.js ï¿½ï¿½ A2A Serverï¿½ï¿½Agent-to-Agent Ð­ï¿½é£©
+// ï¿½ï¿½ï¿½ðµ½»ï¿½Îªï¿½Æ£ï¿½ï¿½ï¿½Â¶ï¿½ï¿½×¼ A2A ï¿½Ó¿ï¿½
+// ï¿½Ú²ï¿½Í¨ï¿½ï¿½ Docker É³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Codex CLIï¿½ï¿½CLI ï¿½Éµï¿½ï¿½ï¿½ koocli/MCP/Skills/API
 
 import express from "express";
 import cors from "cors";
@@ -10,6 +10,7 @@ import { createTask, getTask, streamTask, cancelTask, listUserTasks } from "./ta
 import { getConcurrencyStats } from "./sandbox.js";
 import { getAgentCard } from "./agent-card.js";
 import { userStore } from "./auth.js";
+import { mcpRouter } from "./mcp-routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,18 +19,18 @@ app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 app.use(rateLimit({ windowMs: 60000, max: 120, keyGenerator: (req) => req.userId || req.ip }));
 
-// ========== A2A ±ê×¼½Ó¿Ú ==========
+// ========== A2A ï¿½ï¿½×¼ï¿½Ó¿ï¿½ ==========
 
-// GET /.well-known/agent.json ¡ª AgentCard£¨ÔÆ¶ËÄÜÁ¦ÉùÃ÷£©
+// GET /.well-known/agent.json ï¿½ï¿½ AgentCardï¿½ï¿½ï¿½Æ¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 app.get("/.well-known/agent.json", (req, res) => {
   res.json(getAgentCard());
 });
 
-// POST /tasks ¡ª Î¯ÍÐÈÎÎñ£¨ºËÐÄÈë¿Ú£©
-// ±¾µØ Agent Ëµ"²¿Êð Spring Boot"£¬ÔÆ¶Ë Agent ×Ô¼º¾ö¶¨ÓÃÊ²Ã´¹¤¾ß
+// POST /tasks ï¿½ï¿½ Î¯ï¿½ï¿½ï¿½ï¿½ï¿½ñ£¨ºï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½
+// ï¿½ï¿½ï¿½ï¿½ Agent Ëµ"ï¿½ï¿½ï¿½ï¿½ Spring Boot"ï¿½ï¿½ï¿½Æ¶ï¿½ Agent ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê²Ã´ï¿½ï¿½ï¿½ï¿½
 app.post("/tasks", authFlexible, async (req, res) => {
   const { description, context } = req.body;
-  if (!description) return res.status(400).json({ error: "È±ÉÙ description" });
+  if (!description) return res.status(400).json({ error: "È±ï¿½ï¿½ description" });
 
   try {
     const task = await createTask(req.userId, description, context || {}, req.user);
@@ -49,18 +50,18 @@ app.post("/tasks", authFlexible, async (req, res) => {
   }
 });
 
-// GET /tasks/:id ¡ª ²éÑ¯ÈÎÎñ×´Ì¬
+// GET /tasks/:id ï¿½ï¿½ ï¿½ï¿½Ñ¯ï¿½ï¿½ï¿½ï¿½×´Ì¬
 app.get("/tasks/:id", authFlexible, (req, res) => {
   const task = getTask(req.params.id);
-  if (!task) return res.status(404).json({ error: "ÈÎÎñ²»´æÔÚ" });
-  if (task.userId !== req.userId) return res.status(403).json({ error: "ÎÞÈ¨·ÃÎÊ" });
+  if (!task) return res.status(404).json({ error: "ï¿½ï¿½ï¿½ñ²»´ï¿½ï¿½ï¿½" });
+  if (task.userId !== req.userId) return res.status(403).json({ error: "ï¿½ï¿½È¨ï¿½ï¿½ï¿½ï¿½" });
 
   res.json({
     taskId: task.id,
     status: task.status,           // pending | working | completed | failed | cancelled
     description: task.description,
     progress: task.progress,        // 0-100
-    currentStep: task.currentStep,  // "ÕýÔÚ´´½¨ ECS..."
+    currentStep: task.currentStep,  // "ï¿½ï¿½ï¿½Ú´ï¿½ï¿½ï¿½ ECS..."
     artifacts: task.artifacts,      // [{ name, url, description }]
     output: task.output,
     error: task.error,
@@ -70,7 +71,7 @@ app.get("/tasks/:id", authFlexible, (req, res) => {
   });
 });
 
-// GET /tasks/:id/stream ¡ª SSE Á÷Ê½ÍÆËÍ½ø¶È
+// GET /tasks/:id/stream ï¿½ï¿½ SSE ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Í½ï¿½ï¿½ï¿½
 app.get("/tasks/:id/stream", authFlexible, (req, res) => {
   const task = getTask(req.params.id);
   if (!task) return res.status(404).end();
@@ -93,31 +94,31 @@ app.get("/tasks/:id/stream", authFlexible, (req, res) => {
   req.on("close", unsubscribe);
 });
 
-// DELETE /tasks/:id ¡ª È¡ÏûÈÎÎñ
+// DELETE /tasks/:id ï¿½ï¿½ È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 app.delete("/tasks/:id", authFlexible, async (req, res) => {
   const task = getTask(req.params.id);
-  if (!task) return res.status(404).json({ error: "ÈÎÎñ²»´æÔÚ" });
-  if (task.userId !== req.userId) return res.status(403).json({ error: "ÎÞÈ¨·ÃÎÊ" });
+  if (!task) return res.status(404).json({ error: "ï¿½ï¿½ï¿½ñ²»´ï¿½ï¿½ï¿½" });
+  if (task.userId !== req.userId) return res.status(403).json({ error: "ï¿½ï¿½È¨ï¿½ï¿½ï¿½ï¿½" });
 
   await cancelTask(req.params.id);
   res.json({ taskId: req.params.id, status: "cancelled" });
 });
 
-// GET /tasks ¡ª ÓÃ»§ÈÎÎñÁÐ±í
+// GET /tasks ï¿½ï¿½ ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð±ï¿½
 app.get("/tasks", authFlexible, (req, res) => {
   const tasks = listUserTasks(req.userId);
   res.json({ tasks, ...(req.issuedJwt ? { token: req.issuedJwt } : {}) });
 });
 
-// ========== ÓÃ»§×¢²á ==========
+// ========== ï¿½Ã»ï¿½×¢ï¿½ï¿½ ==========
 
 app.post("/api/v1/register", (req, res) => {
   const { userId, ak, sk, projectId, openaiKey, region } = req.body;
   if (!userId || !ak || !sk) {
-    return res.status(400).json({ error: "È±ÉÙ userId, ak, sk" });
+    return res.status(400).json({ error: "È±ï¿½ï¿½ userId, ak, sk" });
   }
   if (userStore.has(userId)) {
-    return res.status(409).json({ error: "ÓÃ»§ÒÑ´æÔÚ" });
+    return res.status(409).json({ error: "ï¿½Ã»ï¿½ï¿½Ñ´ï¿½ï¿½ï¿½" });
   }
   userStore.set(userId, { userId, ak, sk, projectId, openaiKey, createdAt: Date.now() });
 
@@ -125,9 +126,9 @@ app.post("/api/v1/register", (req, res) => {
   res.status(201).json({ ok: true, userId, token });
 });
 
-// ========== ½¡¿µ¼ì²é ==========
+// ========== ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ==========
 
-// GET /api/v1/concurrency ¡ª ²¢·¢×´Ì¬
+// GET /api/v1/concurrency ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½×´Ì¬
 app.get("/api/v1/concurrency", authFlexible, (req, res) => {
   res.json(getConcurrencyStats());
 });
@@ -141,7 +142,9 @@ app.get("/api/v1/health", (req, res) => {
   });
 });
 
+mcpRouter(app);
+
 app.listen(PORT, () => {
-  console.log(`[A2A Server] »ªÎªÔÆ Agent ÒÑÆô¶¯ ¡ú http://0.0.0.0:${PORT}`);
-  console.log(`[A2A Server] AgentCard ¡ú http://0.0.0.0:${PORT}/.well-known/agent.json`);
+  console.log(`[A2A Server] ï¿½ï¿½Îªï¿½ï¿½ Agent ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ http://0.0.0.0:${PORT}`);
+  console.log(`[A2A Server] AgentCard ï¿½ï¿½ http://0.0.0.0:${PORT}/.well-known/agent.json`);
 });
