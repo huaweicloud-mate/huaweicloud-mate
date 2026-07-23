@@ -30,16 +30,19 @@ async function main() {
 
   try {
     const QRCode = await import("qrcode");
-    const qrText = await QRCode.toString(loginUrl, { type: "terminal", small: true });
+    const { writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const qrPath = `${tmpdir()}/qrcode-login-${code}.png`;
+    await QRCode.toFile(qrPath, loginUrl, { type: "png", width: 400, margin: 2 });
     console.log("\n┌─ 请扫码登录 Huawei Cloud Agent ──────────────────────────┐");
-    console.log("│                                                           │");
-    qrText.split("\n").forEach(line => console.log("│  " + line));
-    console.log("│                                                           │");
+    console.log(`│                                                           │`);
+    console.log(`│  二维码图片: ${qrPath}                                      │`);
+    console.log(`│                                                           │`);
     console.log(`│  确认码: ${code}               有效期: 30 秒                   │`);
-    console.log("│  (扫码失败? 把确认码粘贴到聊天框即可)                       │");
-    console.log("└───────────────────────────────────────────────────────────┘\n");
-  } catch {
-    console.log(`确认码: ${code}   (qrcode 模块异常，无法显示二维码)`);
+    console.log(`│  (扫码失败? 把确认码粘贴到聊天框即可)                       │`);
+    console.log(`└───────────────────────────────────────────────────────────┘\n`);
+  } catch (e) {
+    console.log(`确认码: ${code}   (二维码生成失败: ${e.message})`);
   }
 
   for (let i = 0; i < MAX_POLLS; i++) {
