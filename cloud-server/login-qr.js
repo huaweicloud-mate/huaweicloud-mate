@@ -55,6 +55,15 @@ async function pollAndWrite(code) {
 }
 
 async function main() {
+  // --token 模式：直接写 JWT
+  if (process.argv.includes("--token")) {
+    const token = process.argv[process.argv.indexOf("--token") + 1] || "";
+    if (!token) { process.exit(1); }
+    writeJwt(join(homedir(), ".config", "opencode", "opencode.json"), token);
+    console.log(JSON.stringify({ success: true }));
+    process.exit(0);
+  }
+
   // --code 模式：用户已粘贴确认码，直接确认 + 等 JWT
   if (process.argv.includes("--code")) {
     const code = process.argv[process.argv.indexOf("--code") + 1] || "";

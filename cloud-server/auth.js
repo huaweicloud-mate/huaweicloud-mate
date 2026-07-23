@@ -193,17 +193,25 @@ export function authFlexible(req, res, next) {
 }
 
 // ========== 登录码管理 ==========
-const CODE_TTL_MS = 30000; // 30 秒
-const loginCodeStore = new Map(); // code → { createdAt, confirmed, userId }
+const CODE_TTL_MS = 30000;
+const loginCodeStore = new Map();
+const loginIntentStore = new Map(); // code → intent
 
-function generateLoginCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 去掉易混淆字符 I/O/0/1
+function generateLoginCode(intent) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code;
   do {
     code = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
   } while (loginCodeStore.has(code));
   loginCodeStore.set(code, { createdAt: Date.now(), confirmed: false, userId: null });
+  if (intent) loginIntentStore.set(code, intent);
   return code;
+}
+
+function getLoginIntent(code) {
+  const intent = loginIntentStore.get(code);
+  loginIntentStore.delete(code);
+  return intent;
 }
 
 function confirmLoginCode(code) {
@@ -237,4 +245,4 @@ function pollLoginCode(code) {
   return { confirmed: false };
 }
 
-export { issueJwt, registerUser, verifyJwt, userStore, JWT_SECRET, SESSION_TIMEOUT_MS, generateLoginCode, confirmLoginCode, pollLoginCode };
+export { issueJwt, registerUser, verifyJwt, userStore, JWT_SECRET, SESSION_TIMEOUT_MS, generateLoginCode, confirmLoginCode, pollLoginCode, getLoginIntent };
