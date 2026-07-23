@@ -7,10 +7,11 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
-    "express": "^5.0.0",
+    "@kubernetes/client-node": "^0.22.0",
     "cors": "^2.8.0",
+    "express": "^5.0.0",
     "express-rate-limit": "^7.0.0",
     "jsonwebtoken": "^9.0.0",
-    "@kubernetes/client-node": "^0.22.0"
+    "qrcode": "^1.5.4"
   }
 }
