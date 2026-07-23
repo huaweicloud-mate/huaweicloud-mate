@@ -23,11 +23,11 @@ const OPERATION_PATTERNS = [
 ];
 
 function isCapabilityOnly(intent) {
-  for (const p of OPERATION_PATTERNS) {
-    if (p.test(intent)) return false;
-  }
   for (const p of CAPABILITY_PATTERNS) {
     if (p.test(intent)) return true;
+  }
+  for (const p of OPERATION_PATTERNS) {
+    if (p.test(intent)) return false;
   }
   return false;
 }
@@ -110,7 +110,7 @@ export function mcpRouter(app) {
       });
     }
 
-    const intent = args?.intent || "";
+    const intent = (args?.intent || "").trim();
     if (!intent) {
       return res.json({
         jsonrpc: "2.0", id: call.id,
