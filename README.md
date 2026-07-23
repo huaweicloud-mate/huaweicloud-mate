@@ -79,12 +79,17 @@ curl http://localhost:3000/api/v1/health
 ### 部署到 CCE
 
 ```bash
-# 1. 构建镜像
-docker build -t server -f cloud-server/Dockerfile.server .
-docker build -t sandbox -f cloud-server/Dockerfile.sandbox .
-docker tag server swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/server:latest
-docker tag sandbox swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/sandbox:latest
+# 1. 构建镜像（版本号 YYYYMMDDHHmmss）
+VERSION=$(date +%Y%m%d%H%M%S)
+docker build -t server:${VERSION} -f cloud-server/Dockerfile.server .
+docker build -t sandbox:${VERSION} -f cloud-server/Dockerfile.sandbox .
+docker tag server:${VERSION} swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/server:${VERSION}
+docker tag server:${VERSION} swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/server:latest
+docker tag sandbox:${VERSION} swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/sandbox:${VERSION}
+docker tag sandbox:${VERSION} swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/sandbox:latest
+docker push swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/server:${VERSION}
 docker push swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/server:latest
+docker push swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/sandbox:${VERSION}
 docker push swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/sandbox:latest
 
 # 2. 基础设施 (Terraform)

@@ -69,6 +69,10 @@ async function getOrCreateContainer(userId, user) {
   activeJobs.set(userId, { jobName, startTime: Date.now() });
   jobStatusCache.set(jobName, { podName, podIp, phase: "Running" });
 
+  // Wait for opencode to be actually ready
+  await waitForSandboxReady(podIp);
+  console.log(`[sandbox] ${userId} pod ${podName} ready at ${podIp}:3005`);
+
   return { id: podName, podIp };
 }
 
@@ -91,8 +95,19 @@ async function getPodIp(podName) {
   return body.status.podIP;
 }
 
+async function waitForSandboxReady(podIp) {
+  for (let i = 0; i < 30; i++) {
+    try {
+      const resp = await fetch(`http://${podIp}:3005/`);
+      if (resp.ok) return;
+    } catch {}
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  throw new Error("Sandbox not ready after 60s");
+}
+
 async function execInContainer(container, cmd) {
-  const resp = await fetch(`http://${container.podIp}:3005/global/health`);
+  const resp = await fetch(`http://${container.podIp}:3005/`);
   if (!resp.ok) throw new Error("Sandbox not healthy");
   return "ok";
 }

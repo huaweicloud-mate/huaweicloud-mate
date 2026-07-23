@@ -18,7 +18,7 @@ resource "huaweicloud_vpc_subnet" "agent_subnet" {
   gateway_ip = cidrhost(var.subnet_cidr, 1)
 }
 
-# EIP
+# EIP for CCE cluster
 resource "huaweicloud_vpc_eip" "agent_eip" {
   publicip { type = "5_bgp" }
   bandwidth {
@@ -27,6 +27,31 @@ resource "huaweicloud_vpc_eip" "agent_eip" {
     share_type  = "PER"
     charge_mode = "traffic"
   }
+}
+
+# NAT Gateway + SNAT (CCE Pod 出公网访问 DeepSeek API)
+resource "huaweicloud_nat_gateway" "agent_nat" {
+  name      = "${var.cluster_name}-nat"
+  spec      = "1"
+  vpc_id    = huaweicloud_vpc.agent_vpc.id
+  subnet_id = huaweicloud_vpc_subnet.agent_subnet.id
+}
+
+# EIP for NAT
+resource "huaweicloud_vpc_eip" "nat_eip" {
+  publicip { type = "5_bgp" }
+  bandwidth {
+    name        = "${var.cluster_name}-nat-eip"
+    size        = 10
+    share_type  = "PER"
+    charge_mode = "traffic"
+  }
+}
+
+resource "huaweicloud_nat_snat_rule" "agent_snat" {
+  nat_gateway_id = huaweicloud_nat_gateway.agent_nat.id
+  floating_ip_id = huaweicloud_vpc_eip.nat_eip.id
+  subnet_id      = huaweicloud_vpc_subnet.agent_subnet.id
 }
 
 # CCE Cluster
@@ -71,4 +96,47 @@ resource "huaweicloud_obs_bucket" "agent_bucket" {
 # SWR Organization
 resource "huaweicloud_swr_organization" "agent_org" {
   name = "huaweicloud-agent"
+}
+
+# Builder ECS (amd64, 用于构建 Docker 镜像)
+resource "huaweicloud_compute_instance" "builder" {
+  name       = "agent-builder"
+  image_name = "Ubuntu 22.04 server 64bit"
+  flavor_id  = "s6.large.2"
+  admin_pass = "Huawei@123456"
+
+  network {
+    uuid = huaweicloud_vpc_subnet.agent_subnet.id
+  }
+
+  system_disk_type = "SSD"
+  system_disk_size = 40
+
+  user_data = <<-EOT
+#!/bin/bash
+sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/" /etc/ssh/sshd_config
+sed -i "s/#PermitRootLogin prohibit-password/PermitRootLogin yes/" /etc/ssh/sshd_config
+systemctl restart sshd
+curl -fsSL https://get.docker.com | bash
+systemctl enable docker --now
+mkdir -p /etc/docker
+echo '{"registry-mirrors":["https://docker.m.daocloud.io"]}' > /etc/docker/daemon.json
+systemctl restart docker
+EOT
+}
+
+# EIP for builder
+resource "huaweicloud_vpc_eip" "builder_eip" {
+  publicip { type = "5_bgp" }
+  bandwidth {
+    name        = "agent-builder-eip"
+    size        = 5
+    share_type  = "PER"
+    charge_mode = "traffic"
+  }
+}
+
+resource "huaweicloud_compute_eip_associate" "builder_eip_assoc" {
+  public_ip   = huaweicloud_vpc_eip.builder_eip.address
+  instance_id = huaweicloud_compute_instance.builder.id
 }

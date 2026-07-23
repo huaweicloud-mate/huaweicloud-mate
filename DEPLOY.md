@@ -19,16 +19,61 @@ export DEEPSEEK_API_KEY="sk-..."
 
 ---
 
+## 镜像说明
+
+项目包含两个 Docker 镜像，均存放于 SWR 组织 `huaweicloud-agent`：
+
+### server 镜像
+
+| 项目 | 说明 |
+|------|------|
+| **定位** | A2A 服务端（常驻服务） |
+| **Dockerfile** | `cloud-server/Dockerfile.server` |
+| **基础镜像** | `node:22-alpine` |
+| **端口** | `3000` |
+| **运行模式** | CCE Deployment，1 副本常驻 |
+| **职责** | 接收 A2A/MCP 请求 → SigV4/JWT 鉴权 → 创建 K8s Job → 代理任务到 Sandbox Pod → SSE 流式回传 |
+
+### sandbox 镜像
+
+| 项目 | 说明 |
+|------|------|
+| **定位** | 按需沙箱（按用户/任务动态创建） |
+| **Dockerfile** | `cloud-server/Dockerfile.sandbox` |
+| **基础镜像** | `node:22-alpine` |
+| **端口** | `3005`（opencode serve） |
+| **运行模式** | K8s Job（`sandbox-{userId}`），ttl 30min 自动清理 |
+| **内置组件** | `opencode-ai` + `huaweicloud-mate` MCP 插件 + `hcloud` KooCLI |
+| **职责** | 接收 AK/SK 环境变量 → 启动 opencode → 注册 mate-npx → 执行华为云操作 → 返回结果 |
+
+### 镜像版本号
+
+版本号采用时间戳格式，精确到秒：
+
+```
+YYYYMMDDHHmmss
+```
+
+示例：`20260630181701` 表示 2026 年 6 月 30 日 18:17:01。
+
+> 构建时使用 `docker tag` 打上对应版本标签及 `latest` 标签，便于回滚与追溯。
+
+---
+
 ## 1. 构建镜像
 
 ```bash
 cd /home/developer/Desktop/huaweicloud-agent-demo
 
+VERSION=$(date +%Y%m%d%H%M%S)
+
 # 构建 A2A Server 镜像
-docker build -t huaweicloud-agent/server:latest -f cloud-server/Dockerfile.server cloud-server/
+docker build -t huaweicloud-agent/server:${VERSION} -f cloud-server/Dockerfile.server cloud-server/
+docker tag huaweicloud-agent/server:${VERSION} huaweicloud-agent/server:latest
 
 # 构建沙箱镜像
-docker build -t huaweicloud-agent/sandbox:latest -f cloud-server/Dockerfile.sandbox cloud-server/
+docker build -t huaweicloud-agent/sandbox:${VERSION} -f cloud-server/Dockerfile.sandbox cloud-server/
+docker tag huaweicloud-agent/sandbox:${VERSION} huaweicloud-agent/sandbox:latest
 ```
 
 ---
@@ -39,12 +84,16 @@ docker build -t huaweicloud-agent/sandbox:latest -f cloud-server/Dockerfile.sand
 # 登录 SWR
 docker login -u cn-south-1@${HW_ACCESS_KEY} -p ${HW_SECRET_KEY} swr.cn-south-1.myhuaweicloud.com
 
-# 打标签
+# 打标签（版本号 + latest）
+docker tag huaweicloud-agent/server:${VERSION} swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/server:${VERSION}
 docker tag huaweicloud-agent/server:latest swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/server:latest
+docker tag huaweicloud-agent/sandbox:${VERSION} swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:${VERSION}
 docker tag huaweicloud-agent/sandbox:latest swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:latest
 
 # 推送
+docker push swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/server:${VERSION}
 docker push swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/server:latest
+docker push swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:${VERSION}
 docker push swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:latest
 ```
 

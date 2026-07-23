@@ -81,7 +81,7 @@ export function mcpRouter(app) {
           if (event.status === "completed") {
             clearTimeout(timeout);
             unsubscribe();
-            resolve(event.message || task.output || "任务完成");
+            resolve(task.output || event.message || "任务完成");
           } else if (event.status === "failed") {
             clearTimeout(timeout);
             unsubscribe();
