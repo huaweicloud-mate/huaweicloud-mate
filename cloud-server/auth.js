@@ -237,4 +237,4 @@ function pollLoginCode(code) {
   return { confirmed: false };
 }
 
-export { issueJwt, registerUser, userStore, JWT_SECRET, SESSION_TIMEOUT_MS, generateLoginCode, confirmLoginCode, pollLoginCode };
+export { issueJwt, registerUser, verifyJwt, userStore, JWT_SECRET, SESSION_TIMEOUT_MS, generateLoginCode, confirmLoginCode, pollLoginCode };

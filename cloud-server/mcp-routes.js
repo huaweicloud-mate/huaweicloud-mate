@@ -1,6 +1,6 @@
 // cloud-server/mcp-routes.js — MCP over HTTP 端点
 import { createTask, streamTask } from "./task-manager.js";
-import { authFlexible } from "./auth.js";
+import { verifyJwt, userStore, generateLoginCode } from "./auth.js";
 
 export function mcpRouter(app) {
 
@@ -44,8 +44,8 @@ export function mcpRouter(app) {
     next();
   });
 
-  // tools/call — 需要认证
-  app.post("/mcp", authFlexible, async (req, res) => {
+  // tools/call — JWT 校验在方法内处理，失败时返回 AUTH_REQUIRED 而非 401
+  app.post("/mcp", async (req, res) => {
     const call = req.body;
 
     if (!call || call.method !== "tools/call") {
@@ -60,6 +60,39 @@ export function mcpRouter(app) {
       });
     }
 
+    // JWT 校验
+    const authHeader = req.headers.authorization || "";
+    let userId = null;
+    let user = null;
+    if (authHeader.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const payload = verifyJwt(token);
+      if (payload) {
+        const u = userStore.get(payload.sub);
+        if (u) {
+          userId = payload.sub;
+          user = u;
+        }
+      }
+    }
+
+    if (!userId) {
+      const code = generateLoginCode();
+      return res.json({
+        jsonrpc: "2.0", id: call.id,
+        result: {
+          content: [{
+            type: "text",
+            text: JSON.stringify({
+              type: "AUTH_REQUIRED",
+              code,
+              message: "需要登录认证，请执行 node cloud-server/login-qr.js 扫码登录"
+            }),
+          }],
+        },
+      });
+    }
+
     const intent = args?.intent || "";
     if (!intent) {
       return res.json({
@@ -69,7 +102,7 @@ export function mcpRouter(app) {
     }
 
     try {
-      const task = await createTask(req.userId, intent, { source: "mcp" }, req.user);
+      const task = await createTask(userId, intent, { source: "mcp" }, user);
 
       const text = await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
