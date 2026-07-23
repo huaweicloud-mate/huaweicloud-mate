@@ -144,6 +144,18 @@ app.get("/api/v1/health", (req, res) => {
 
 // ========== 二维码登录 ==========
 
+import { readFile } from "node:fs/promises";
+
+app.get("/auth/qr/:code.png", async (req, res) => {
+  try {
+    const img = await readFile(`/tmp/qrcode-login-${req.params.code}.png`);
+    res.setHeader("Content-Type", "image/png");
+    res.send(img);
+  } catch {
+    res.status(404).send("QR not found");
+  }
+});
+
 app.post("/auth/login", (req, res) => {
   const code = generateLoginCode();
   res.json({ code, expiresIn: 30 });

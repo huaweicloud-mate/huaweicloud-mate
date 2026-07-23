@@ -2,7 +2,6 @@
 import { createTask, streamTask } from "./task-manager.js";
 import { verifyJwt, userStore, generateLoginCode } from "./auth.js";
 import QRCode from "qrcode";
-import { tmpdir } from "node:os";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,12 +55,12 @@ export function mcpRouter(app) {
             {
               name: "huaweicloud_search",
               description:
-                "搜索华为云能力索引，查询产品功能、规格说明、操作步骤。不需要登录。\n" +
-                "示例: 'ECS 有哪些规格' / 'OBS 桶怎么创建' / 'VPC 的安全组规则'",
+                "搜索华为云能力索引，查产品功能、规格参数、某个区域有哪些能力、操作文档。不需要登录。\n" +
+                "适用: 'ECS 有哪些规格' / 'cn-south-1 支持什么 ECS 规格' / 'OBS 怎么创建'",
               inputSchema: {
                 type: "object",
                 properties: {
-                  query: { type: "string", description: "搜索关键词（产品名、功能名、操作名）" },
+                  query: { type: "string", description: "搜索关键词（产品名、功能名、规格、操作名）" },
                 },
                 required: ["query"],
               },
@@ -69,8 +68,8 @@ export function mcpRouter(app) {
             {
               name: "huaweicloud_invoke",
               description:
-                "操作华为云实时资源。需要登录认证。支持查询、创建、修改、删除资源。\n" +
-                "示例: '查 cn-south-1 的 ECS 实例' / '列出 OBS 桶' / '创建 VPC'",
+                "操作华为云实时资源——查询/创建/修改/删除你账号下的真实资源。需要登录认证。\n" +
+                "不用来查规格文档。示例: '列出我的 ECS 实例' / '创建 VPC' / '删除 OBS 桶'",
               inputSchema: {
                 type: "object",
                 properties: {
@@ -142,19 +141,20 @@ export function mcpRouter(app) {
 
       if (!userId) {
         const code = generateLoginCode();
-        const qrPath = `${tmpdir()}/qrcode-login-${code}.png`;
+        const qrPath = `/tmp/qrcode-login-${code}.png`;
         await QRCode.toFile(qrPath, `http://127.0.0.1:3000/auth/confirm/${code}`, { type: "png", width: 400, margin: 2 });
+        const qrUrl = `http://127.0.0.1:3000/auth/qr/${code}.png`;
         return res.json({
           jsonrpc: "2.0", id: call.id,
           result: {
             content: [{
               type: "text",
-              text: JSON.stringify({
-                type: "AUTH_REQUIRED",
-                code,
-                qrImage: qrPath,
-                message: `扫码或粘贴确认码 ${code} 到聊天框完成登录，有效期 30 秒`
-              }),
+            text: JSON.stringify({
+              type: "AUTH_REQUIRED",
+              code,
+              qrImage: qrUrl,
+              message: `扫码或粘贴确认码 ${code} 到聊天框完成登录，有效期 30 秒`
+            }),
             }],
           },
         });
