@@ -7,7 +7,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CAPABILITY_INDEX = JSON.parse(readFileSync(join(__dirname, "..", "huaweicloud-mate", "data", "capability_index.json"), "utf8"));
+const CAPABILITY_INDEX = JSON.parse(readFileSync(join(__dirname, "capability_index.json"), "utf8"));
 const { catalog, search_index } = CAPABILITY_INDEX;
 
 // 判断 intent 是否只需要能力查询（不需要调 API）
