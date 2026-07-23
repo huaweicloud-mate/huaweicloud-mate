@@ -1,6 +1,8 @@
 // cloud-server/mcp-routes.js — MCP over HTTP 端点
 import { createTask, streamTask } from "./task-manager.js";
 import { verifyJwt, userStore, generateLoginCode } from "./auth.js";
+import QRCode from "qrcode";
+import { tmpdir } from "node:os";
 
 export function mcpRouter(app) {
 
@@ -78,6 +80,8 @@ export function mcpRouter(app) {
 
     if (!userId) {
       const code = generateLoginCode();
+      const qrPath = `${tmpdir()}/qrcode-login-${code}.png`;
+      await QRCode.toFile(qrPath, `http://127.0.0.1:3000/auth/confirm/${code}`, { type: "png", width: 400, margin: 2 });
       return res.json({
         jsonrpc: "2.0", id: call.id,
         result: {
@@ -86,7 +90,8 @@ export function mcpRouter(app) {
             text: JSON.stringify({
               type: "AUTH_REQUIRED",
               code,
-              message: "需要登录认证，请执行 node cloud-server/login-qr.js 扫码登录"
+              qrImage: qrPath,
+              message: `扫码或粘贴确认码 ${code} 到聊天框完成登录，有效期 30 秒`
             }),
           }],
         },

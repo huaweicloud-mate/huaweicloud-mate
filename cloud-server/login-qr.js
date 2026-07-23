@@ -16,7 +16,61 @@ function getLocalIp() {
   }
 }
 
+function writeJwt(configPath, token) {
+  let config = {};
+  if (existsSync(configPath)) {
+    config = JSON.parse(readFileSync(configPath, "utf8"));
+  }
+  if (!config.mcp) config.mcp = {};
+  if (!config.mcp["huaweicloud-agent"]) config.mcp["huaweicloud-agent"] = {};
+  if (!config.mcp["huaweicloud-agent"].headers) config.mcp["huaweicloud-agent"].headers = {};
+  config.mcp["huaweicloud-agent"].headers.Authorization = `Bearer ${token}`;
+  writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
+}
+
+async function pollAndWrite(code) {
+  for (let i = 0; i < MAX_POLLS; i++) {
+    await new Promise(r => setTimeout(r, POLL_INTERVAL));
+    let pollResp;
+    try {
+      pollResp = await fetch(`${A2A_URL}/auth/token/${code}`);
+    } catch {
+      process.exit(2);
+    }
+    const result = await pollResp.json();
+
+    if (result.expired) {
+      console.error(JSON.stringify({ success: false, error: "确认码已过期" }));
+      process.exit(1);
+    }
+
+    if (result.confirmed && result.token) {
+      const configPath = join(homedir(), ".config", "opencode", "opencode.json");
+      writeJwt(configPath, result.token);
+      console.log(JSON.stringify({ success: true, token: result.token.substring(0, 20) + "..." }));
+      process.exit(0);
+    }
+  }
+  process.exit(1);
+}
+
 async function main() {
+  // --code 模式：用户已粘贴确认码，直接确认 + 等 JWT
+  if (process.argv.includes("--code")) {
+    const code = process.argv[process.argv.indexOf("--code") + 1] || "";
+    if (!code) {
+      console.error(JSON.stringify({ success: false, error: "缺少确认码" }));
+      process.exit(1);
+    }
+    try {
+      await fetch(`${A2A_URL}/auth/confirm/${code}`);
+    } catch {
+      process.exit(2);
+    }
+    await pollAndWrite(code);
+  }
+
+  // 完整模式：生成二维码 + 轮询
   let loginResp;
   try {
     loginResp = await fetch(`${A2A_URL}/auth/login`, { method: "POST" });
@@ -30,9 +84,7 @@ async function main() {
 
   try {
     const QRCode = await import("qrcode");
-    const { writeFileSync } = await import("node:fs");
-    const { tmpdir } = await import("node:os");
-    const qrPath = `${tmpdir()}/qrcode-login-${code}.png`;
+    const qrPath = `/tmp/qrcode-login-${code}.png`;
     await QRCode.toFile(qrPath, loginUrl, { type: "png", width: 400, margin: 2 });
     console.log("\n┌─ 请扫码登录 Huawei Cloud Agent ──────────────────────────┐");
     console.log(`│                                                           │`);
@@ -45,41 +97,7 @@ async function main() {
     console.log(`确认码: ${code}   (二维码生成失败: ${e.message})`);
   }
 
-  for (let i = 0; i < MAX_POLLS; i++) {
-    await new Promise(r => setTimeout(r, POLL_INTERVAL));
-    let pollResp;
-    try {
-      pollResp = await fetch(`${A2A_URL}/auth/token/${code}`);
-    } catch {
-      console.error(JSON.stringify({ success: false, error: "轮询网络错误" }));
-      process.exit(2);
-    }
-    const result = await pollResp.json();
-
-    if (result.expired) {
-      console.error(JSON.stringify({ success: false, error: "确认码已过期" }));
-      process.exit(1);
-    }
-
-    if (result.confirmed && result.token) {
-      const configPath = join(homedir(), ".config", "opencode", "opencode.json");
-      let config = {};
-      if (existsSync(configPath)) {
-        config = JSON.parse(readFileSync(configPath, "utf8"));
-      }
-      if (!config.mcp) config.mcp = {};
-      if (!config.mcp["huaweicloud-agent"]) config.mcp["huaweicloud-agent"] = {};
-      if (!config.mcp["huaweicloud-agent"].headers) config.mcp["huaweicloud-agent"].headers = {};
-      config.mcp["huaweicloud-agent"].headers.Authorization = `Bearer ${result.token}`;
-      writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n");
-
-      console.log(JSON.stringify({ success: true, token: result.token.substring(0, 20) + "..." }));
-      process.exit(0);
-    }
-  }
-
-  console.error(JSON.stringify({ success: false, error: "等待超时" }));
-  process.exit(1);
+  await pollAndWrite(code);
 }
 
 main();
