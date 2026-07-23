@@ -155,18 +155,14 @@ app.get("/auth/confirm/:code", (req, res) => {
   if (token) {
     res.send(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>登录确认</title><style>
+<title>登录成功</title><style>
 body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5}
 .box{background:#fff;border-radius:12px;padding:32px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.1)}
-h2{color:#333;margin:0 0 12px}p{color:#666;margin:0 0 20px}
-.btn{display:inline-block;padding:12px 32px;background:#1664ff;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;text-decoration:none}
-.btn:hover{background:#0e4fd9}
-.done{color:#0a0;font-weight:bold;font-size:18px}
+h2{color:#0a0;margin:0 0 12px}.done{font-weight:bold;font-size:18px}
+p{color:#666;margin:0}
 </style></head><body>
-<div class="box"><h2>Huawei Cloud Agent</h2>
-<p>终端正在等待确认登录...</p>
-<a class="btn" href="/auth/confirm/${req.params.code}">点此确认登录</a>
-</div></body></html>`);
+<div class="box"><h2 class="done">已确认</h2><p>返回终端继续操作</p></div>
+</body></html>`);
   } else {
     res.status(404).send(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
