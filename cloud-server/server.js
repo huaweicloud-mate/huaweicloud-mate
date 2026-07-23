@@ -5,7 +5,7 @@
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import { authFlexible, issueJwt } from "./auth.js";
+import { authFlexible, issueJwt, generateLoginCode, confirmLoginCode, pollLoginCode } from "./auth.js";
 import { createTask, getTask, streamTask, cancelTask, listUserTasks } from "./task-manager.js";
 import { getConcurrencyStats } from "./sandbox.js";
 import { getAgentCard } from "./agent-card.js";
@@ -140,6 +140,49 @@ app.get("/api/v1/health", (req, res) => {
     users: userStore.size,
     uptime: process.uptime(),
   });
+});
+
+// ========== 二维码登录 ==========
+
+app.post("/auth/login", (req, res) => {
+  const code = generateLoginCode();
+  res.json({ code, expiresIn: 30 });
+});
+
+app.get("/auth/confirm/:code", (req, res) => {
+  const token = confirmLoginCode(req.params.code);
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  if (token) {
+    res.send(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>登录确认</title><style>
+body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5}
+.box{background:#fff;border-radius:12px;padding:32px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+h2{color:#333;margin:0 0 12px}p{color:#666;margin:0 0 20px}
+.btn{display:inline-block;padding:12px 32px;background:#1664ff;color:#fff;border:none;border-radius:8px;font-size:16px;cursor:pointer;text-decoration:none}
+.btn:hover{background:#0e4fd9}
+.done{color:#0a0;font-weight:bold;font-size:18px}
+</style></head><body>
+<div class="box"><h2>Huawei Cloud Agent</h2>
+<p>终端正在等待确认登录...</p>
+<a class="btn" href="/auth/confirm/${req.params.code}">点此确认登录</a>
+</div></body></html>`);
+  } else {
+    res.status(404).send(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>确认码无效</title><style>
+body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5}
+.box{background:#fff;border-radius:12px;padding:32px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+h2{color:#c00}p{color:#666}
+</style></head><body>
+<div class="box"><h2>确认码无效或已过期</h2><p>请返回终端重新发起登录</p></div>
+</body></html>`);
+  }
+});
+
+app.get("/auth/token/:code", (req, res) => {
+  const result = pollLoginCode(req.params.code);
+  res.json(result);
 });
 
 mcpRouter(app);
