@@ -192,4 +192,49 @@ export function authFlexible(req, res, next) {
   return authWithAkSk(req, res, next);
 }
 
-export { issueJwt, registerUser, userStore, JWT_SECRET, SESSION_TIMEOUT_MS };
+// ========== 登录码管理 ==========
+const CODE_TTL_MS = 30000; // 30 秒
+const loginCodeStore = new Map(); // code → { createdAt, confirmed, userId }
+
+function generateLoginCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 去掉易混淆字符 I/O/0/1
+  let code;
+  do {
+    code = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  } while (loginCodeStore.has(code));
+  loginCodeStore.set(code, { createdAt: Date.now(), confirmed: false, userId: null });
+  return code;
+}
+
+function confirmLoginCode(code) {
+  const entry = loginCodeStore.get(code);
+  if (!entry) return null;
+  if (Date.now() - entry.createdAt > CODE_TTL_MS) {
+    loginCodeStore.delete(code);
+    return null;
+  }
+  // 取第一个已注册用户
+  const users = Array.from(userStore.values());
+  if (users.length === 0) return null;
+  const userId = users[0].userId;
+  entry.confirmed = true;
+  entry.userId = userId;
+  return issueJwt(userId);
+}
+
+function pollLoginCode(code) {
+  const entry = loginCodeStore.get(code);
+  if (!entry) return { confirmed: false, expired: true };
+  if (Date.now() - entry.createdAt > CODE_TTL_MS) {
+    loginCodeStore.delete(code);
+    return { confirmed: false, expired: true };
+  }
+  if (entry.confirmed) {
+    const token = issueJwt(entry.userId);
+    loginCodeStore.delete(code);
+    return { confirmed: true, token };
+  }
+  return { confirmed: false };
+}
+
+export { issueJwt, registerUser, userStore, JWT_SECRET, SESSION_TIMEOUT_MS, generateLoginCode, confirmLoginCode, pollLoginCode };
