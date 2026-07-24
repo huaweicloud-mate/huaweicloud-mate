@@ -1,0 +1,26 @@
+name: Sync to GitCode
+
+on:
+  push:
+    branches: ["*"]
+  delete:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror to GitCode
+        run: |
+          REPO_NAME=$(basename "${{ github.repository }}")
+          GITCODE_URL="https://${{ secrets.GITCODE_USERNAME }}:${{ secrets.GITCODE_TOKEN }}@gitcode.com/hd-vector/huaweicloud-mate.git"
+          git remote add gitcode "${GITCODE_URL}"
+          git push gitcode --all --force
+          git push gitcode --tags --force
+
