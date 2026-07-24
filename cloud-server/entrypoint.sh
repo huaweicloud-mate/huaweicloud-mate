@@ -8,9 +8,11 @@ huaweicloud_access_key = ${HW_ACCESS_KEY}
 huaweicloud_secret_key = ${HW_SECRET_KEY}
 EOF
 
+hcloud configure set --cli-agree=true 2>/dev/null || true
+
 hcloud configure list 2>/dev/null || true
 
-opencode serve --port 3005 --hostname 127.0.0.1 &
+opencode serve --port 3005 --hostname 0.0.0.0 &
 OP_SERVER=$!
 
 for i in $(seq 1 30); do

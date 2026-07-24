@@ -2,12 +2,10 @@ FROM node:22-alpine
 
 RUN apk add --no-cache curl bash
 
-ARG KOO_CLI_URL=https://obs.cn-south-1.myhuaweicloud.com/cli/latest/hcloud_install.sh
+ARG KOO_CLI_URL=https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest/hcloud_install.sh
 RUN curl -fsSL ${KOO_CLI_URL} -o /tmp/hcloud_install.sh \
     && bash /tmp/hcloud_install.sh -y \
-    && rm /tmp/hcloud_install.sh \
-    && hcloud version \
-    || echo "[WARN] hcloud install failed"
+    && rm /tmp/hcloud_install.sh
 
 RUN npm install -g opencode-ai
 RUN npm install -g huaweicloud-mate@latest

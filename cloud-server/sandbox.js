@@ -3,7 +3,7 @@
 import k8s from "@kubernetes/client-node";
 
 const kc = new k8s.KubeConfig();
-kc.loadFromCluster();
+kc.loadFromDefault();
 
 const batchApi = kc.makeApiClient(k8s.BatchV1Api);
 const coreApi = kc.makeApiClient(k8s.CoreV1Api);
@@ -38,6 +38,7 @@ async function getOrCreateContainer(userId, user) {
       ttlSecondsAfterFinished: 1800,
       template: {
         spec: {
+          imagePullSecrets: [{ name: "swr-secret" }],
           restartPolicy: "Never",
           containers: [{
             name: "sandbox",
@@ -62,7 +63,14 @@ async function getOrCreateContainer(userId, user) {
     },
   };
 
-  const { body } = await batchApi.createNamespacedJob(NAMESPACE, job);
+  const { body } = await batchApi.createNamespacedJob(NAMESPACE, job).catch(async (err) => {
+    if (err.statusCode === 409) {
+      console.log(`[sandbox] ${userId} job exists, reusing`);
+      const existing = await batchApi.readNamespacedJob(jobName, NAMESPACE);
+      return existing;
+    }
+    throw err;
+  });
   const podName = await waitForPodReady(jobName);
   const podIp = await getPodIp(podName);
 
@@ -77,7 +85,7 @@ async function getOrCreateContainer(userId, user) {
 }
 
 async function waitForPodReady(jobName) {
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 90; i++) {
     const { body } = await coreApi.listNamespacedPod(
       NAMESPACE, undefined, undefined, undefined, undefined,
       `job-name=${jobName}`
@@ -96,7 +104,7 @@ async function getPodIp(podName) {
 }
 
 async function waitForSandboxReady(podIp) {
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 60; i++) {
     try {
       const resp = await fetch(`http://${podIp}:3005/`);
       if (resp.ok) return;
