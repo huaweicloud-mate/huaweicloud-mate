@@ -78,7 +78,10 @@ export function mcpRouter(app) {
       const payload = verifyJwt(authHeader.slice(7));
       if (payload) { const u = userStore.get(payload.sub); if (u) { userId = payload.sub; user = u; } }
     }
-    if (!userId) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "未登录。请先调用 huaweicloud_login 获取验证码，扫码后调用 huaweicloud_confirm 完成登录。" }], isError: true } });
+    if (!userId) {
+      const code = generateLoginCode(intent);
+      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ type: "AUTH_REQUIRED", code, qrImage: `http://127.0.0.1:3000/auth/qr/${code}.png`, message: `需要登录认证。扫码或在聊天框输入确认码 ${code}，然后调用 huaweicloud_confirm 完成登录。30 秒有效` }) }] } });
+    }
 
     try {
       const task = await createTask(userId, intent, { source: "mcp" }, user);
