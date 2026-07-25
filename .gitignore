@@ -1,0 +1,11 @@
+
+# Terraform state (含集群证书、EIP)
+*.tfstate
+*.tfstate.backup
+
+# 本地配置
+opencode.json
+.config/
+.terraform/
+node_modules/
+node_modules/

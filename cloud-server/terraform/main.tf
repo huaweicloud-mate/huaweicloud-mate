@@ -98,7 +98,54 @@ resource "huaweicloud_swr_organization" "agent_org" {
   name = "huaweicloud-agent"
 }
 
-# Builder ECS (amd64, 用于构建 Docker 镜像)
+# DCS Redis (替代内存存储)
+resource "huaweicloud_dcs_instance" "agent_redis" {
+  name              = "${var.cluster_name}-redis"
+  engine            = "Redis"
+  engine_version    = "5.0"
+  capacity          = 1
+  flavor            = "redis.single.xu1.large.1"
+  vpc_id            = huaweicloud_vpc.agent_vpc.id
+  subnet_id         = huaweicloud_vpc_subnet.agent_subnet.id
+  available_zones = ["cn-south-1a"]
+  password          = "hdkitservice@2024"
+}
+
+# RDS MySQL（代金券领取记录）
+resource "huaweicloud_rds_instance" "agent_db" {
+  name              = "${var.cluster_name}-mysql"
+  flavor            = "rds.mysql.c2.medium.ha"
+  vpc_id            = huaweicloud_vpc.agent_vpc.id
+  subnet_id         = huaweicloud_vpc_subnet.agent_subnet.id
+  security_group_id = huaweicloud_networking_secgroup.agent_sg.id
+  availability_zone = ["cn-south-1a"]
+
+  db {
+    type     = "MySQL"
+    version  = "8.0"
+    password = "Hdkit@2024Service"
+  }
+
+  volume {
+    type = "ULTRAHIGH"
+    size = 40
+  }
+}
+
+resource "huaweicloud_networking_secgroup" "agent_sg" {
+  name = "${var.cluster_name}-sg"
+}
+
+resource "huaweicloud_networking_secgroup_rule" "agent_sg_mysql" {
+  security_group_id = huaweicloud_networking_secgroup.agent_sg.id
+  direction         = "ingress"
+  ethertype         = "IPv4"
+  protocol          = "tcp"
+  port_range_min    = 3306
+  port_range_max    = 3306
+  remote_ip_prefix  = var.vpc_cidr
+}
+
 resource "huaweicloud_compute_instance" "builder" {
   name       = "agent-builder"
   image_name = "Ubuntu 22.04 server 64bit"

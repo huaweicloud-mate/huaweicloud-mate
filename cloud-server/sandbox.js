@@ -17,6 +17,10 @@ const jobStatusCache = new Map();
 function hasActive(userId) {
   const info = activeJobs.get(userId);
   if (!info) return false;
+  if (Date.now() - info.startTime > 1800000) {
+    activeJobs.delete(userId);
+    return false;
+  }
   const status = jobStatusCache.get(info.jobName);
   return status && status.phase === "Running";
 }
@@ -25,7 +29,7 @@ async function getOrCreateContainer(userId, user) {
   if (hasActive(userId)) {
     const info = activeJobs.get(userId);
     const status = jobStatusCache.get(info.jobName);
-    return { id: status.podName, podIp: status.podIp };
+    return { id: status.podName, podIp: status.podIp, sessionId: info.sessionId };
   }
 
   const jobName = `sandbox-${userId.replace(/[^a-z0-9-]/g, "-").slice(0, 40)}`;
@@ -74,14 +78,21 @@ async function getOrCreateContainer(userId, user) {
   const podName = await waitForPodReady(jobName);
   const podIp = await getPodIp(podName);
 
-  activeJobs.set(userId, { jobName, startTime: Date.now() });
+  // Create opencode session and store it
+  let sessionId = null;
+  try {
+    const sResp = await fetch(`http://${podIp}:3005/session`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}),
+    });
+    const session = await sResp.json();
+    sessionId = session.id;
+  } catch { /* session creation failed, will create new each time */ }
+
+  activeJobs.set(userId, { jobName, startTime: Date.now(), sessionId });
   jobStatusCache.set(jobName, { podName, podIp, phase: "Running" });
 
-  // Wait for opencode to be actually ready
-  await waitForSandboxReady(podIp);
-  console.log(`[sandbox] ${userId} pod ${podName} ready at ${podIp}:3005`);
-
-  return { id: podName, podIp };
+  console.log(`[sandbox] ${userId} pod ${podName} ready at ${podIp}:3005 session=${sessionId}`);
+  return { id: podName, podIp, sessionId };
 }
 
 async function waitForPodReady(jobName) {
@@ -90,28 +101,17 @@ async function waitForPodReady(jobName) {
       NAMESPACE, undefined, undefined, undefined, undefined,
       `job-name=${jobName}`
     );
-    if (body.items.length > 0 && body.items[0].status?.phase === "Running") {
+    if (body.items.length > 0 && body.items[0].status?.phase === "Running" && body.items[0].status?.conditions?.some(c => c.type === "Ready" && c.status === "True")) {
       return body.items[0].metadata.name;
     }
     await new Promise(r => setTimeout(r, 1000));
   }
-  throw new Error(`Sandbox pod for job ${jobName} not ready after 60s`);
+  throw new Error(`Sandbox pod for job ${jobName} not ready after 90s`);
 }
 
 async function getPodIp(podName) {
   const { body } = await coreApi.readNamespacedPod(podName, NAMESPACE);
   return body.status.podIP;
-}
-
-async function waitForSandboxReady(podIp) {
-  for (let i = 0; i < 60; i++) {
-    try {
-      const resp = await fetch(`http://${podIp}:3005/`);
-      if (resp.ok) return;
-    } catch {}
-    await new Promise(r => setTimeout(r, 2000));
-  }
-  throw new Error("Sandbox not ready after 60s");
 }
 
 async function execInContainer(container, cmd) {

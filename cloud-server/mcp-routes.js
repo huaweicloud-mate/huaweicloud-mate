@@ -1,7 +1,11 @@
 // cloud-server/mcp-routes.js — MCP over HTTP 端点
 import { createTask, streamTask } from "./task-manager.js";
-import { verifyJwt, userStore, generateLoginCode, confirmLoginCode, getLoginIntent } from "./auth.js";
-import QRCode from "qrcode";
+import crypto from "node:crypto";
+import { verifyJwt, userStore, issueJwt } from "./auth.js";
+import { setUser } from "./redis-store.js";
+import { getDomainId, getVoucher, claimVoucher, markVoucherClaimed } from "./db.js";
+
+const PUBLIC_URL = process.env.PUBLIC_URL || "http://127.0.0.1:3000";
 
 export function mcpRouter(app) {
 
@@ -9,34 +13,36 @@ export function mcpRouter(app) {
     const call = req.body;
     if (!call || !call.method) return next();
     if (call.method === "initialize") {
-      return res.json({
-        jsonrpc: "2.0", id: call.id,
-        result: { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "Huawei Cloud Agent", version: "2.0.0" } },
-      });
+      return res.json({ jsonrpc: "2.0", id: call.id, result: { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "hdkitservice", version: "5.0.0" } } });
     }
     if (call.method === "tools/list") {
-      return res.json({
-        jsonrpc: "2.0", id: call.id,
-        result: {
-          tools: [
-            {
-              name: "huaweicloud_invoke",
-              description: "使用自然语言操作华为云资源。需要先登录。示例: '查 cn-south-1 的 ECS' / '列出 OBS 桶'",
-              inputSchema: { type: "object", properties: { intent: { type: "string", description: "华为云操作的自然语言描述" } }, required: ["intent"] },
-            },
-            {
-              name: "huaweicloud_login",
-              description: "生成登录二维码。返回确认码和二维码图片URL。扫码后调用 huaweicloud_confirm 完成登录。",
-              inputSchema: { type: "object", properties: {} },
-            },
-            {
-              name: "huaweicloud_confirm",
-              description: "用户扫码或输入确认码后，调用此工具完成登录。用户发送 4 位大写字母数字组合（如 QYWF）时，提取该码调用此工具。",
-              inputSchema: { type: "object", properties: { code: { type: "string", description: "4 位确认码" } }, required: ["code"] },
-            },
-          ],
+      return res.json({ jsonrpc: "2.0", id: call.id, result: { tools: [
+        {
+          name: "huaweicloud_auth",
+          description: "认证并获取 JWT。返回代金券状态但不会自动领取——需要用户明确确认后才调 huaweicloud_voucher_claim 领取。示例: huaweicloud_auth(ak='...', sk='...', region='cn-south-1')",
+          inputSchema: { type: "object", properties: { ak: { type: "string" }, sk: { type: "string" }, region: { type: "string" } } },
         },
-      });
+        {
+          name: "huaweicloud_set_credentials",
+          description: "更新 AK/SK，自动销毁旧沙箱。",
+          inputSchema: { type: "object", properties: { token: { type: "string" }, ak: { type: "string" }, sk: { type: "string" }, region: { type: "string" } }, required: ["token", "ak", "sk"] },
+        },
+        {
+          name: "huaweicloud_voucher_status",
+          description: "查询代金券领取状态。",
+          inputSchema: { type: "object", properties: { token: { type: "string" } }, required: ["token"] },
+        },
+        {
+          name: "huaweicloud_voucher_claim",
+          description: "领取代金券。仅在用户明确表示同意领取后调用。一人只能领取一次，重复调用返回已领取状态。",
+          inputSchema: { type: "object", properties: { token: { type: "string" } }, required: ["token"] },
+        },
+        {
+          name: "huaweicloud_invoke",
+          description: "操作华为云资源。示例: huaweicloud_invoke(intent='查 ECS', token='...')",
+          inputSchema: { type: "object", properties: { intent: { type: "string" }, token: { type: "string" } }, required: ["intent"] },
+        },
+      ] } });
     }
     if (call.method === "notifications/initialized") {
       return res.json({ jsonrpc: "2.0", id: call.id, result: {} });
@@ -49,23 +55,87 @@ export function mcpRouter(app) {
     if (!call || call.method !== "tools/call") return res.status(400).json({ error: "invalid MCP request" });
     const { name, arguments: args } = call.params || {};
 
-    // ====== huaweicloud_login：生成登录二维码 ======
-    if (name === "huaweicloud_login") {
-      const code = generateLoginCode();
-      await QRCode.toFile(`/tmp/qrcode-login-${code}.png`, `http://127.0.0.1:3000/auth/confirm/${code}`, { type: "png", width: 400, margin: 2 });
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ code, qrImage: `http://127.0.0.1:3000/auth/qr/${code}.png`, message: `扫码或在聊天框输入确认码 ${code}，然后调用 huaweicloud_confirm` }) }] } });
+    // ====== huaweicloud_auth ======
+    if (name === "huaweicloud_auth") {
+      const userId = crypto.randomUUID().slice(0, 8);
+      const ak = args?.ak || "";
+      const sk = args?.sk || "";
+      const region = args?.region || "cn-south-1";
+      userStore.set(userId, { userId, ak, sk, region, createdAt: Date.now() });
+      setUser(userId, { userId, ak, sk, region }).catch(() => {});
+
+      // 查券状态（MySQL 查 voucher_records）
+      let voucherInfo = "";
+      if (ak && sk) {
+        try {
+          const domainId = await getDomainId(ak, sk) || crypto.createHash("sha256").update(ak).digest("hex").slice(0, 16);
+          const existing = await getVoucher(domainId);
+          if (existing && existing.status === 1) {
+            voucherInfo = "已领取";
+          } else {
+            voucherInfo = "未领取";
+          }
+          userStore.get(userId).domainId = domainId;
+        } catch {}
+      }
+
+      const token = issueJwt(userId);
+      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ success: true, token, mode: (ak && sk) ? "real" : "mock", voucher: voucherInfo || undefined }) }] } });
     }
 
-    // ====== huaweicloud_confirm：确认登录 ======
-    if (name === "huaweicloud_confirm") {
-      const code = (args?.code || "").trim().toUpperCase();
-      if (!code || code.length !== 4) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "无效确认码" }], isError: true } });
-      const token = confirmLoginCode(code);
-      if (!token) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "确认码无效或已过期" }], isError: true } });
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ success: true, token, message: "登录成功，请运行 node cloud-server/login-qr.js --token " + token + " 保存凭据" }) }] } });
+    // ====== huaweicloud_set_credentials ======
+    if (name === "huaweicloud_set_credentials") {
+      const jwtToken = args?.token || "";
+      const payload = verifyJwt(jwtToken);
+      if (!payload) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "token 无效" }], isError: true } });
+      const userId = payload.sub;
+      const ak = args?.ak || "", sk = args?.sk || "", region = args?.region || "cn-south-1";
+      if (!ak || !sk) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "ak 和 sk 不能为空" }], isError: true } });
+      userStore.set(userId, { userId, ak, sk, region, createdAt: Date.now() });
+      setUser(userId, { userId, ak, sk, region }).catch(() => {});
+      try { const { destroyContainer } = await import("./sandbox.js"); await destroyContainer(userId); } catch {}
+      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ success: true, message: "AK/SK 已更新，旧沙箱已销毁" }) }] } });
     }
 
-    // ====== huaweicloud_invoke：执行操作 ======
+    // ====== huaweicloud_voucher_status ======
+    if (name === "huaweicloud_voucher_status") {
+      const payload = verifyJwt(args?.token || "");
+      if (!payload) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "token无效" }], isError: true } });
+      const u = userStore.get(payload.sub);
+      if (!u?.domainId) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "请提供 AK/SK 登录以查询" }], isError: true } });
+      const existing = await getVoucher(u.domainId);
+      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify(existing && existing.status === 1 ? { claimed: true, voucherId: existing.voucherId, amount: existing.amount } : { claimed: false }) }] } });
+    }
+
+    // ====== huaweicloud_voucher_claim ======
+    if (name === "huaweicloud_voucher_claim") {
+      const payload = verifyJwt(args?.token || "");
+      if (!payload) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "token无效" }], isError: true } });
+      const u = userStore.get(payload.sub);
+      if (!u?.domainId || !u?.ak || !u?.sk) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "请先登录并绑定 AK/SK" }], isError: true } });
+
+      // 先查 MySQL
+      const existing = await getVoucher(u.domainId);
+      if (existing && existing.status === 1) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ claimed: true, message: "已领取过" }) }] } });
+
+      // 调激励服务
+      const akHash = crypto.createHash("sha256").update(u.ak).digest("hex");
+      try {
+        const claimResp = await fetch(`http://127.0.0.1:${process.env.PORT || 3000}/api/v1/incentive/voucher/claim`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ domainId: u.domainId })
+        });
+        const claim = await claimResp.json();
+        if (claim.success) {
+          await claimVoucher(u.domainId, akHash, claim.voucherId, claim.amount || 100);
+          return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ success: true, voucherId: claim.voucherId, amount: claim.amount, message: "领取成功" }) }] } });
+        }
+      } catch {}
+      // 激励返回已领取
+      await markVoucherClaimed(u.domainId, akHash);
+      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ claimed: true, message: "激励侧已领取过" }) }] } });
+    }
+
+    // ====== huaweicloud_invoke ======
     if (name !== "huaweicloud_invoke") {
       return res.json({ jsonrpc: "2.0", id: call.id, error: { code: -32601, message: `Unknown tool: ${name}` } });
     }
@@ -73,15 +143,13 @@ export function mcpRouter(app) {
     if (!intent) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "请提供 intent" }], isError: true } });
 
     const authHeader = req.headers.authorization || "";
+    let jwtToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : (args?.token || "");
     let userId = null, user = null;
-    if (authHeader.startsWith("Bearer ")) {
-      const payload = verifyJwt(authHeader.slice(7));
+    if (jwtToken) {
+      const payload = verifyJwt(jwtToken);
       if (payload) { const u = userStore.get(payload.sub); if (u) { userId = payload.sub; user = u; } }
     }
-    if (!userId) {
-      const code = generateLoginCode(intent);
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ type: "AUTH_REQUIRED", code, qrImage: `http://127.0.0.1:3000/auth/qr/${code}.png`, message: `需要登录认证。扫码或在聊天框输入确认码 ${code}，然后调用 huaweicloud_confirm 完成登录。30 秒有效` }) }] } });
-    }
+    if (!userId) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "请先调用 huaweicloud_auth 完成认证" }], isError: true } });
 
     try {
       const task = await createTask(userId, intent, { source: "mcp" }, user);

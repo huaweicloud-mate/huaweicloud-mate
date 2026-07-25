@@ -2,13 +2,19 @@
 set -e
 
 mkdir -p ~/.hcloud
+
+# hcloud CLI 格式 (config.json)
+echo 'y' | hcloud configure set --cli-profile=default \
+  --cli-access-key=${HW_ACCESS_KEY} \
+  --cli-secret-key=${HW_SECRET_KEY} \
+  --cli-region=cn-south-1 2>/dev/null || true
+
+# huaweicloud-mate 兼容格式 (credentials 文件)
 cat > ~/.hcloud/credentials << EOF
 [default]
 huaweicloud_access_key = ${HW_ACCESS_KEY}
 huaweicloud_secret_key = ${HW_SECRET_KEY}
 EOF
-
-hcloud configure set --cli-agree=true 2>/dev/null || true
 
 hcloud configure list 2>/dev/null || true
 

@@ -4,6 +4,7 @@
 
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
+import { getUser, setUser } from "./redis-store.js";
 
 // ��������Ӧ�ӻ�������/Secrets Manager ��ȡ
 const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString("hex");
@@ -14,25 +15,9 @@ const SESSION_TIMEOUT_MS = parseInt(process.env.SESSION_TIMEOUT_MS || "1800000")
 // ��ʽ: { userId: { ak, sk, projectId, openaiKey?, createdAt } }
 const userStore = new Map();
 
-// ��ʼ������Ա/�����û������������� API ע�ᣩ
-userStore.set("demo-user", {
-  userId: "demo-user",
-  ak: process.env.DEMO_AK || "",
-  sk: process.env.DEMO_SK || "",
-  projectId: process.env.DEMO_PROJECT_ID || "",
-  openaiKey: process.env.DEMO_OPENAI_KEY || "",
-  createdAt: Date.now(),
-});
-
-// 预注册 demo 用户（从环境变量注入，POC 阶段用）
-if (process.env.DEMO_AK && process.env.DEMO_SK) {
-  userStore.set("demo-user", {
-    userId: "demo-user",
-    ak: process.env.DEMO_AK,
-    sk: process.env.DEMO_SK,
-    projectId: process.env.DEMO_PROJECT_ID || "",
-    createdAt: Date.now(),
-  });
+// Sync user to Redis (fire-and-forget, non-blocking)
+function persistUser(userId, data) {
+  setUser(userId, { ...data, createdAt: String(data.createdAt || Date.now()) }).catch(() => {});
 }
 
 // ========== AK/SK ǩ����֤ ==========
@@ -137,6 +122,7 @@ function registerUser({ userId, ak, sk, projectId, openaiKey }) {
     return { ok: false, error: "�û��Ѵ���" };
   }
   userStore.set(userId, { userId, ak, sk, projectId, openaiKey, createdAt: Date.now() });
+  persistUser(userId, { userId, ak, sk, projectId, openaiKey });
   return { ok: true };
 }
 
@@ -197,15 +183,20 @@ const CODE_TTL_MS = 30000;
 const loginCodeStore = new Map();
 const loginIntentStore = new Map(); // code → intent
 
-function generateLoginCode(intent) {
+function generateLoginCode(opts) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code;
   do {
     code = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
   } while (loginCodeStore.has(code));
-  loginCodeStore.set(code, { createdAt: Date.now(), confirmed: false, userId: null });
-  if (intent) loginIntentStore.set(code, intent);
+  const userId = crypto.randomUUID().slice(0, 8);
+  loginCodeStore.set(code, { createdAt: Date.now(), confirmed: false, userId, ak: opts?.ak || "", sk: opts?.sk || "", region: opts?.region || "" });
   return code;
+}
+
+function getLoginUserId(code) {
+  const entry = loginCodeStore.get(code);
+  return entry?.userId;
 }
 
 function getLoginIntent(code) {
@@ -221,10 +212,11 @@ function confirmLoginCode(code) {
     loginCodeStore.delete(code);
     return null;
   }
-  // 取第一个已注册用户
-  const users = Array.from(userStore.values());
-  if (users.length === 0) return null;
-  const userId = users[0].userId;
+  const userId = entry.userId;
+  if (!userStore.has(userId)) {
+    userStore.set(userId, { userId, ak: entry.ak || "", sk: entry.sk || "", region: entry.region || "cn-south-1", createdAt: Date.now() });
+  persistUser(userId, { userId, ak: entry.ak, sk: entry.sk, region: entry.region });
+  }
   entry.confirmed = true;
   entry.userId = userId;
   return issueJwt(userId);

@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
-app.use(rateLimit({ windowMs: 60000, max: 120, keyGenerator: (req) => req.userId || req.ip }));
+app.use(rateLimit({ windowMs: 60000, max: 300, keyGenerator: (req) => req.userId || req.ip }));
 
 // ========== A2A ��׼�ӿ� ==========
 
@@ -191,6 +191,14 @@ h2{color:#c00}p{color:#666}
 app.get("/auth/token/:code", (req, res) => {
   const result = pollLoginCode(req.params.code);
   res.json(result);
+});
+
+// ========== 激励 Mock API ==========
+app.get("/api/v1/incentive/voucher/status", (req, res) => {
+  res.json({ claimed: false });
+});
+app.post("/api/v1/incentive/voucher/claim", (req, res) => {
+  res.json({ success: true, voucherId: `vc_${Date.now()}`, amount: 100, currency: "CNY", expiredAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString() });
 });
 
 mcpRouter(app);

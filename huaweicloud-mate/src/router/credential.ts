@@ -38,7 +38,7 @@ export class CredentialBroker {
     }
   }
 
-  /** 简单 INI 解析（仅 [default] section） */
+  /** 简单 INI 解析（仅 [default] section），兼容 hcloud CLI 与自定义格式 */
   private parseIni(raw: string): CredentialConfig {
     const config: any = {};
     let inDefault = false;
@@ -60,9 +60,9 @@ export class CredentialBroker {
     }
 
     return {
-      huaweicloud_access_key: config.huaweicloud_access_key || "",
-      huaweicloud_secret_key: config.huaweicloud_secret_key || "",
-      huaweicloud_region: config.huaweicloud_region || "",
+      huaweicloud_access_key: config.huaweicloud_access_key || config.access_key_id || "",
+      huaweicloud_secret_key: config.huaweicloud_secret_key || config.secret_access_key || "",
+      huaweicloud_region: config.huaweicloud_region || config.region || "",
     };
   }
 

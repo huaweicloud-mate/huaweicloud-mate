@@ -68,18 +68,23 @@ async function executeTask(taskId, user) {
   updateTask(taskId, { progress: 10, currentStep: "沙箱就绪，正在执行任务..." });
   publishEvent(taskId, { type: "progress", progress: 10, message: "沙箱就绪" });
 
-    const podIp = container.podIp;
+  const podIp = container.podIp;
+  let sessionId = container.sessionId;
+
+  if (!sessionId) {
     const sResp = await fetch(`http://${podIp}:3005/session`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
     const session = await sResp.json();
+    sessionId = session.id;
+  }
 
-    updateTask(taskId, { progress: 20, currentStep: "正在分析意图..." });
-    publishEvent(taskId, { type: "progress", progress: 20, message: "LLM 分析中" });
+  updateTask(taskId, { progress: 20, currentStep: "正在分析意图..." });
+  publishEvent(taskId, { type: "progress", progress: 20, message: "LLM 分析中" });
 
-    const mResp = await fetch(`http://${podIp}:3005/session/${session.id}/message`, {
+  const mResp = await fetch(`http://${podIp}:3005/session/${sessionId}/message`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ parts: [{ type: "text", text: task.description }] }),
