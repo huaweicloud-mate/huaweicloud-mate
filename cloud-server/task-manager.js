@@ -110,8 +110,6 @@ async function executeTask(taskId, user) {
       error: err.message,
     });
     publishEvent(taskId, { type: "failed", status: "failed", error: err.message });
-  } finally {
-    releaseContainer(user.userId);
   }
 }
 
