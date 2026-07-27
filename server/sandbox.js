@@ -53,6 +53,7 @@ async function getOrCreateContainer(userId, user) {
           containers: [{
             name: "sandbox",
             image: SANDBOX_IMAGE,
+            imagePullPolicy: "Always",
             env: [
               { name: "NODE_PATH", value: "/usr/local/lib/node_modules" },
               { name: "HW_ACCESS_KEY", value: user.ak || "" },
@@ -64,6 +65,12 @@ async function getOrCreateContainer(userId, user) {
               limits: { cpu: "2", memory: "2Gi" },
             },
             volumeMounts: [{ name: "skills", mountPath: "/skills" }],
+            securityContext: {
+              runAsNonRoot: true,
+              runAsUser: 1000,
+              allowPrivilegeEscalation: false,
+              capabilities: { drop: ["ALL"] },
+            },
             readinessProbe: {
               httpGet: { path: "/global/health", port: 3005 },
               initialDelaySeconds: 10,

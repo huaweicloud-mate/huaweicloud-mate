@@ -64,7 +64,6 @@ export function mcpRouter(app) {
       userStore.set(userId, { userId, ak, sk, region, createdAt: Date.now() });
       setUser(userId, { userId, ak, sk, region }).catch(() => {});
 
-      // 查券状态（MySQL 查 voucher_records）
       let voucherInfo = "";
       if (ak && sk) {
         try {
@@ -80,6 +79,16 @@ export function mcpRouter(app) {
       }
 
       const token = issueJwt(userId);
+
+      // 后台预热 sandbox（不阻塞 auth 响应）
+      const user = userStore.get(userId);
+      setImmediate(async () => {
+        try {
+          const { getOrCreateContainer } = await import("./sandbox.js");
+          await getOrCreateContainer(userId, user);
+        } catch {}
+      });
+
       return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ success: true, token, mode: (ak && sk) ? "real" : "mock", voucher: voucherInfo || undefined }) }] } });
     }
 
@@ -114,11 +123,9 @@ export function mcpRouter(app) {
       const u = userStore.get(payload.sub);
       if (!u?.domainId || !u?.ak || !u?.sk) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "请先登录并绑定 AK/SK" }], isError: true } });
 
-      // 先查 MySQL
       const existing = await getVoucher(u.domainId);
       if (existing && existing.status === 1) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ claimed: true, message: "已领取过" }) }] } });
 
-      // 调激励服务
       const akHash = crypto.createHash("sha256").update(u.ak).digest("hex");
       try {
         const claimResp = await fetch(`http://127.0.0.1:${process.env.PORT || 3000}/api/v1/incentive/voucher/claim`, {
@@ -130,7 +137,6 @@ export function mcpRouter(app) {
           return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ success: true, voucherId: claim.voucherId, amount: claim.amount, message: "领取成功" }) }] } });
         }
       } catch {}
-      // 激励返回已领取
       await markVoucherClaimed(u.domainId, akHash);
       return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ claimed: true, message: "激励侧已领取过" }) }] } });
     }

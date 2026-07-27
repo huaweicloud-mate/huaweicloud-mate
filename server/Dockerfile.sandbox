@@ -1,19 +1,22 @@
 FROM node:22-alpine
 
-RUN apk add --no-cache curl bash gcompat
+RUN apk add --no-cache curl bash gcompat terraform
 
 ARG KOO_CLI_URL=https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest/hcloud_install.sh
 RUN curl -fsSL ${KOO_CLI_URL} -o /tmp/hcloud_install.sh \
     && bash /tmp/hcloud_install.sh -y \
-    && rm /tmp/hcloud_install.sh
+    && rm /tmp/hcloud_install.sh \
+    && chmod 755 /usr/local/bin/hcloud
 
-RUN npm install -g opencode-ai @huaweicloud/huaweicloud-sdk-core
+RUN npm install -g opencode-ai @huaweicloud/huaweicloud-sdk-core @huaweicloud/huaweicloud-sdk-apig
 ENV NODE_PATH=/usr/local/lib/node_modules
 
-RUN mkdir -p /workspace /skills
+RUN mkdir -p /workspace /skills && chmod 777 /workspace /skills
 WORKDIR /workspace
 
 COPY server/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
+
+USER 1000
 
 ENTRYPOINT ["/entrypoint.sh"]

@@ -3,20 +3,21 @@ set -e
 
 mkdir -p ~/.hcloud
 
-# hcloud CLI 格式 (config.json)
-echo 'y' | hcloud configure set --cli-profile=default \
-  --cli-access-key=${HW_ACCESS_KEY} \
-  --cli-secret-key=${HW_SECRET_KEY} \
-  --cli-region=cn-south-1 2>/dev/null || true
+# 配置 hcloud CLI（非交互式）
+hcloud configure set \
+  --cli-access-key="${HW_ACCESS_KEY}" \
+  --cli-secret-key="${HW_SECRET_KEY}" \
+  --cli-region="cn-south-1" 2>/dev/null || true
 
-# huaweicloud-mate 兼容格式 (credentials 文件)
+# 接受隐私协议,避免后续每次运行都弹交互提示
+sed -i 's/"agreePrivacy": "false"/"agreePrivacy": "true"/' ~/.hcloud/config.json 2>/dev/null || true
+
+# huaweicloud-mate 兼容格式
 cat > ~/.hcloud/credentials << EOF
 [default]
 huaweicloud_access_key = ${HW_ACCESS_KEY}
 huaweicloud_secret_key = ${HW_SECRET_KEY}
 EOF
-
-hcloud configure list 2>/dev/null || true
 
 opencode serve --port 3005 --hostname 0.0.0.0 &
 OP_SERVER=$!
