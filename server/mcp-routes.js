@@ -20,7 +20,7 @@ export function mcpRouter(app) {
     }
     if (call.method === "tools/list") {
       return res.json({ jsonrpc: "2.0", id: call.id, result: { tools: [
-        { name: "huaweicloud_auth",           description: "认证并获取 JWT。返回代金券状态。示例: huaweicloud_auth(ak='...', sk='...', region='cn-south-1')", inputSchema: { type:"object", properties:{ ak:{type:"string"},sk:{type:"string"},region:{type:"string"} } } },
+        { name: "huaweicloud_auth",           description: "认证。temp_credential=true时后端用AK/SK换临时凭证，沙箱仅收到临时AK/SK/SecurityToken(6h)。", inputSchema: { type:"object", properties:{ ak:{type:"string"},sk:{type:"string"},region:{type:"string"},temp_credential:{type:"boolean"} } } },
         { name: "huaweicloud_set_credentials",description: "更新 AK/SK，自动销毁旧沙箱。", inputSchema: { type:"object", properties:{ token:{type:"string"},ak:{type:"string"},sk:{type:"string"},region:{type:"string"}}, required:["token","ak","sk"] } },
         { name: "huaweicloud_voucher_status", description: "查询代金券领取状态。", inputSchema: { type:"object", properties:{ token:{type:"string"}}, required:["token"] } },
         { name: "huaweicloud_voucher_claim",  description: "领取代金券（一人一次）。", inputSchema: { type:"object", properties:{ token:{type:"string"}}, required:["token"] } },
@@ -68,34 +68,32 @@ export function mcpRouter(app) {
       }
 
       // 临时凭证模式：后端 STS 换临时 AK/SK/Token
-      let tempInfo = {};
+      let tempInfo = {}, tempCreds = null;
       if (useTemp && ak && sk) {
         try {
-          const temp = await createTemporaryCredentials(ak, sk, region);
+          tempCreds = await createTemporaryCredentials(ak, sk, region);
           await setUser(userId, {
-            ...user,
-            ak, sk, // 长期存 Redis
-            temp_ak: temp.ak,
-            temp_sk: temp.sk,
-            temp_security_token: temp.securityToken,
-            temp_expires_at: temp.expiresAt,
-            temp_credential: "true",
+            ...user, ak, sk,
+            temp_ak: tempCreds.ak, temp_sk: tempCreds.sk,
+            temp_security_token: tempCreds.securityToken,
+            temp_expires_at: tempCreds.expiresAt, temp_credential: "true",
           });
-          tempInfo = { temp_credential: true, expires_at: temp.expiresAt };
+          tempInfo = { temp_credential: true, expires_at: tempCreds.expiresAt };
         } catch (err) {
-          // STS 失败 → 降级为长期凭证
           tempInfo = { temp_credential: false, sts_error: err.message };
         }
       }
 
       const token = issueJwt(userId);
 
-      // 预热沙箱
-      const sandboxUser = { ...user, ...(useTemp && tempInfo.temp_credential ? { ak: user.temp_ak, sk: user.temp_sk, securityToken: user.temp_security_token } : { ak: user.ak, sk: user.sk }) };
+      // 预热沙箱（临时凭证模式用临时 AK/SK，长期模式用原始 AK/SK）
+      const sandboxAk = tempCreds ? tempCreds.ak : user.ak;
+      const sandboxSk = tempCreds ? tempCreds.sk : user.sk;
+      const sandboxToken = tempCreds ? tempCreds.securityToken : undefined;
       setImmediate(async () => {
         try {
           const { getOrCreateContainer } = await import("./sandbox.js");
-          await getOrCreateContainer(userId, sandboxUser);
+          await getOrCreateContainer(userId, { ...user, ak: sandboxAk, sk: sandboxSk, securityToken: sandboxToken });
         } catch {}
       });
 

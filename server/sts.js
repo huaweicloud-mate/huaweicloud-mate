@@ -1,58 +1,65 @@
 // cloud-server/sts.js — IAM STS 临时凭证客户端
-// 用用户长期 AK/SK 换取 6h 有效的临时 AK/SK/SecurityToken
+// 创建一次性 K8s Job，用 sandbox 镜像运行 hcloud CLI
+import k8s from "@kubernetes/client-node";
 import crypto from "node:crypto";
 
-/**
- * 创建临时访问凭证
- * POST /v3.0/OS-CREDENTIAL/securitytokens
- */
+const kc = new k8s.KubeConfig();
+kc.loadFromDefault();
+const batchApi = kc.makeApiClient(k8s.BatchV1Api);
+const coreApi = kc.makeApiClient(k8s.CoreV1Api);
+const NAMESPACE = process.env.NAMESPACE || "huaweicloud-agent";
+const SANDBOX_IMAGE = process.env.SANDBOX_IMAGE || "swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:latest";
+
 export async function createTemporaryCredentials(ak, sk, region = "cn-south-1") {
-  const host = `iam.${region}.myhuaweicloud.com`;
-  const path = "/v3.0/OS-CREDENTIAL/securitytokens";
-  const method = "POST";
-  const body = JSON.stringify({
-    credential: {
-      description: "hc-devkit-sandbox-session",
+  const jobName = `sts-${crypto.randomUUID().slice(0, 8)}`;
+
+  const job = {
+    apiVersion: "batch/v1",
+    kind: "Job",
+    metadata: { name: jobName, namespace: NAMESPACE },
+    spec: {
+      ttlSecondsAfterFinished: 120,
+      template: {
+        spec: {
+          restartPolicy: "Never",
+          containers: [{
+            name: "sts",
+            image: SANDBOX_IMAGE,
+            command: ["sh", "-c"],
+            args: [
+              `printf 'y\\n' | hcloud configure set --cli-access-key=${ak} --cli-secret-key=${sk} --cli-region=${region} >/dev/null 2>&1; printf 'y\\n' | hcloud IAM CreateTemporaryAccessKeyByToken --region=${region} --cli-access-key=${ak} --cli-secret-key=${sk} --auth.identity.methods.1=token --auth.identity.token.duration_seconds=21600`,
+            ],
+          }],
+        },
+      },
     },
-  });
-
-  const t = new Date();
-  const ts = t.toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
-  const sha256 = (d) => crypto.createHash("sha256").update(d).digest("hex");
-  const hmacSha256 = (k, d) => crypto.createHmac("sha256", k).update(d).digest();
-
-  const canonicalHeaders = `content-type:application/json\nhost:${host}\nx-sdk-date:${ts}\n`;
-  const signedHeaders = "content-type;host;x-sdk-date";
-  const canonicalRequest = `${method}\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${sha256(body)}`;
-
-  const datestamp = t.toISOString().slice(0, 10).replace(/-/g, "");
-  const scope = `${datestamp}/${region}/iam/sdk_request`;
-  const stringToSign = `SDK-HMAC-SHA256\n${ts}\n${scope}\n${sha256(canonicalRequest)}`;
-
-  const kDate = hmacSha256(sk, datestamp);
-  const kRegion = hmacSha256(kDate, region);
-  const kService = hmacSha256(kRegion, "iam");
-  const kSigning = hmacSha256(kService, "sdk_request");
-  const sig = crypto.createHmac("sha256", kSigning).update(stringToSign).digest("hex");
-  const auth = `SDK-HMAC-SHA256 Access=${ak}, SignedHeaders=${signedHeaders}, Signature=${sig}`;
+  };
 
   try {
-    const resp = await fetch(`https://${host}${path}`, {
-      method,
-      headers: { "Content-Type": "application/json", "X-Sdk-Date": ts, Authorization: auth },
-      body,
-    });
+    await batchApi.createNamespacedJob(NAMESPACE, job);
 
-    if (!resp.ok) {
-      const err = await resp.text();
-      throw new Error(`STS HTTP ${resp.status}: ${err.slice(0, 200)}`);
+    for (let i = 0; i < 30; i++) {
+      const { body } = await batchApi.readNamespacedJob(jobName, NAMESPACE);
+      if (body.status?.succeeded >= 1) break;
+      if (body.status?.failed >= 1) throw new Error("STS job failed");
+      await new Promise(r => setTimeout(r, 1000));
     }
 
-    const data = await resp.json();
+    const { body: pods } = await coreApi.listNamespacedPod(
+      NAMESPACE, undefined, undefined, undefined, undefined, `job-name=${jobName}`
+    );
+    if (!pods?.items?.length) throw new Error("No STS pod");
+    const podName = pods.items[0].metadata.name;
+
+    const logResp = await coreApi.readNamespacedPodLog(podName, NAMESPACE, "sts");
+    const stdout = typeof logResp === "string" ? logResp : (logResp?.body || "");
+
+    const match = stdout.match(/\{[\s\S]*"credential"[\s\S]*\}/);
+    if (!match) throw new Error(`No credential JSON: ${stdout.slice(0, 300)}`);
+
+    const data = JSON.parse(match[0]);
     const cred = data.credential;
-    if (!cred?.access || !cred?.secret) {
-      throw new Error(`STS response missing credentials: ${JSON.stringify(data).slice(0, 200)}`);
-    }
+    if (!cred?.access) throw new Error(`Missing access: ${match[0].slice(0, 200)}`);
 
     return {
       ak: cred.access,
@@ -61,7 +68,7 @@ export async function createTemporaryCredentials(ak, sk, region = "cn-south-1") 
       expiresAt: cred.expires_at || new Date(Date.now() + 6 * 3600 * 1000).toISOString(),
     };
   } catch (err) {
-    console.error(`[sts] Failed to create temporary credentials: ${err.message}`);
+    console.error(`[sts] ${err.message}`);
     throw err;
   }
 }
