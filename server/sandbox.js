@@ -13,8 +13,6 @@ const MAX_CONCURRENT = parseInt(process.env.MAX_SANDBOXES || "5");
 const SANDBOX_IMAGE = process.env.SANDBOX_IMAGE || "swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:latest";
 
 const jobStatusCache = new Map(); // 本地 Pod 状态缓存，Redis 存 Job 元信息
-const PUBLIC_AK = process.env.PUBLIC_READONLY_AK || "";
-const PUBLIC_SK = process.env.PUBLIC_READONLY_SK || "";
 const MAX_ANON_SANDBOXES = parseInt(process.env.MAX_ANON_SANDBOXES || "3");
 
 async function hasActive(userId) {
@@ -181,8 +179,8 @@ async function createAnonymousContainer() {
             imagePullPolicy: "Always",
             env: [
               { name: "NODE_PATH", value: "/usr/local/lib/node_modules" },
-              { name: "HW_ACCESS_KEY", value: PUBLIC_AK },
-              { name: "HW_SECRET_KEY", value: PUBLIC_SK },
+              { name: "HW_ACCESS_KEY", value: "" },
+              { name: "HW_SECRET_KEY", value: "" },
               { name: "DEEPSEEK_API_KEY", value: process.env.DEEPSEEK_API_KEY || "" },
             ],
             resources: { requests: { cpu: "1", memory: "1Gi" }, limits: { cpu: "2", memory: "2Gi" } },
