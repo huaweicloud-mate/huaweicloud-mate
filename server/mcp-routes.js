@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { verifyJwt, issueJwt, isRedisAvailable } from "./auth.js";
 import { getUser, setUser, findUserIdByAk } from "./redis-store.js";
 import { getDomainId, getVoucher, claimVoucher, markVoucherClaimed } from "./db.js";
+import { createAnonymousContainer } from "./sandbox.js";
 
 const PUBLIC_URL = process.env.PUBLIC_URL || "http://127.0.0.1:3000";
 
@@ -136,8 +137,24 @@ export function mcpRouter(app) {
       const payload = verifyJwt(jwtToken);
       if (payload) { user = await getUser(payload.sub); if (user) userId = payload.sub; }
     }
-    if (!userId) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请先调用 huaweicloud_auth 完成认证" }], isError:true } });
 
+    // 无 token → 匿名沙箱
+    if (!userId) {
+      try {
+        const container = await createAnonymousContainer();
+        const sResp = await fetch(`http://${container.podIp}:3005/session/${container.sessionId}/message`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ parts: [{ type: "text", text: intent }] }),
+        });
+        const data = await sResp.json();
+        const texts = (data.parts || []).filter(p => p.type === "text").map(p => p.text);
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: texts.join("\n") || JSON.stringify(data) }] } });
+      } catch (err) {
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: `匿名查询失败: ${err.message}` }], isError:true } });
+      }
+    }
+
+    // 有 token → 用户沙箱
     try {
       const task = await createTask(userId, intent, { source:"mcp" }, user);
       const text = await new Promise((resolve, reject) => {

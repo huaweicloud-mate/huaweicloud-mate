@@ -13,6 +13,9 @@ const MAX_CONCURRENT = parseInt(process.env.MAX_SANDBOXES || "5");
 const SANDBOX_IMAGE = process.env.SANDBOX_IMAGE || "swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:latest";
 
 const jobStatusCache = new Map(); // 本地 Pod 状态缓存，Redis 存 Job 元信息
+const PUBLIC_AK = process.env.PUBLIC_READONLY_AK || "";
+const PUBLIC_SK = process.env.PUBLIC_READONLY_SK || "";
+const MAX_ANON_SANDBOXES = parseInt(process.env.MAX_ANON_SANDBOXES || "3");
 
 async function hasActive(userId) {
   const job = await getJobSafe(userId);
@@ -152,4 +155,69 @@ export async function reconcileActiveJobs() {
   } catch (err) { console.log(`[sandbox] reconcile skipped: ${err.message}`); }
 }
 
-export { getOrCreateContainer, releaseContainer, destroyContainer, getConcurrencyStats };
+// ── 匿名沙箱（公共只读 AK/SK，不关联用户） ──
+
+async function createAnonymousContainer() {
+  const jobName = `sandbox-anon-${Date.now().toString(36)}`;
+  const job = {
+    apiVersion: "batch/v1",
+    kind: "Job",
+    metadata: { name: jobName, namespace: NAMESPACE },
+    spec: {
+      ttlSecondsAfterFinished: 300, // 5min 快速清理
+      template: {
+        spec: {
+          imagePullSecrets: [{ name: "swr-secret" }],
+          restartPolicy: "Never",
+          initContainers: [{
+            name: "git-sync",
+            image: "alpine/git:latest",
+            command: ["sh", "-c", "git clone --depth 1 https://gitcode.com/huaweicloud/huaweicloud-skills.git /data/skills && cp -r /data/skills/skills/* /skills/"],
+            volumeMounts: [{ name: "skills", mountPath: "/skills" }],
+          }],
+          containers: [{
+            name: "sandbox",
+            image: SANDBOX_IMAGE,
+            imagePullPolicy: "Always",
+            env: [
+              { name: "NODE_PATH", value: "/usr/local/lib/node_modules" },
+              { name: "HW_ACCESS_KEY", value: PUBLIC_AK },
+              { name: "HW_SECRET_KEY", value: PUBLIC_SK },
+              { name: "DEEPSEEK_API_KEY", value: process.env.DEEPSEEK_API_KEY || "" },
+            ],
+            resources: { requests: { cpu: "1", memory: "1Gi" }, limits: { cpu: "2", memory: "2Gi" } },
+            volumeMounts: [{ name: "skills", mountPath: "/skills" }],
+            securityContext: { runAsNonRoot: true, runAsUser: 1000, allowPrivilegeEscalation: false, capabilities: { drop: ["ALL"] } },
+            readinessProbe: { httpGet: { path: "/global/health", port: 3005 }, initialDelaySeconds: 10, periodSeconds: 5 },
+          }],
+          volumes: [{ name: "skills", emptyDir: {} }],
+        },
+      },
+    },
+  };
+
+  await batchApi.createNamespacedJob(NAMESPACE, job).catch(async (err) => {
+    if (err.statusCode === 409) { console.log(`[sandbox] anon ${jobName} exists`); return; }
+    throw err;
+  });
+  const podName = await waitForPodReady(jobName);
+  const podIp = await getPodIp(podName);
+
+  let sessionId = null;
+  try {
+    const sResp = await fetch(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    const session = await sResp.json();
+    sessionId = session.id;
+  } catch {}
+
+  jobStatusCache.set(jobName, { podName, podIp, phase: "Running" });
+  console.log(`[sandbox] anon ${jobName} ready at ${podIp}:3005 session=${sessionId}`);
+  return { id: podName, podIp, sessionId };
+}
+
+async function destroyAnonymousContainer(podId) {
+  // 匿名沙箱不追踪，靠 ttlSecondsAfterFinished 自动清理
+  // 这里仅从缓存移除
+}
+
+export { getOrCreateContainer, createAnonymousContainer, releaseContainer, destroyContainer, getConcurrencyStats };
