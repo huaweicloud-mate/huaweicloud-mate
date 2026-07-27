@@ -44,10 +44,17 @@ async function getOrCreateContainer(userId, user) {
         spec: {
           imagePullSecrets: [{ name: "swr-secret" }],
           restartPolicy: "Never",
+          initContainers: [{
+            name: "git-sync",
+            image: "alpine/git:latest",
+            command: ["sh", "-c", "git clone --depth 1 https://gitcode.com/huaweicloud/huaweicloud-skills.git /data/skills && cp -r /data/skills/skills/* /skills/"],
+            volumeMounts: [{ name: "skills", mountPath: "/skills" }],
+          }],
           containers: [{
             name: "sandbox",
             image: SANDBOX_IMAGE,
             env: [
+              { name: "NODE_PATH", value: "/usr/local/lib/node_modules" },
               { name: "HW_ACCESS_KEY", value: user.ak || "" },
               { name: "HW_SECRET_KEY", value: user.sk || "" },
               { name: "DEEPSEEK_API_KEY", value: process.env.DEEPSEEK_API_KEY || "" },
@@ -56,12 +63,14 @@ async function getOrCreateContainer(userId, user) {
               requests: { cpu: "1", memory: "1Gi" },
               limits: { cpu: "2", memory: "2Gi" },
             },
+            volumeMounts: [{ name: "skills", mountPath: "/skills" }],
             readinessProbe: {
               httpGet: { path: "/global/health", port: 3005 },
               initialDelaySeconds: 10,
               periodSeconds: 5,
             },
           }],
+          volumes: [{ name: "skills", emptyDir: {} }],
         },
       },
     },

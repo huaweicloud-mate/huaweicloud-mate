@@ -7,16 +7,11 @@ RUN curl -fsSL ${KOO_CLI_URL} -o /tmp/hcloud_install.sh \
     && bash /tmp/hcloud_install.sh -y \
     && rm /tmp/hcloud_install.sh
 
-RUN npm install -g opencode-ai
-RUN npm install -g huaweicloud-mate@latest
+RUN npm install -g opencode-ai @huaweicloud/huaweicloud-sdk-core
+ENV NODE_PATH=/usr/local/lib/node_modules
 
-RUN mkdir -p /workspace /opencode-config/skills/hw-agent-rules /skills
+RUN mkdir -p /workspace /skills
 WORKDIR /workspace
-
-# Agent skills + config
-COPY opencode-config/skills/hw-agent-rules/SKILL.md /opencode-config/skills/hw-agent-rules/
-# TODO: add huaweicloud-skills git submodule
-# COPY huaweicloud-skills/skills/ /skills/
 
 COPY server/entrypoint.sh /
 RUN chmod +x /entrypoint.sh

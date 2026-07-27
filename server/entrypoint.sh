@@ -28,10 +28,6 @@ for i in $(seq 1 30); do
     sleep 1
 done
 
-curl -s -X POST http://127.0.0.1:3005/mcp \
-  -H "Content-Type: application/json" \
-  -d '{"name":"mate-npx","config":{"type":"local","command":["npx","-y","huaweicloud-mate"],"enabled":true}}'
-
 echo "[sandbox] ready"
 
 wait $OP_SERVER
