@@ -6,6 +6,7 @@ import { verifyJwt, issueJwt, isRedisAvailable } from "./auth.js";
 import { getUser, setUser, findUserIdByAk } from "./redis-store.js";
 import { getDomainId, getVoucher, claimVoucher, markVoucherClaimed } from "./db.js";
 import { createAnonymousContainer } from "./sandbox.js";
+import { createTemporaryCredentials } from "./sts.js";
 
 const PUBLIC_URL = process.env.PUBLIC_URL || "http://127.0.0.1:3000";
 
@@ -40,6 +41,7 @@ export function mcpRouter(app) {
       if (!isRedisAvailable()) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type:"text", text: "Redis 不可用，请稍后重试" }], isError: true } });
 
       const ak = args?.ak || "", sk = args?.sk || "", region = args?.region || "cn-south-1";
+      const useTemp = args?.temp_credential === true;
 
       let userId = ak ? (await findUserIdByAk(ak)) : null;
       if (!userId) {
@@ -50,6 +52,7 @@ export function mcpRouter(app) {
       const user = await getUser(userId);
       user.domainId = user.domainId || "";
 
+      // 查券（仅首次）
       let voucherInfo = "";
       if (ak && sk && !user.domainId) {
         try {
@@ -64,16 +67,39 @@ export function mcpRouter(app) {
         } catch {}
       }
 
+      // 临时凭证模式：后端 STS 换临时 AK/SK/Token
+      let tempInfo = {};
+      if (useTemp && ak && sk) {
+        try {
+          const temp = await createTemporaryCredentials(ak, sk, region);
+          await setUser(userId, {
+            ...user,
+            ak, sk, // 长期存 Redis
+            temp_ak: temp.ak,
+            temp_sk: temp.sk,
+            temp_security_token: temp.securityToken,
+            temp_expires_at: temp.expiresAt,
+            temp_credential: "true",
+          });
+          tempInfo = { temp_credential: true, expires_at: temp.expiresAt };
+        } catch (err) {
+          // STS 失败 → 降级为长期凭证
+          tempInfo = { temp_credential: false, sts_error: err.message };
+        }
+      }
+
       const token = issueJwt(userId);
 
+      // 预热沙箱
+      const sandboxUser = { ...user, ...(useTemp && tempInfo.temp_credential ? { ak: user.temp_ak, sk: user.temp_sk, securityToken: user.temp_security_token } : { ak: user.ak, sk: user.sk }) };
       setImmediate(async () => {
         try {
           const { getOrCreateContainer } = await import("./sandbox.js");
-          await getOrCreateContainer(userId, user);
+          await getOrCreateContainer(userId, sandboxUser);
         } catch {}
       });
 
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type:"text", text: JSON.stringify({ success: true, token, mode: (ak && sk) ? "real" : "mock", voucher: voucherInfo || undefined }) }] } });
+      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type:"text", text: JSON.stringify({ success: true, token, mode: (ak && sk) ? "real" : "mock", voucher: voucherInfo || undefined, ...tempInfo }) }] } });
     }
 
     // ── huaweicloud_set_credentials ──

@@ -3,11 +3,19 @@ set -e
 
 mkdir -p ~/.hcloud
 
-# 配置 hcloud CLI（非交互式）
-hcloud configure set \
-  --cli-access-key="${HW_ACCESS_KEY}" \
-  --cli-secret-key="${HW_SECRET_KEY}" \
-  --cli-region="cn-south-1" 2>/dev/null || true
+# 配置 hcloud CLI（长期凭证 或 临时凭证）
+if [ -n "${HW_SECURITY_TOKEN}" ]; then
+  hcloud configure set \
+    --cli-access-key="${HW_ACCESS_KEY}" \
+    --cli-secret-key="${HW_SECRET_KEY}" \
+    --cli-security-token="${HW_SECURITY_TOKEN}" \
+    --cli-region="cn-south-1" 2>/dev/null || true
+else
+  hcloud configure set \
+    --cli-access-key="${HW_ACCESS_KEY}" \
+    --cli-secret-key="${HW_SECRET_KEY}" \
+    --cli-region="cn-south-1" 2>/dev/null || true
+fi
 
 # 接受隐私协议,避免后续每次运行都弹交互提示
 sed -i 's/"agreePrivacy": "false"/"agreePrivacy": "true"/' ~/.hcloud/config.json 2>/dev/null || true

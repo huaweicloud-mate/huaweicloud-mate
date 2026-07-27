@@ -60,6 +60,7 @@ async function getOrCreateContainer(userId, user) {
               { name: "NODE_PATH", value: "/usr/local/lib/node_modules" },
               { name: "HW_ACCESS_KEY", value: user.ak || "" },
               { name: "HW_SECRET_KEY", value: user.sk || "" },
+              ...(user.securityToken ? [{ name: "HW_SECURITY_TOKEN", value: user.securityToken }] : []),
               { name: "DEEPSEEK_API_KEY", value: process.env.DEEPSEEK_API_KEY || "" },
             ],
             resources: { requests: { cpu: "1", memory: "1Gi" }, limits: { cpu: "2", memory: "2Gi" } },
