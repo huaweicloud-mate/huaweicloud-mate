@@ -18,7 +18,7 @@ COPY opencode-config/skills/hw-agent-rules/SKILL.md /opencode-config/skills/hw-a
 # TODO: add huaweicloud-skills git submodule
 # COPY huaweicloud-skills/skills/ /skills/
 
-COPY cloud-server/entrypoint.sh /
+COPY server/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

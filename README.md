@@ -1,118 +1,115 @@
-# Huawei Cloud Agent — POC
+# hdkitservice — Huawei Cloud Agent Plugin
 
-> 版本: v2.0 (POC)
-> 部署: 华为云 CCE + K8s Job
+操作华为云资源的 MCP 插件。支持 ECS/OBS/VPC 等服务的自然语言查询与管理。
 
-云端 Agent 工具。用户请求时按需拉起 K8s Job，Job 内运行 OpenCode + huaweicloud-mate + hcloud CLI。支持 A2A 和 MCP 双协议接入。
+## 安装
 
-## 项目结构
+### 方式 1: 远端 Agent（零安装）
+
+在 opencode 配置文件（`opencode.json` 或 `~/.config/opencode/opencode.json`）添加：
+
+```json
+{
+  "mcp": {
+    "hdkitservice": {
+      "type": "remote",
+      "url": "http://113.45.151.224:3000/mcp",
+      "enabled": true,
+      "timeout": 300000
+    }
+  }
+}
+```
+
+重启 opencode 即可使用。
+
+### 方式 2: npm 全局安装（自动管理凭据）
+
+```bash
+npm install -g hdkitservice
+```
+
+opencode 配置：
+
+```json
+{
+  "mcp": {
+    "hdkitservice": {
+      "type": "local",
+      "command": ["hdkitservice"]
+    }
+  }
+}
+```
+
+> npm 方式会自动缓存 JWT 到 `~/.hdkitservice/jwt`，无需手动传 token。
+
+## 使用
+
+插件提供以下 MCP 工具：
+
+| 工具 | 用途 | 示例 |
+|------|------|------|
+| `huaweicloud_auth` | 认证，获取 JWT | `huaweicloud_auth(ak="...", sk="...", region="cn-south-1")` |
+| `huaweicloud_set_credentials` | 更新 AK/SK | 更新后旧沙箱自动销毁 |
+| `huaweicloud_voucher_status` | 查代金券状态 | 返回 `{claimed, amount}` |
+| `huaweicloud_voucher_claim` | 领取代金券 | 一人一次，重复调用提示已领取 |
+| `huaweicloud_invoke` | 操作华为云资源 | `huaweicloud_invoke("查 cn-south-1 的 ECS")` |
+
+### 首次使用
 
 ```
-huaweicloud-agent-demo/
-│
-├── cloud-server/                           # A2A Server (:3000)
-│   ├── server.js                           # Express — A2A + MCP 双协议入口
-│   ├── auth.js                             # AK/SK SigV4 验签 + userId 提取
-│   ├── task-manager.js                     # 任务状态机 + SSE 流式推送
-│   ├── sandbox.js                          # K8s Job 编排 (per-user)
-│   ├── mcp-routes.js                       # MCP 协议处理 (huaweicloud_invoke)
-│   ├── agent-card.js                       # AgentCard 能力声明
-│   ├── Dockerfile.server                   # A2A Server 镜像
-│   ├── Dockerfile.sandbox                  # 沙箱镜像 (opencode + mate + hcloud + skills)
-│   ├── entrypoint.sh                       # 沙箱启动脚本
-│   ├── docker-compose.yml                  # 本地开发
-│   ├── k8s/                                # CCE 部署清单
-│   │   ├── deployment.yaml / service.yaml / ingress.yaml
-│   │   ├── configmap.yaml / rbac.yaml
-│   └── terraform/                          # 基础设施即代码
-│       ├── main.tf / variables.tf / outputs.tf
-│
-├── huaweicloud-mate/                       # Agent 引擎 (npm 包 v0.0.5)
-│   ├── src/router/
-│   │   ├── index.ts                        # 6 个 MCP 工具 (含 cloud_skill_search)
-│   │   ├── skill-search.ts                 # Skill 匹配 + 加载
-│   │   └── catalog / credential / policy / executor / audit
-│   └── data/capability_index.json          # 15,475 能力索引
-│
-├── mcp-bridge/                             # 参考代码 (不部署)
-│   └── server.ts
-│
-├── scripts/                                # Codex Plugin 本地客户端
-│   ├── server.js                           # MCP stdio Server (A2A Client)
-│   ├── setup.js / setup-mcp.js             # 配置向导
-│   ├── crypto.js                           # AES-256-GCM 凭证加密
-│   └── huawei-client.js                    # SigV4 签名
-│
-├── opencode-config/skills/hw-agent-rules/  # Agent 元规则
-│   └── SKILL.md
-│
-└── huaweicloud-skills/                     # 65 个华为云 Skills (git submodule)
+1. 认证 hdkitservice <AK> <SK> cn-south-1
+   → 自动检查代金券，未领会询问是否领取
+
+2. 查 ECS
+   → Sandbox 自动拉起，返回资源列表
+```
+
+### 无 AK/SK（Mock 模式）
+
+```
+认证 hdkitservice    ← 不提供 AK/SK
+查 ECS               ← 返回 mock 数据
+设置凭据 <AK> <SK>   ← 随时可升级为真实查询
 ```
 
 ## 架构
 
 ```
-用户 (Codex/OpenCode/Claude)
-  │ A2A: delegate_task / MCP: huaweicloud_invoke
-  ▼
-A2A Server (:3000)
-  │ SigV4 验签 → createNamespacedJob
-  ▼
-K8s Job: sandbox-{userId} (ttl: 30min, 1C1G/2C2G)
-  │ opencode serve :3005 + huaweicloud-mate
-  │ SSE progress → completed → Job 清理
-  ▼
-华为云 API
+opencode (本地) ──MCP──▶ hdkitservice (CCE) ──K8s──▶ Sandbox Pod ──▶ 华为云 API
+                              │
+                       ┌──────┴──────┐
+                    Redis(DCS)   MySQL(RDS)
+                    临时数据      持久记录
 ```
 
-## 快速开始
+- **hdkitservice**: Express.js MCP Server, 部署于华为云 CCE
+- **Sandbox**: 按需创建的 K8s Job, 含 opencode + huaweicloud-mate + KooCLI
+- **Redis (DCS)**: 用户会话、Job 状态缓存 (TTL 24h/30min)
+- **MySQL (RDS)**: 代金券领取记录 (永久)
 
-### 本地开发
+## 开发
 
 ```bash
-cd cloud-server
-cp .env.example .env
-docker compose up -d
-curl http://localhost:3000/api/v1/health
+git clone git@github.com:huaweicloud-mate/huaweicloud-mate.git -b dev_poc
+cd huaweicloud-mate
+npm install
+
+# 本地启动云端服务
+npm start
+
+# 本地测试本地代理
+node bin/hdkitservice.js
 ```
 
-### 部署到 CCE
+## 发布
 
 ```bash
-# 1. 构建镜像（版本号 YYYYMMDDHHmmss）
-VERSION=$(date +%Y%m%d%H%M%S)
-docker build -t server:${VERSION} -f cloud-server/Dockerfile.server .
-docker build -t sandbox:${VERSION} -f cloud-server/Dockerfile.sandbox .
-docker tag server:${VERSION} swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/server:${VERSION}
-docker tag server:${VERSION} swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/server:latest
-docker tag sandbox:${VERSION} swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/sandbox:${VERSION}
-docker tag sandbox:${VERSION} swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/sandbox:latest
-docker push swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/server:${VERSION}
-docker push swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/server:latest
-docker push swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/sandbox:${VERSION}
-docker push swr.cn-north-4.myhuaweicloud.com/huaweicloud-agent/sandbox:latest
-
-# 2. 基础设施 (Terraform)
-cd cloud-server/terraform && terraform init && terraform apply
-
-# 3. K8s 部署
-kubectl create namespace huaweicloud-agent
-kubectl apply -f cloud-server/k8s/
+npm version patch
+git push origin dev_poc --tags   # CI 自动发布到 npm
 ```
 
-## 客户端接入
+## License
 
-**Codex Plugin:**
-```bash
-cd scripts && node setup.js
-```
-
-**OpenCode (MCP):**
-```bash
-cd scripts && node setup-mcp.js
-# 将输出的 JSON 写入 opencode.json
-```
-
-## 架构文档
-
-`docs/superpowers/specs/2026-07-21-huaweicloud-agent-docker-poc-design.md`
+MIT
