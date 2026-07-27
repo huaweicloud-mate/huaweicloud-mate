@@ -1,55 +1,81 @@
-// cloud-server/redis-store.js — Redis 存储，不可用时自动降级为内存
+// cloud-server/redis-store.js — DCS Redis 主存储
+// 用户数据 + Job 状态以 Redis 为准，不可用时拒绝请求（不降级为内存）
 import Redis from "ioredis";
 
 const REDIS_URL = process.env.REDIS_URL || "";
 
 let redis = null;
-try {
+(async () => {
   if (REDIS_URL) {
-    redis = new Redis(REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 1 });
-    await redis.ping();
-    console.log("[redis-store] Redis connected");
+    try {
+      redis = new Redis(REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 2, retryStrategy: () => null });
+      await redis.ping();
+      console.log("[redis-store] Redis connected");
+    } catch { redis = null; console.log("[redis-store] Redis unavailable"); }
   }
-} catch { console.log("[redis-store] Redis unavailable, using memory fallback"); }
+})();
 
-const memStore = new Map();
+export function isRedisAvailable() { return redis !== null; }
 
-async function getUser(userId) {
-  if (redis) {
-    const data = await redis.hgetall(`user:${userId}`);
-    return Object.keys(data).length > 0 ? data : null;
-  }
-  return memStore.get(userId) || null;
+// ── 用户 ──
+
+export async function getUser(userId) {
+  if (!redis) throw new Error("Redis unavailable");
+  const data = await redis.hgetall(`user:${userId}`);
+  if (Object.keys(data).length === 0) return null;
+  data.createdAt = parseInt(data.createdAt) || Date.now();
+  return data;
 }
 
-async function setUser(userId, data) {
-  if (redis) {
-    await redis.hset(`user:${userId}`, data);
-    await redis.expire(`user:${userId}`, 86400); // 24h TTL
-  }
-  memStore.set(userId, data);
+export async function setUser(userId, data) {
+  if (!redis) throw new Error("Redis unavailable");
+  const flat = {};
+  for (const [k, v] of Object.entries(data)) flat[k] = String(v ?? "");
+  await redis.hset(`user:${userId}`, flat);
+  await redis.expire(`user:${userId}`, 86400); // 24h TTL
+  if (data.ak) await redis.setex(`akidx:${data.ak}`, 86400, userId);
 }
 
-async function getJob(userId) {
-  if (redis) {
-    const data = await redis.hgetall(`job:${userId}`);
-    if (Object.keys(data).length === 0) return null;
-    const age = Date.now() - parseInt(data.startTime);
-    if (age > 1800000) { await redis.del(`job:${userId}`); return null; }
-    return data;
-  }
-  return null; // memory job cache handled by sandbox.js directly
+export async function delUser(userId) {
+  if (!redis) throw new Error("Redis unavailable");
+  const data = await redis.hgetall(`user:${userId}`);
+  if (data?.ak) await redis.del(`akidx:${data.ak}`);
+  await redis.del(`user:${userId}`);
 }
 
-async function setJob(userId, data) {
-  if (redis) {
-    await redis.hset(`job:${userId}`, { ...data, startTime: String(data.startTime || Date.now()) });
-    await redis.expire(`job:${userId}`, 1800); // 30min TTL
-  }
+export async function findUserIdByAk(ak) {
+  if (!redis) throw new Error("Redis unavailable");
+  return await redis.get(`akidx:${ak}`);
 }
 
-async function delJob(userId) {
-  if (redis) await redis.del(`job:${userId}`);
+// ── Job ──
+
+export async function getJob(userId) {
+  if (!redis) throw new Error("Redis unavailable");
+  const data = await redis.hgetall(`job:${userId}`);
+  if (Object.keys(data).length === 0) return null;
+  const age = Date.now() - parseInt(data.startTime);
+  if (age > 1800000) { await redis.del(`job:${userId}`); return null; }
+  return data;
 }
 
-export { getUser, setUser, getJob, setJob, delJob };
+export async function setJob(userId, data) {
+  if (!redis) throw new Error("Redis unavailable");
+  const flat = {};
+  for (const [k, v] of Object.entries(data)) flat[k] = String(v ?? "");
+  await redis.hset(`job:${userId}`, flat);
+  await redis.expire(`job:${userId}`, 1800); // 30min TTL
+}
+
+export async function delJob(userId) {
+  if (!redis) throw new Error("Redis unavailable");
+  await redis.del(`job:${userId}`);
+}
+
+// ── 健康/统计 ──
+
+export async function countUsers() {
+  if (!redis) return 0;
+  const keys = await redis.keys("user:*");
+  return keys.length;
+}

@@ -1,8 +1,9 @@
 // cloud-server/mcp-routes.js — MCP over HTTP 端点
+// 用户数据从 DCS Redis 读写，无内存 Map
 import { createTask, streamTask } from "./task-manager.js";
 import crypto from "node:crypto";
-import { verifyJwt, userStore, issueJwt } from "./auth.js";
-import { setUser } from "./redis-store.js";
+import { verifyJwt, issueJwt, isRedisAvailable } from "./auth.js";
+import { getUser, setUser, findUserIdByAk } from "./redis-store.js";
 import { getDomainId, getVoucher, claimVoucher, markVoucherClaimed } from "./db.js";
 
 const PUBLIC_URL = process.env.PUBLIC_URL || "http://127.0.0.1:3000";
@@ -17,36 +18,14 @@ export function mcpRouter(app) {
     }
     if (call.method === "tools/list") {
       return res.json({ jsonrpc: "2.0", id: call.id, result: { tools: [
-        {
-          name: "huaweicloud_auth",
-          description: "认证并获取 JWT。返回代金券状态但不会自动领取——需要用户明确确认后才调 huaweicloud_voucher_claim 领取。示例: huaweicloud_auth(ak='...', sk='...', region='cn-south-1')",
-          inputSchema: { type: "object", properties: { ak: { type: "string" }, sk: { type: "string" }, region: { type: "string" } } },
-        },
-        {
-          name: "huaweicloud_set_credentials",
-          description: "更新 AK/SK，自动销毁旧沙箱。",
-          inputSchema: { type: "object", properties: { token: { type: "string" }, ak: { type: "string" }, sk: { type: "string" }, region: { type: "string" } }, required: ["token", "ak", "sk"] },
-        },
-        {
-          name: "huaweicloud_voucher_status",
-          description: "查询代金券领取状态。",
-          inputSchema: { type: "object", properties: { token: { type: "string" } }, required: ["token"] },
-        },
-        {
-          name: "huaweicloud_voucher_claim",
-          description: "领取代金券。仅在用户明确表示同意领取后调用。一人只能领取一次，重复调用返回已领取状态。",
-          inputSchema: { type: "object", properties: { token: { type: "string" } }, required: ["token"] },
-        },
-        {
-          name: "huaweicloud_invoke",
-          description: "操作华为云资源。示例: huaweicloud_invoke(intent='查 ECS', token='...')",
-          inputSchema: { type: "object", properties: { intent: { type: "string" }, token: { type: "string" } }, required: ["intent"] },
-        },
+        { name: "huaweicloud_auth",           description: "认证并获取 JWT。返回代金券状态。示例: huaweicloud_auth(ak='...', sk='...', region='cn-south-1')", inputSchema: { type:"object", properties:{ ak:{type:"string"},sk:{type:"string"},region:{type:"string"} } } },
+        { name: "huaweicloud_set_credentials",description: "更新 AK/SK，自动销毁旧沙箱。", inputSchema: { type:"object", properties:{ token:{type:"string"},ak:{type:"string"},sk:{type:"string"},region:{type:"string"}}, required:["token","ak","sk"] } },
+        { name: "huaweicloud_voucher_status", description: "查询代金券领取状态。", inputSchema: { type:"object", properties:{ token:{type:"string"}}, required:["token"] } },
+        { name: "huaweicloud_voucher_claim",  description: "领取代金券（一人一次）。", inputSchema: { type:"object", properties:{ token:{type:"string"}}, required:["token"] } },
+        { name: "huaweicloud_invoke",          description: "操作华为云资源。", inputSchema: { type:"object", properties:{ intent:{type:"string"}, token:{type:"string"}}, required:["intent"] } },
       ] } });
     }
-    if (call.method === "notifications/initialized") {
-      return res.json({ jsonrpc: "2.0", id: call.id, result: {} });
-    }
+    if (call.method === "notifications/initialized") return res.json({ jsonrpc: "2.0", id: call.id, result: {} });
     next();
   });
 
@@ -55,33 +34,37 @@ export function mcpRouter(app) {
     if (!call || call.method !== "tools/call") return res.status(400).json({ error: "invalid MCP request" });
     const { name, arguments: args } = call.params || {};
 
-    // ====== huaweicloud_auth ======
+    // ── huaweicloud_auth ──
     if (name === "huaweicloud_auth") {
-      const userId = crypto.randomUUID().slice(0, 8);
-      const ak = args?.ak || "";
-      const sk = args?.sk || "";
-      const region = args?.region || "cn-south-1";
-      userStore.set(userId, { userId, ak, sk, region, createdAt: Date.now() });
-      setUser(userId, { userId, ak, sk, region }).catch(() => {});
+      if (!isRedisAvailable()) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type:"text", text: "Redis 不可用，请稍后重试" }], isError: true } });
+
+      const ak = args?.ak || "", sk = args?.sk || "", region = args?.region || "cn-south-1";
+
+      let userId = ak ? (await findUserIdByAk(ak)) : null;
+      if (!userId) {
+        userId = crypto.randomUUID().slice(0, 8);
+        await setUser(userId, { userId, ak, sk, region, createdAt: Date.now() });
+      }
+
+      const user = await getUser(userId);
+      user.domainId = user.domainId || "";
 
       let voucherInfo = "";
-      if (ak && sk) {
+      if (ak && sk && !user.domainId) {
         try {
-          const domainId = await getDomainId(ak, sk) || crypto.createHash("sha256").update(ak).digest("hex").slice(0, 16);
-          const existing = await getVoucher(domainId);
-          if (existing && existing.status === 1) {
-            voucherInfo = "已领取";
-          } else {
-            voucherInfo = "未领取";
-          }
-          userStore.get(userId).domainId = domainId;
+          user.domainId = await getDomainId(ak, sk) || crypto.createHash("sha256").update(ak).digest("hex").slice(0, 16);
+          await setUser(userId, { ...user, domainId: user.domainId });
+        } catch {}
+      }
+      if (user.domainId) {
+        try {
+          const existing = await getVoucher(user.domainId);
+          voucherInfo = (existing && existing.status === 1) ? "已领取" : "未领取";
         } catch {}
       }
 
       const token = issueJwt(userId);
 
-      // 后台预热 sandbox（不阻塞 auth 响应）
-      const user = userStore.get(userId);
       setImmediate(async () => {
         try {
           const { getOrCreateContainer } = await import("./sandbox.js");
@@ -89,76 +72,74 @@ export function mcpRouter(app) {
         } catch {}
       });
 
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ success: true, token, mode: (ak && sk) ? "real" : "mock", voucher: voucherInfo || undefined }) }] } });
+      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type:"text", text: JSON.stringify({ success: true, token, mode: (ak && sk) ? "real" : "mock", voucher: voucherInfo || undefined }) }] } });
     }
 
-    // ====== huaweicloud_set_credentials ======
+    // ── huaweicloud_set_credentials ──
     if (name === "huaweicloud_set_credentials") {
-      const jwtToken = args?.token || "";
-      const payload = verifyJwt(jwtToken);
-      if (!payload) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "token 无效" }], isError: true } });
+      const payload = verifyJwt(args?.token || "");
+      if (!payload) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"token 无效" }], isError:true } });
       const userId = payload.sub;
+      const user = await getUser(userId);
+      if (!user) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"用户不存在" }], isError:true } });
       const ak = args?.ak || "", sk = args?.sk || "", region = args?.region || "cn-south-1";
-      if (!ak || !sk) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "ak 和 sk 不能为空" }], isError: true } });
-      userStore.set(userId, { userId, ak, sk, region, createdAt: Date.now() });
-      setUser(userId, { userId, ak, sk, region }).catch(() => {});
+      if (!ak || !sk) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"ak 和 sk 不能为空" }], isError:true } });
+      await setUser(userId, { ...user, ak, sk, region, createdAt: Date.now() });
       try { const { destroyContainer } = await import("./sandbox.js"); await destroyContainer(userId); } catch {}
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ success: true, message: "AK/SK 已更新，旧沙箱已销毁" }) }] } });
+      return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ success:true, message:"AK/SK 已更新，旧沙箱已销毁" }) }] } });
     }
 
-    // ====== huaweicloud_voucher_status ======
+    // ── huaweicloud_voucher_status ──
     if (name === "huaweicloud_voucher_status") {
       const payload = verifyJwt(args?.token || "");
-      if (!payload) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "token无效" }], isError: true } });
-      const u = userStore.get(payload.sub);
-      if (!u?.domainId) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "请提供 AK/SK 登录以查询" }], isError: true } });
+      if (!payload) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"token无效" }], isError:true } });
+      const u = await getUser(payload.sub);
+      if (!u?.domainId) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请提供 AK/SK 登录以查询" }], isError:true } });
       const existing = await getVoucher(u.domainId);
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify(existing && existing.status === 1 ? { claimed: true, voucherId: existing.voucherId, amount: existing.amount } : { claimed: false }) }] } });
+      return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify(existing && existing.status === 1 ? { claimed:true, voucherId:existing.voucherId, amount:existing.amount } : { claimed:false }) }] } });
     }
 
-    // ====== huaweicloud_voucher_claim ======
+    // ── huaweicloud_voucher_claim ──
     if (name === "huaweicloud_voucher_claim") {
       const payload = verifyJwt(args?.token || "");
-      if (!payload) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "token无效" }], isError: true } });
-      const u = userStore.get(payload.sub);
-      if (!u?.domainId || !u?.ak || !u?.sk) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "请先登录并绑定 AK/SK" }], isError: true } });
+      if (!payload) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"token无效" }], isError:true } });
+      const u = await getUser(payload.sub);
+      if (!u?.domainId || !u?.ak || !u?.sk) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请先登录并绑定 AK/SK" }], isError:true } });
 
       const existing = await getVoucher(u.domainId);
-      if (existing && existing.status === 1) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ claimed: true, message: "已领取过" }) }] } });
+      if (existing && existing.status === 1) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"已领取过" }) }] } });
 
       const akHash = crypto.createHash("sha256").update(u.ak).digest("hex");
       try {
-        const claimResp = await fetch(`http://127.0.0.1:${process.env.PORT || 3000}/api/v1/incentive/voucher/claim`, {
-          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ domainId: u.domainId })
-        });
+        const claimResp = await fetch(`http://127.0.0.1:${process.env.PORT || 3000}/api/v1/incentive/voucher/claim`, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ domainId: u.domainId }) });
         const claim = await claimResp.json();
         if (claim.success) {
           await claimVoucher(u.domainId, akHash, claim.voucherId, claim.amount || 100);
-          return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ success: true, voucherId: claim.voucherId, amount: claim.amount, message: "领取成功" }) }] } });
+          return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ success:true, voucherId:claim.voucherId, amount:claim.amount, message:"领取成功" }) }] } });
         }
       } catch {}
       await markVoucherClaimed(u.domainId, akHash);
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: JSON.stringify({ claimed: true, message: "激励侧已领取过" }) }] } });
+      return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"激励侧已领取过" }) }] } });
     }
 
-    // ====== huaweicloud_invoke ======
+    // ── huaweicloud_invoke ──
     if (name !== "huaweicloud_invoke") {
-      return res.json({ jsonrpc: "2.0", id: call.id, error: { code: -32601, message: `Unknown tool: ${name}` } });
+      return res.json({ jsonrpc:"2.0", id:call.id, error: { code:-32601, message: `Unknown tool: ${name}` } });
     }
     const intent = (args?.intent || "").trim();
-    if (!intent) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "请提供 intent" }], isError: true } });
+    if (!intent) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请提供 intent" }], isError:true } });
 
     const authHeader = req.headers.authorization || "";
     let jwtToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : (args?.token || "");
     let userId = null, user = null;
     if (jwtToken) {
       const payload = verifyJwt(jwtToken);
-      if (payload) { const u = userStore.get(payload.sub); if (u) { userId = payload.sub; user = u; } }
+      if (payload) { user = await getUser(payload.sub); if (user) userId = payload.sub; }
     }
-    if (!userId) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: "请先调用 huaweicloud_auth 完成认证" }], isError: true } });
+    if (!userId) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请先调用 huaweicloud_auth 完成认证" }], isError:true } });
 
     try {
-      const task = await createTask(userId, intent, { source: "mcp" }, user);
+      const task = await createTask(userId, intent, { source:"mcp" }, user);
       const text = await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => { unsubscribe(); reject(new Error("超时")); }, 300000);
         const unsubscribe = streamTask(task.id, (event) => {
@@ -166,9 +147,9 @@ export function mcpRouter(app) {
           else if (event.status === "failed") { clearTimeout(timeout); unsubscribe(); reject(new Error(event.error || "失败")); }
         });
       });
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text }] } });
+      return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text }] } });
     } catch (err) {
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true } });
+      return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: `Error: ${err.message}` }], isError:true } });
     }
   });
 }

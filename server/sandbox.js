@@ -1,39 +1,40 @@
 // cloud-server/sandbox.js — K8s Job 管理
-// 每用户一个 K8s Job，执行完 ttlSecondsAfterFinished 自动清理
+// Job 状态持久化到 DCS Redis，Server 重启不丢
 import k8s from "@kubernetes/client-node";
+import { getJob, setJob, delJob, isRedisAvailable } from "./redis-store.js";
 
 const kc = new k8s.KubeConfig();
 kc.loadFromDefault();
 
 const batchApi = kc.makeApiClient(k8s.BatchV1Api);
 const coreApi = kc.makeApiClient(k8s.CoreV1Api);
-const NAMESPACE = process.env.NAMESPACE || "default";
+const NAMESPACE = process.env.NAMESPACE || "huaweicloud-agent";
 const MAX_CONCURRENT = parseInt(process.env.MAX_SANDBOXES || "5");
 const SANDBOX_IMAGE = process.env.SANDBOX_IMAGE || "swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:latest";
 
-const activeJobs = new Map();
-const jobStatusCache = new Map();
+const jobStatusCache = new Map(); // 本地 Pod 状态缓存，Redis 存 Job 元信息
 
-function hasActive(userId) {
-  const info = activeJobs.get(userId);
-  if (!info) return false;
-  if (Date.now() - info.startTime > 1800000) {
-    activeJobs.delete(userId);
-    return false;
-  }
-  const status = jobStatusCache.get(info.jobName);
+async function hasActive(userId) {
+  const job = await getJobSafe(userId);
+  if (!job) return false;
+  const status = jobStatusCache.get(job.jobName);
   return status && status.phase === "Running";
 }
 
+async function getJobSafe(userId) {
+  try { return await getJob(userId); } catch { return null; }
+}
+
 async function getOrCreateContainer(userId, user) {
-  if (hasActive(userId)) {
-    const info = activeJobs.get(userId);
-    const status = jobStatusCache.get(info.jobName);
-    return { id: status.podName, podIp: status.podIp, sessionId: info.sessionId };
+  const existingJob = await getJobSafe(userId);
+  if (existingJob) {
+    const status = jobStatusCache.get(existingJob.jobName);
+    if (status && status.phase === "Running") {
+      return { id: status.podName, podIp: status.podIp, sessionId: existingJob.sessionId };
+    }
   }
 
   const jobName = `sandbox-${userId.replace(/[^a-z0-9-]/g, "-").slice(0, 40)}`;
-
   const job = {
     apiVersion: "batch/v1",
     kind: "Job",
@@ -60,22 +61,10 @@ async function getOrCreateContainer(userId, user) {
               { name: "HW_SECRET_KEY", value: user.sk || "" },
               { name: "DEEPSEEK_API_KEY", value: process.env.DEEPSEEK_API_KEY || "" },
             ],
-            resources: {
-              requests: { cpu: "1", memory: "1Gi" },
-              limits: { cpu: "2", memory: "2Gi" },
-            },
+            resources: { requests: { cpu: "1", memory: "1Gi" }, limits: { cpu: "2", memory: "2Gi" } },
             volumeMounts: [{ name: "skills", mountPath: "/skills" }],
-            securityContext: {
-              runAsNonRoot: true,
-              runAsUser: 1000,
-              allowPrivilegeEscalation: false,
-              capabilities: { drop: ["ALL"] },
-            },
-            readinessProbe: {
-              httpGet: { path: "/global/health", port: 3005 },
-              initialDelaySeconds: 10,
-              periodSeconds: 5,
-            },
+            securityContext: { runAsNonRoot: true, runAsUser: 1000, allowPrivilegeEscalation: false, capabilities: { drop: ["ALL"] } },
+            readinessProbe: { httpGet: { path: "/global/health", port: 3005 }, initialDelaySeconds: 10, periodSeconds: 5 },
           }],
           volumes: [{ name: "skills", emptyDir: {} }],
         },
@@ -83,29 +72,27 @@ async function getOrCreateContainer(userId, user) {
     },
   };
 
-  const { body } = await batchApi.createNamespacedJob(NAMESPACE, job).catch(async (err) => {
+  await batchApi.createNamespacedJob(NAMESPACE, job).catch(async (err) => {
     if (err.statusCode === 409) {
       console.log(`[sandbox] ${userId} job exists, reusing`);
-      const existing = await batchApi.readNamespacedJob(jobName, NAMESPACE);
-      return existing;
+      return;
     }
     throw err;
   });
   const podName = await waitForPodReady(jobName);
   const podIp = await getPodIp(podName);
 
-  // Create opencode session and store it
   let sessionId = null;
   try {
-    const sResp = await fetch(`http://${podIp}:3005/session`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}),
-    });
+    const sResp = await fetch(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
     const session = await sResp.json();
     sessionId = session.id;
-  } catch { /* session creation failed, will create new each time */ }
+  } catch {}
 
-  activeJobs.set(userId, { jobName, startTime: Date.now(), sessionId });
   jobStatusCache.set(jobName, { podName, podIp, phase: "Running" });
+  if (isRedisAvailable()) {
+    setJob(userId, { jobName, podName, podIp, sessionId: sessionId || "", startTime: Date.now() }).catch(() => {});
+  }
 
   console.log(`[sandbox] ${userId} pod ${podName} ready at ${podIp}:3005 session=${sessionId}`);
   return { id: podName, podIp, sessionId };
@@ -113,10 +100,7 @@ async function getOrCreateContainer(userId, user) {
 
 async function waitForPodReady(jobName) {
   for (let i = 0; i < 90; i++) {
-    const { body } = await coreApi.listNamespacedPod(
-      NAMESPACE, undefined, undefined, undefined, undefined,
-      `job-name=${jobName}`
-    );
+    const { body } = await coreApi.listNamespacedPod(NAMESPACE, undefined, undefined, undefined, undefined, `job-name=${jobName}`);
     if (body.items.length > 0 && body.items[0].status?.phase === "Running" && body.items[0].status?.conditions?.some(c => c.type === "Ready" && c.status === "True")) {
       return body.items[0].metadata.name;
     }
@@ -130,27 +114,42 @@ async function getPodIp(podName) {
   return body.status.podIP;
 }
 
-async function execInContainer(container, cmd) {
-  const resp = await fetch(`http://${container.podIp}:3005/`);
-  if (!resp.ok) throw new Error("Sandbox not healthy");
-  return "ok";
-}
-
 function releaseContainer(userId) {
-  activeJobs.delete(userId);
+  if (isRedisAvailable()) delJob(userId).catch(() => {});
 }
 
 async function destroyContainer(userId) {
-  const info = activeJobs.get(userId);
-  if (info) {
-    await batchApi.deleteNamespacedJob(info.jobName, NAMESPACE);
-    activeJobs.delete(userId);
-    jobStatusCache.delete(info.jobName);
-  }
+  try {
+    const existing = await getJobSafe(userId);
+    if (existing) {
+      await batchApi.deleteNamespacedJob(existing.jobName, NAMESPACE).catch(() => {});
+      jobStatusCache.delete(existing.jobName);
+    }
+  } catch {}
+  if (isRedisAvailable()) delJob(userId).catch(() => {});
 }
 
 function getConcurrencyStats() {
-  return { active: activeJobs.size, max: MAX_CONCURRENT };
+  return { active: jobStatusCache.size, max: MAX_CONCURRENT };
 }
 
-export { getOrCreateContainer, execInContainer, releaseContainer, destroyContainer, getConcurrencyStats };
+// ── 启动时从 K8s 调和活跃 Job ──
+export async function reconcileActiveJobs() {
+  try {
+    const { body } = await batchApi.listNamespacedJob(NAMESPACE, undefined, undefined, undefined, undefined, "app=sandbox");
+    for (const job of body.items) {
+      if (job.status?.active === 1) {
+        const jobName = job.metadata.name;
+        const pods = await coreApi.listNamespacedPod(NAMESPACE, undefined, undefined, undefined, undefined, `job-name=${jobName}`);
+        for (const pod of pods.body.items) {
+          if (pod.status?.phase === "Running" && pod.status?.podIP) {
+            jobStatusCache.set(jobName, { podName: pod.metadata.name, podIp: pod.status.podIP, phase: "Running" });
+            console.log(`[sandbox] reconciled existing: ${jobName} @ ${pod.status.podIP}`);
+          }
+        }
+      }
+    }
+  } catch (err) { console.log(`[sandbox] reconcile skipped: ${err.message}`); }
+}
+
+export { getOrCreateContainer, releaseContainer, destroyContainer, getConcurrencyStats };
