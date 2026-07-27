@@ -1,6 +1,6 @@
 {
   "name": "hc-devkit",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "description": "Huawei Cloud DevKit - MCP plugin for managing cloud resources",
   "type": "module",
   "bin": {
