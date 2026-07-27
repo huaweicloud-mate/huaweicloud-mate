@@ -1,4 +1,4 @@
-# hdkitservice — Huawei Cloud Agent Plugin
+# hc-devkit — Huawei Cloud Agent Plugin
 
 操作华为云资源的 MCP 插件。支持 ECS/OBS/VPC 等服务的自然语言查询与管理。
 
@@ -11,7 +11,7 @@
 ```json
 {
   "mcp": {
-    "hdkitservice": {
+    "hc-devkit": {
       "type": "remote",
       "url": "http://113.45.151.224:3000/mcp",
       "enabled": true,
@@ -26,7 +26,7 @@
 ### 方式 2: npm 全局安装（自动管理凭据）
 
 ```bash
-npm install -g hdkitservice
+npm install -g hc-devkit
 ```
 
 opencode 配置：
@@ -34,15 +34,15 @@ opencode 配置：
 ```json
 {
   "mcp": {
-    "hdkitservice": {
+    "hc-devkit": {
       "type": "local",
-      "command": ["hdkitservice"]
+      "command": ["hc-devkit"]
     }
   }
 }
 ```
 
-> npm 方式会自动缓存 JWT 到 `~/.hdkitservice/jwt`，无需手动传 token。
+> npm 方式会自动缓存 JWT 到 `~/.hc-devkit/jwt`，无需手动传 token。
 
 ## 使用
 
@@ -59,7 +59,7 @@ opencode 配置：
 ### 首次使用
 
 ```
-1. 认证 hdkitservice <AK> <SK> cn-south-1
+1. 认证 hc-devkit <AK> <SK> cn-south-1
    → 自动检查代金券，未领会询问是否领取
 
 2. 查 ECS
@@ -69,7 +69,7 @@ opencode 配置：
 ### 无 AK/SK（Mock 模式）
 
 ```
-认证 hdkitservice    ← 不提供 AK/SK
+认证 hc-devkit    ← 不提供 AK/SK
 查 ECS               ← 返回 mock 数据
 设置凭据 <AK> <SK>   ← 随时可升级为真实查询
 ```
@@ -77,14 +77,14 @@ opencode 配置：
 ## 架构
 
 ```
-opencode (本地) ──MCP──▶ hdkitservice (CCE) ──K8s──▶ Sandbox Pod ──▶ 华为云 API
+opencode (本地) ──MCP──▶ hc-devkit (CCE) ──K8s──▶ Sandbox Pod ──▶ 华为云 API
                               │
                        ┌──────┴──────┐
                     Redis(DCS)   MySQL(RDS)
                     临时数据      持久记录
 ```
 
-- **hdkitservice**: Express.js MCP Server, 部署于华为云 CCE
+- **hc-devkit**: Express.js MCP Server, 部署于华为云 CCE
 - **Sandbox**: 按需创建的 K8s Job, 含 opencode + huaweicloud-mate + KooCLI
 - **Redis (DCS)**: 用户会话、Job 状态缓存 (TTL 24h/30min)
 - **MySQL (RDS)**: 代金券领取记录 (永久)
@@ -100,7 +100,7 @@ npm install
 npm start
 
 # 本地测试本地代理
-node bin/hdkitservice.js
+node bin/hc-devkit.js
 ```
 
 ## 发布

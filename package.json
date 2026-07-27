@@ -1,10 +1,10 @@
 {
-  "name": "hdkitservice",
+  "name": "hc-devkit",
   "version": "0.0.5",
-  "description": "Huawei Cloud Agent - MCP plugin for managing cloud resources",
+  "description": "Huawei Cloud DevKit - MCP plugin for managing cloud resources",
   "type": "module",
   "bin": {
-    "hdkitservice": "./bin/hdkitservice.js"
+    "hc-devkit": "./bin/hc-devkit.js"
   },
   "files": [
     "bin/",

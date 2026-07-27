@@ -1,19 +1,19 @@
 #!/usr/bin/env node
-// bin/hdkitservice.js — local MCP stdio server, proxies to cloud hdkitservice
+// bin/hc-devkit.js — local MCP stdio server, proxies to cloud hc-devkit
 import { createInterface } from "node:readline";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
 const CLOUD_URL = process.env.HDKITSERVICE_URL || "http://113.45.151.224:3000/mcp";
-const JWT_FILE = join(homedir(), ".hdkitservice", "jwt");
+const JWT_FILE = join(homedir(), ".hc-devkit", "jwt");
 
 // JWT persistence
 function loadJwt() {
   try { return readFileSync(JWT_FILE, "utf8").trim(); } catch { return ""; }
 }
 function saveJwt(token) {
-  mkdirSync(join(homedir(), ".hdkitservice"), { recursive: true });
+  mkdirSync(join(homedir(), ".hc-devkit"), { recursive: true });
   writeFileSync(JWT_FILE, token);
 }
 
@@ -33,7 +33,7 @@ rl.on("line", async (line) => {
     return respond(call.id, {
       protocolVersion: "2024-11-05",
       capabilities: { tools: {} },
-      serverInfo: { name: "hdkitservice", version: "0.1.0" },
+      serverInfo: { name: "hc-devkit", version: "0.1.0" },
     });
   }
   if (method === "notifications/initialized") return;

@@ -13,7 +13,7 @@ export function mcpRouter(app) {
     const call = req.body;
     if (!call || !call.method) return next();
     if (call.method === "initialize") {
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "hdkitservice", version: "5.0.0" } } });
+      return res.json({ jsonrpc: "2.0", id: call.id, result: { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "hc-devkit", version: "5.0.0" } } });
     }
     if (call.method === "tools/list") {
       return res.json({ jsonrpc: "2.0", id: call.id, result: { tools: [
