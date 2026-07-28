@@ -3,6 +3,7 @@
 import crypto from "node:crypto";
 import { getOrCreateContainer, destroyContainer, releaseContainer } from "./sandbox.js";
 import { insertTask, updateTaskDb, getTaskDb, listTasksByUser } from "./db.js";
+import { getUser } from "./redis-store.js";
 
 const activeTaskCache = new Map();
 const taskSubscribers = new Map();
@@ -96,7 +97,10 @@ async function executeTask(taskId, user) {
     track(taskId, { status: "working", progress: 5, currentStep: "正在初始化沙箱..." });
     publish(taskId, { type: "status", status: "working", message: "开始分配沙箱..." });
 
-    const container = await getOrCreateContainer(user.userId, user).catch((err) => {
+    const freshUser = await getUser(task.userId || task.user_id);
+    const currentUser = freshUser || user;
+
+    const container = await getOrCreateContainer(currentUser.userId, currentUser).catch((err) => {
       if (err.message?.includes("ENOENT") || err.message?.includes("connect") || err.code === "ENOENT") {
         console.log("[task-manager] K8s unavailable");
         return null;

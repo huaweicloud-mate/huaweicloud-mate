@@ -128,3 +128,27 @@ describe("M3: activeTaskCache recovery and SSE reconnect", () => {
     expect(code).toContain("initTaskCache()");
   });
 });
+
+describe("M4: set_credentials should not use stale user in executeTask", () => {
+  it("executeTask should re-read user from Redis before creating sandbox", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    const execFn = code.slice(code.indexOf("async function executeTask"), code.indexOf("function publish"));
+    expect(execFn).toContain("freshUser");
+    expect(execFn).toContain("getUser");
+  });
+
+  it("executeTask should use freshUser for getOrCreateContainer, not stale user param", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    const execFn = code.slice(code.indexOf("async function executeTask"), code.indexOf("function publish"));
+    expect(execFn).toContain("currentUser");
+    expect(execFn).toMatch(/getOrCreateContainer\(currentUser/);
+  });
+
+  it("task-manager should import getUser from redis-store", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    expect(code).toMatch(/import.*getUser.*from.*redis-store/);
+  });
+});
