@@ -4,7 +4,7 @@ import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { authFlexible, issueJwt, generateLoginCode, confirmLoginCode, pollLoginCode, registerUser, isRedisAvailable, CODE_TTL_MS } from "./auth.js";
-import { createTask, getTask, streamTask, cancelTask, listUserTasks } from "./task-manager.js";
+import { createTask, getTask, streamTask, cancelTask, listUserTasks, initTaskCache } from "./task-manager.js";
 import { getConcurrencyStats, reconcileActiveJobs } from "./sandbox.js";
 import { getAgentCard } from "./agent-card.js";
 import { countUsers } from "./redis-store.js";
@@ -42,11 +42,12 @@ app.get("/tasks/:id/stream", authFlexible, async (req, res) => {
   const task = await getTask(req.params.id);
   if (!task) return res.status(404).end();
   if (task.userId !== req.userId) return res.status(403).end();
+  const lastEventId = parseInt(req.headers["last-event-id"] || "0", 10);
   res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-cache", Connection: "keep-alive" });
   const unsubscribe = streamTask(req.params.id, (event) => {
-    res.write(`data: ${JSON.stringify(event)}\n\n`);
+    res.write(`id: ${event.id}\ndata: ${JSON.stringify(event)}\n\n`);
     if (["completed", "failed", "cancelled"].includes(event.status)) { res.end(); unsubscribe(); }
-  });
+  }, lastEventId);
   req.on("close", unsubscribe);
 });
 
@@ -109,4 +110,5 @@ app.listen(PORT, async () => {
   console.log(`[A2A Server] 华为云 Agent 已启动 @ http://0.0.0.0:${PORT}`);
   console.log(`[A2A Server] AgentCard @ http://0.0.0.0:${PORT}/.well-known/agent.json`);
   await reconcileActiveJobs();
+  await initTaskCache();
 });

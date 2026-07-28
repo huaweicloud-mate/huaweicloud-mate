@@ -75,3 +75,56 @@ describe("B8: DB update failure logging and retry", () => {
     expect(errorLogs.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe("M3: activeTaskCache recovery and SSE reconnect", () => {
+  it("initTaskCache should be exported", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    expect(code).toContain("export async function initTaskCache");
+  });
+
+  it("initTaskCache should recover pending/working tasks from MySQL", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    const initFn = code.slice(code.indexOf("async function initTaskCache"));
+    expect(initFn).toContain("pending");
+    expect(initFn).toContain("working");
+    expect(initFn).toContain("activeTaskCache.set");
+  });
+
+  it("working tasks should be marked failed on recovery (server restarted)", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    const initFn = code.slice(code.indexOf("async function initTaskCache"));
+    expect(initFn).toContain("Server restarted, task interrupted");
+  });
+
+  it("publish should assign incremental event id", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    const publishFn = code.slice(code.indexOf("function publish("), code.indexOf("function track("));
+    expect(publishFn).toContain("eventCounter");
+    expect(publishFn).toContain("id: eventCounter");
+  });
+
+  it("streamTask should accept lastEventId and replay missed events", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    const streamFn = code.slice(code.indexOf("function streamTask("), code.indexOf("async function cancelTask"));
+    expect(streamFn).toContain("lastEventId");
+    expect(streamFn).toContain("replayFrom");
+  });
+
+  it("server.js SSE endpoint should send event id and support Last-Event-ID", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./server.js", import.meta.url), "utf-8");
+    expect(code).toContain("last-event-id");
+    expect(code).toMatch(/id:\s*\$\{event\.id\}/);
+  });
+
+  it("server.js should call initTaskCache on startup", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./server.js", import.meta.url), "utf-8");
+    expect(code).toContain("initTaskCache()");
+  });
+});

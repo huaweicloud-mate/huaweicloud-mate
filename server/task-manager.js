@@ -4,8 +4,68 @@ import crypto from "node:crypto";
 import { getOrCreateContainer, destroyContainer, releaseContainer } from "./sandbox.js";
 import { insertTask, updateTaskDb, getTaskDb, listTasksByUser } from "./db.js";
 
-const activeTaskCache = new Map();   // 活跃任务缓存（状态频繁变更，减少 MySQL 压力）
-const taskSubscribers = new Map();  // SSE 订阅者（必须是内存）
+const activeTaskCache = new Map();
+const taskSubscribers = new Map();
+let eventCounter = 0;
+
+export async function recoverActiveTasks() {
+  try {
+    const [rows] = (await import("./db.js")).default ? [] : [];
+    const { default: mysql } = await import("mysql2/promise");
+  } catch {}
+  try {
+    const tasks = await listTasksByUser("__all__");
+    return;
+  } catch {}
+}
+
+export async function recoverActiveTasksFromDb() {
+  try {
+    const pool = (await import("./db.js"))._pool;
+  } catch {}
+}
+
+async function recoverTasks() {
+  try {
+    const db = await import("./db.js");
+    const statuses = ["pending", "working"];
+    for (const status of statuses) {
+      const tasks = await listTasksByUser("__recover__");
+    }
+  } catch {}
+}
+
+export async function initTaskCache() {
+  try {
+    const mysql = await import("mysql2/promise");
+    const pool = mysql.createPool({
+      host: process.env.MYSQL_HOST || "mysql",
+      port: parseInt(process.env.MYSQL_PORT || "3306"),
+      user: process.env.MYSQL_USER || "root",
+      password: process.env.MYSQL_PASSWORD,
+      database: process.env.MYSQL_DATABASE || "hdkitservice",
+      connectionLimit: 1,
+    });
+    const [rows] = await pool.execute("SELECT * FROM tasks WHERE status IN ('pending', 'working')");
+    for (const r of rows) {
+      const task = {
+        id: r.id, userId: r.user_id, description: r.description,
+        status: r.status, progress: r.progress, output: r.output || "",
+        error: r.error, events: [], artifacts: [],
+        createdAt: r.created_at?.toISOString?.() || r.created_at,
+        updatedAt: r.updated_at?.toISOString?.() || r.updated_at,
+      };
+      activeTaskCache.set(r.id, task);
+      if (r.status === "working") {
+        track(r.id, { status: "failed", error: "Server restarted, task interrupted" });
+      }
+    }
+    await pool.end();
+    console.log(`[task-manager] Recovered ${rows.length} active tasks from MySQL`);
+  } catch (err) {
+    console.log(`[task-manager] Task recovery skipped: ${err.message}`);
+  }
+}
 
 async function createTask(userId, description, context, user) {
   const taskId = crypto.randomUUID();
@@ -88,10 +148,12 @@ async function executeTask(taskId, user) {
 function publish(taskId, event) {
   const task = getCached(taskId);
   if (!task) return;
-  task.events.push({ ...event, timestamp: new Date().toISOString() });
+  eventCounter++;
+  const enriched = { ...event, timestamp: new Date().toISOString(), id: eventCounter };
+  task.events.push(enriched);
   task.updatedAt = new Date().toISOString();
   const subs = taskSubscribers.get(taskId);
-  if (subs) for (const cb of subs) { try { cb(event); } catch (_) {} }
+  if (subs) for (const cb of subs) { try { cb(enriched); } catch (_) {} }
 }
 
 function track(taskId, updates) {
@@ -117,12 +179,16 @@ async function getTask(taskId) {
   return await getTaskDb(taskId);
 }
 
-function streamTask(taskId, callback) {
+function streamTask(taskId, callback, lastEventId = 0) {
   if (!taskSubscribers.has(taskId)) taskSubscribers.set(taskId, new Set());
   taskSubscribers.get(taskId).add(callback);
 
   const task = getCached(taskId);
-  if (task) for (const event of task.events) { try { callback(event); } catch (_) {} }
+  if (task) {
+    const replayFrom = task.events.findIndex((e) => (e.id || 0) > lastEventId);
+    const replayEvents = replayFrom >= 0 ? task.events.slice(replayFrom) : task.events;
+    for (const event of replayEvents) { try { callback(event); } catch (_) {} }
+  }
 
   return () => {
     const subs = taskSubscribers.get(taskId);
