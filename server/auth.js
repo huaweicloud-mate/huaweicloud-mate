@@ -8,6 +8,8 @@ const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString("he
 const JWT_EXPIRES = process.env.JWT_EXPIRES || "12h";
 const SESSION_TIMEOUT_MS = parseInt(process.env.SESSION_TIMEOUT_MS || "1800000");
 
+const SIGV4_MAX_SKEW_MS = 15 * 60 * 1000;
+
 // ── JWT ──
 
 export function issueJwt(userId) {
@@ -28,6 +30,55 @@ export async function registerUser({ userId, ak, sk, projectId, openaiKey, regio
   return { ok: true };
 }
 
+// ── SigV4 (SDK-HMAC-SHA256) 签名验证 ──
+
+function hmacSha256(key, data) {
+  return crypto.createHmac("sha256", key).update(data).digest();
+}
+
+function sha256Hex(data) {
+  return crypto.createHash("sha256").update(data).digest("hex");
+}
+
+function parseAuthHeader(header) {
+  if (!header || !header.startsWith("SDK-HMAC-SHA256 ")) return null;
+  const parts = {};
+  header.slice("SDK-HMAC-SHA256 ".length).split(",").forEach((seg) => {
+    const eq = seg.indexOf("=");
+    if (eq > -1) parts[seg.slice(0, eq).trim()] = seg.slice(eq + 1).trim();
+  });
+  return { access: parts.Access || null, signedHeaders: parts.SignedHeaders || null, signature: parts.Signature || null };
+}
+
+function buildCanonicalRequest(method, path, query, headers, signedHeaders, body) {
+  const sorted = signedHeaders.split(";");
+  const headerLines = sorted.filter(Boolean).map((h) => `${h}:${(headers[h] || "").trim()}`);
+  return [method, path, query, ...headerLines, "", sha256Hex(body)].join("\n");
+}
+
+function buildStringToSign(timestamp, canonicalRequest) {
+  return ["SDK-HMAC-SHA256", timestamp, sha256Hex(canonicalRequest)].join("\n");
+}
+
+export function verifySignature({ method, path, query, headers, body, ak, sk }) {
+  const parsed = parseAuthHeader(headers.authorization || "");
+  if (!parsed || !parsed.access || !parsed.signedHeaders || !parsed.signature) return { ok: false, error: "Authorization 头格式无效" };
+  if (parsed.access !== ak) return { ok: false, error: "AK 不匹配" };
+
+  const timestamp = headers["x-sdk-date"] || headers["X-Sdk-Date"];
+  if (!timestamp) return { ok: false, error: "缺少 X-Sdk-Date 头" };
+  const skew = Math.abs(Date.now() - new Date(timestamp).getTime());
+  if (skew > SIGV4_MAX_SKEW_MS) return { ok: false, error: "请求时间偏差过大" };
+
+  const canonical = buildCanonicalRequest(method, path, query || "", headers, parsed.signedHeaders, body || "");
+  const sts = buildStringToSign(timestamp, canonical);
+  const signingKey = hmacSha256(sk, hmacSha256(sk, timestamp));
+  const computed = hmacSha256(signingKey, sts).toString("hex");
+
+  if (computed !== parsed.signature) return { ok: false, error: "签名验证失败" };
+  return { ok: true };
+}
+
 // ── Auth 中间件 ──
 
 // A2A 端点：Bearer JWT 或 AK/SK 签名
@@ -37,8 +88,10 @@ export async function authFlexible(req, res, next) {
   if (authHeader.startsWith("Bearer ")) {
     return authWithJwt(req, res, next);
   }
-  // AK/SK 签名由服务端自行验证（hbcloud SDK 调用）
-  return authWithJwt(req, res, next); // 降级为 JWT
+  if (authHeader.startsWith("SDK-HMAC-SHA256 ")) {
+    return authWithAkSk(req, res, next);
+  }
+  return res.status(401).json({ error: "需要 Bearer Token 或 SDK-HMAC-SHA256 签名" });
 }
 
 async function authWithJwt(req, res, next) {
@@ -54,6 +107,34 @@ async function authWithJwt(req, res, next) {
   req.userId = payload.sub;
   req.user = user;
   req.authMethod = "jwt";
+  next();
+}
+
+async function authWithAkSk(req, res, next) {
+  const parsed = parseAuthHeader(req.headers.authorization || "");
+  if (!parsed || !parsed.access) return res.status(401).json({ error: "签名头格式无效" });
+
+  const userId = await findUserIdByAk(parsed.access);
+  if (!userId) return res.status(401).json({ error: "AK 未注册" });
+
+  const user = await getUser(userId);
+  if (!user || !user.sk) return res.status(401).json({ error: "用户凭据不完整" });
+
+  const result = verifySignature({
+    method: req.method,
+    path: req.path,
+    query: req.url.includes("?") ? req.url.slice(req.url.indexOf("?") + 1) : "",
+    headers: req.headers,
+    body: JSON.stringify(req.body || ""),
+    ak: user.ak,
+    sk: user.sk,
+  });
+
+  if (!result.ok) return res.status(401).json({ error: result.error });
+
+  req.userId = userId;
+  req.user = user;
+  req.authMethod = "sigv4";
   next();
 }
 
