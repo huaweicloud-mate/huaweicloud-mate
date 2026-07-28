@@ -19,7 +19,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use(rateLimit({ windowMs: 60000, max: 300, keyGenerator: (req) => req.userId || req.ip }));
 
 // ── AgentCard ──
-app.get("/.well-known/agent.json", (req, res) => res.json(getAgentCard()));
+app.get("/.well-known/agent.json", (req, res) => res.setHeader("Cache-Control", "public, max-age=3600").json(getAgentCard()));
 
 // ── 任务管理 ──
 app.post("/tasks", authFlexible, async (req, res) => {

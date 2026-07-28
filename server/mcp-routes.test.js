@@ -77,3 +77,19 @@ describe("Q10: temp_credential loose comparison", () => {
     expect(code).not.toMatch(/temp_credential\s*===\s*true\s*;/);
   });
 });
+
+describe("Q11: AgentCard cache headers", () => {
+  it("agent.json endpoint should set Cache-Control header", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./server.js", import.meta.url), "utf-8");
+    const agentLine = code.match(/app\.get\([^)]*agent\.json[^)]*\)[^;]+;/s);
+    expect(agentLine).not.toBeNull();
+    expect(agentLine[0]).toContain("Cache-Control");
+  });
+
+  it("Cache-Control should be public with max-age=3600", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./server.js", import.meta.url), "utf-8");
+    expect(code).toMatch(/public.*max-age=3600/);
+  });
+});
