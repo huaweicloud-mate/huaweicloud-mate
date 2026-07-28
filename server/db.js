@@ -81,7 +81,7 @@ export async function claimVoucher(domainId, akHash, voucherId, amount) {
 }
 
 export async function markVoucherClaimed(domainId, akHash) {
-  await pool.execute("INSERT INTO voucher_records (domain_id, ak_hash, status) VALUES (?, ?, 2) ON DUPLICATE KEY UPDATE status=2", [domainId, akHash]);
+  await pool.execute("INSERT INTO voucher_records (domain_id, ak_hash, status) VALUES (?, ?, 2) ON DUPLICATE KEY UPDATE status=IF(status=1, 1, 2)", [domainId, akHash]);
 }
 
 // ── 任务 ──
