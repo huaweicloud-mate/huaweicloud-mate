@@ -41,7 +41,7 @@ export function mcpRouter(app) {
       if (!isRedisAvailable()) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type:"text", text: "Redis 不可用，请稍后重试" }], isError: true } });
 
       const ak = args?.ak || "", sk = args?.sk || "", region = args?.region || "cn-south-1";
-      const useTemp = args?.temp_credential === true;
+      const useTemp = args?.temp_credential === true || args?.temp_credential === "true" || args?.temp_credential === 1;
 
       let userId = ak ? (await findUserIdByAk(ak)) : null;
       if (!userId) {

@@ -59,3 +59,21 @@ describe("B6: unknown tool should not fallthrough to invoke", () => {
     expect(invokeLogic).toBeGreaterThan(unknownCheck);
   });
 });
+
+describe("Q10: temp_credential loose comparison", () => {
+  it("useTemp should accept boolean true, string 'true', and number 1", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    const useTempLine = code.match(/const useTemp\s*=\s*[^;]+;/);
+    expect(useTempLine).not.toBeNull();
+    expect(useTempLine[0]).toContain("=== true");
+    expect(useTempLine[0]).toContain('=== "true"');
+    expect(useTempLine[0]).toContain("=== 1");
+  });
+
+  it("useTemp should not use strict === true only", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    expect(code).not.toMatch(/temp_credential\s*===\s*true\s*;/);
+  });
+});
