@@ -80,7 +80,9 @@ rl.on("line", async (line) => {
         try {
           const t = JSON.parse(data.result.content[0].text);
           if (t.token) saveJwt(t.token);
-        } catch {}
+        } catch (e) {
+          console.error(`[hc-devkit] Failed to parse auth response: ${e.message}`);
+        }
       }
 
       if (data.result) {
