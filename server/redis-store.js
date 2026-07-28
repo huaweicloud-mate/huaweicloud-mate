@@ -79,3 +79,16 @@ export async function countUsers() {
   const keys = await redis.keys("user:*");
   return keys.length;
 }
+
+// ── 分布式锁 ──
+
+export async function acquireLock(key, ttlMs = 30000) {
+  if (!redis) return true;
+  const result = await redis.set(key, String(Date.now()), "PX", ttlMs, "NX");
+  return result === "OK";
+}
+
+export async function releaseLock(key) {
+  if (!redis) return;
+  await redis.del(key);
+}

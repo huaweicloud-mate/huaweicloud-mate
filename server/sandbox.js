@@ -1,7 +1,7 @@
 // cloud-server/sandbox.js — K8s Job 管理
 // Job 状态持久化到 DCS Redis，Server 重启不丢
 import k8s from "@kubernetes/client-node";
-import { getJob, setJob, delJob, isRedisAvailable } from "./redis-store.js";
+import { getJob, setJob, delJob, isRedisAvailable, acquireLock, releaseLock } from "./redis-store.js";
 
 const kc = new k8s.KubeConfig();
 kc.loadFromDefault();
@@ -35,7 +35,33 @@ async function getOrCreateContainer(userId, user) {
     }
   }
 
-  const jobName = `sandbox-${userId.replace(/[^a-z0-9-]/g, "-").slice(0, 40)}`;
+  const lockKey = `lock:sandbox:${userId}`;
+  const locked = await acquireLock(lockKey, 60000);
+  if (!locked) {
+    console.log(`[sandbox] ${userId} sandbox creation already in progress, waiting...`);
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      const job = await getJobSafe(userId);
+      if (job) {
+        const status = jobStatusCache.get(job.jobName);
+        if (status && status.phase === "Running") {
+          return { id: status.podName, podIp: status.podIp, sessionId: job.sessionId };
+        }
+      }
+    }
+    throw new Error(`Sandbox for ${userId} not ready after waiting 60s`);
+  }
+
+  try {
+    const recheckJob = await getJobSafe(userId);
+    if (recheckJob) {
+      const status = jobStatusCache.get(recheckJob.jobName);
+      if (status && status.phase === "Running") {
+        return { id: status.podName, podIp: status.podIp, sessionId: recheckJob.sessionId };
+      }
+    }
+
+    const jobName = `sandbox-${userId.replace(/[^a-z0-9-]/g, "-").slice(0, 40)}`;
   const job = {
     apiVersion: "batch/v1",
     kind: "Job",
@@ -97,7 +123,12 @@ async function getOrCreateContainer(userId, user) {
   }
 
   console.log(`[sandbox] ${userId} pod ${podName} ready at ${podIp}:3005 session=${sessionId}`);
-  return { id: podName, podIp, sessionId };
+    await releaseLock(lockKey);
+    return { id: podName, podIp, sessionId };
+  } catch (err) {
+    await releaseLock(lockKey);
+    throw err;
+  }
 }
 
 async function waitForPodReady(jobName) {
