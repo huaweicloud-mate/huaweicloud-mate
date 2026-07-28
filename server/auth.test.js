@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import crypto from "node:crypto";
-import { verifySignature } from "./auth.js";
+import { verifySignature, CODE_TTL_MS } from "./auth.js";
 
 const AK = "HPUARREPRFZ9BCWWMWYH";
 const SK = "MNQxuUR5uH8Hsqr5JKi6ZGjn8vgtuCv84X8jdzJU";
@@ -79,5 +79,18 @@ describe("verifySignature", () => {
     const result = verifySignature({ method: "GET", path: "/", query: "", headers: { authorization: "Bearer junk" }, body: "", ak: AK, sk: SK });
     expect(result.ok).toBe(false);
     expect(result.error).toContain("格式无效");
+  });
+});
+
+describe("B7: CODE_TTL_MS consistency", () => {
+  it("CODE_TTL_MS should be exported and equal 30000", () => {
+    expect(CODE_TTL_MS).toBe(30000);
+  });
+
+  it("server.js should use CODE_TTL_MS / 1000 for expiresIn, not hardcoded 30", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./server.js", import.meta.url), "utf-8");
+    expect(code).toContain("CODE_TTL_MS / 1000");
+    expect(code).not.toMatch(/expiresIn:\s*30\b/);
   });
 });

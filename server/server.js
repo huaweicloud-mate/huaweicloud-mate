@@ -3,7 +3,7 @@
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import { authFlexible, issueJwt, generateLoginCode, confirmLoginCode, pollLoginCode, registerUser, isRedisAvailable } from "./auth.js";
+import { authFlexible, issueJwt, generateLoginCode, confirmLoginCode, pollLoginCode, registerUser, isRedisAvailable, CODE_TTL_MS } from "./auth.js";
 import { createTask, getTask, streamTask, cancelTask, listUserTasks } from "./task-manager.js";
 import { getConcurrencyStats, reconcileActiveJobs } from "./sandbox.js";
 import { getAgentCard } from "./agent-card.js";
@@ -88,7 +88,7 @@ app.get("/auth/qr/:code.png", async (req, res) => {
   try { const img = await readFile(`/tmp/qrcode-login-${req.params.code}.png`); res.setHeader("Content-Type", "image/png"); res.send(img); } catch { res.status(404).send("QR not found"); }
 });
 
-app.post("/auth/login", (req, res) => { const code = generateLoginCode(); res.json({ code, expiresIn: 30 }); });
+app.post("/auth/login", (req, res) => { const code = generateLoginCode(); res.json({ code, expiresIn: CODE_TTL_MS / 1000 }); });
 
 app.get("/auth/confirm/:code", async (req, res) => {
   const token = await confirmLoginCode(req.params.code);

@@ -186,4 +186,4 @@ export function pollLoginCode(code) {
   return { confirmed: false };
 }
 
-export { JWT_SECRET, SESSION_TIMEOUT_MS, isRedisAvailable };
+export { JWT_SECRET, SESSION_TIMEOUT_MS, CODE_TTL_MS, isRedisAvailable };
