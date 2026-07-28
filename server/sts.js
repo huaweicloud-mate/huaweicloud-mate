@@ -27,7 +27,7 @@ export async function createTemporaryCredentials(ak, sk, region = "cn-south-1") 
             image: SANDBOX_IMAGE,
             command: ["sh", "-c"],
             args: [
-              `printf 'y\\n' | hcloud configure set --cli-access-key=${ak} --cli-secret-key=${sk} --cli-region=${region} >/dev/null 2>&1; printf 'y\\n' | hcloud IAM CreateTemporaryAccessKeyByToken --region=${region} --cli-access-key=${ak} --cli-secret-key=${sk} --auth.identity.methods.1=token --auth.identity.token.duration_seconds=21600`,
+              `hcloud configure set --cli-access-key=${ak} --cli-secret-key=${sk} --cli-region=${region} --agree-privacy-policy=true >/dev/null 2>&1; hcloud IAM CreateTemporaryAccessKeyByToken --region=${region} --cli-access-key=${ak} --cli-secret-key=${sk} --auth.identity.methods.1=token --auth.identity.token.duration_seconds=21600 --agree-privacy-policy=true`,
             ],
           }],
         },
