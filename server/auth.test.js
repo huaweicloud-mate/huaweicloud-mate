@@ -94,3 +94,28 @@ describe("B7: CODE_TTL_MS consistency", () => {
     expect(code).not.toMatch(/expiresIn:\s*30\b/);
   });
 });
+
+describe("M6: pollLoginCode concurrent grace period", () => {
+  it("pollLoginCode should use setTimeout grace period, not immediate delete", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./auth.js", import.meta.url), "utf-8");
+    const pollFn = code.slice(code.indexOf("function pollLoginCode"), code.indexOf("export {"));
+    expect(pollFn).toContain("setTimeout");
+    expect(pollFn).toContain("CODE_GRACE_MS");
+    const confirmedBlock = pollFn.slice(pollFn.indexOf("if (entry.confirmed)"));
+    expect(confirmedBlock).not.toMatch(/^\s*loginCodeStore\.delete\(code\);\s*$/m);
+  });
+
+  it("grace period should only be set once (graceSet flag)", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./auth.js", import.meta.url), "utf-8");
+    const pollFn = code.slice(code.indexOf("function pollLoginCode"), code.indexOf("export {"));
+    expect(pollFn).toContain("graceSet");
+  });
+
+  it("CODE_GRACE_MS should be defined as 5000", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./auth.js", import.meta.url), "utf-8");
+    expect(code).toMatch(/CODE_GRACE_MS\s*=\s*5000/);
+  });
+});

@@ -141,6 +141,7 @@ async function authWithAkSk(req, res, next) {
 // ── 登录码（短期内存，30s TTL） ──
 
 const CODE_TTL_MS = 30000;
+const CODE_GRACE_MS = 5000;
 const loginCodeStore = new Map();
 const loginIntentStore = new Map();
 
@@ -180,7 +181,10 @@ export function pollLoginCode(code) {
   if (Date.now() - entry.createdAt > CODE_TTL_MS) { loginCodeStore.delete(code); return { confirmed: false, expired: true }; }
   if (entry.confirmed) {
     const token = issueJwt(entry.userId);
-    loginCodeStore.delete(code);
+    if (!entry.graceSet) {
+      entry.graceSet = true;
+      setTimeout(() => loginCodeStore.delete(code), CODE_GRACE_MS);
+    }
     return { confirmed: true, token };
   }
   return { confirmed: false };
