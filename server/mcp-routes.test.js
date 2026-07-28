@@ -40,3 +40,22 @@ describe("B2: voucher claim no self-referencing fetch", () => {
     expect(markIdx).toBeGreaterThan(catchIdx);
   });
 });
+
+describe("B6: unknown tool should not fallthrough to invoke", () => {
+  it("non-invoke tool name should return error code -32601", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    const invokeSection = code.slice(code.indexOf("huaweicloud_invoke"));
+    expect(invokeSection).toContain("code:-32601");
+    expect(invokeSection).toContain("Unknown tool");
+  });
+
+  it("unknown tool check should come before invoke logic", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    const unknownCheck = code.indexOf('name !== "huaweicloud_invoke"');
+    const invokeLogic = code.indexOf("const intent =");
+    expect(unknownCheck).toBeGreaterThan(0);
+    expect(invokeLogic).toBeGreaterThan(unknownCheck);
+  });
+});
