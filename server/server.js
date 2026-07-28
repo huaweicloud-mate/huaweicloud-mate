@@ -6,6 +6,7 @@ import rateLimit from "express-rate-limit";
 import { authFlexible, issueJwt, generateLoginCode, confirmLoginCode, pollLoginCode, registerUser, isRedisAvailable, CODE_TTL_MS } from "./auth.js";
 import { createTask, getTask, streamTask, cancelTask, listUserTasks, initTaskCache } from "./task-manager.js";
 import { getConcurrencyStats, reconcileActiveJobs } from "./sandbox.js";
+import { checkSchema } from "./db.js";
 import { getAgentCard } from "./agent-card.js";
 import { countUsers } from "./redis-store.js";
 import { mcpRouter } from "./mcp-routes.js";
@@ -79,7 +80,8 @@ app.post("/api/v1/register", async (req, res) => {
 app.get("/api/v1/concurrency", authFlexible, (req, res) => res.json(getConcurrencyStats()));
 
 app.get("/api/v1/health", async (req, res) => {
-  res.json({ status: "ok", agent: getAgentCard().name, redis: isRedisAvailable(), users: await countUsers(), uptime: process.uptime() });
+  const schema = await checkSchema().catch(() => ({ ok: false }));
+  res.json({ status: "ok", agent: getAgentCard().name, redis: isRedisAvailable(), db: schema, users: await countUsers(), uptime: process.uptime() });
 });
 
 // ── 二维码登录 ──

@@ -116,3 +116,18 @@ export async function listTasksByUser(userId) {
   const [rows] = await pool.execute("SELECT id, status, description, progress, created_at FROM tasks WHERE user_id = ? ORDER BY created_at DESC LIMIT 50", [userId]);
   return rows.map(r => ({ id: r.id, status: r.status, description: r.description, progress: r.progress, createdAt: r.created_at }));
 }
+
+export async function checkSchema() {
+  const results = {};
+  try {
+    const [tables] = await pool.execute("SHOW TABLES");
+    const tableNames = tables.map((t) => Object.values(t)[0]);
+    results.voucher_records = tableNames.includes("voucher_records");
+    results.tasks = tableNames.includes("tasks");
+    results.ok = results.voucher_records && results.tasks;
+  } catch (err) {
+    results.ok = false;
+    results.error = err.message;
+  }
+  return results;
+}
