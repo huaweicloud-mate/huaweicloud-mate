@@ -9,33 +9,6 @@ const activeTaskCache = new Map();
 const taskSubscribers = new Map();
 let eventCounter = 0;
 
-export async function recoverActiveTasks() {
-  try {
-    const [rows] = (await import("./db.js")).default ? [] : [];
-    const { default: mysql } = await import("mysql2/promise");
-  } catch {}
-  try {
-    const tasks = await listTasksByUser("__all__");
-    return;
-  } catch {}
-}
-
-export async function recoverActiveTasksFromDb() {
-  try {
-    const pool = (await import("./db.js"))._pool;
-  } catch {}
-}
-
-async function recoverTasks() {
-  try {
-    const db = await import("./db.js");
-    const statuses = ["pending", "working"];
-    for (const status of statuses) {
-      const tasks = await listTasksByUser("__recover__");
-    }
-  } catch {}
-}
-
 export async function initTaskCache() {
   try {
     const mysql = await import("mysql2/promise");

@@ -115,11 +115,11 @@ async function getOrCreateContainer(userId, user) {
     const sResp = await fetch(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
     const session = await sResp.json();
     sessionId = session.id;
-  } catch {}
+  } catch (err) { console.error(`[sandbox] session create failed for ${jobName}: ${err.message}`); }
 
   jobStatusCache.set(jobName, { podName, podIp, phase: "Running" });
   if (isRedisAvailable()) {
-    setJob(userId, { jobName, podName, podIp, sessionId: sessionId || "", startTime: Date.now() }).catch(() => {});
+    setJob(userId, { jobName, podName, podIp, sessionId: sessionId || "", startTime: Date.now() }).catch((err) => { console.error(`[sandbox] setJob failed: ${err.message}`); });
   }
 
   console.log(`[sandbox] ${userId} pod ${podName} ready at ${podIp}:3005 session=${sessionId}`);
@@ -148,18 +148,18 @@ async function getPodIp(podName) {
 }
 
 function releaseContainer(userId) {
-  if (isRedisAvailable()) delJob(userId).catch(() => {});
+  if (isRedisAvailable()) delJob(userId).catch((err) => { console.error(`[sandbox] delJob on release failed: ${err.message}`); });
 }
 
 async function destroyContainer(userId) {
   try {
     const existing = await getJobSafe(userId);
     if (existing) {
-      await batchApi.deleteNamespacedJob(existing.jobName, NAMESPACE).catch(() => {});
+      await batchApi.deleteNamespacedJob(existing.jobName, NAMESPACE).catch((err) => { console.error(`[sandbox] deleteNamespacedJob failed: ${err.message}`); });
       jobStatusCache.delete(existing.jobName);
     }
-  } catch {}
-  if (isRedisAvailable()) delJob(userId).catch(() => {});
+  } catch (err) { console.error(`[sandbox] destroyContainer failed for ${userId}: ${err.message}`); }
+  if (isRedisAvailable()) delJob(userId).catch((err) => { console.error(`[sandbox] delJob on destroy failed: ${err.message}`); });
 }
 
 function getConcurrencyStats() {
@@ -238,7 +238,7 @@ async function createAnonymousContainer() {
     const sResp = await fetch(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
     const session = await sResp.json();
     sessionId = session.id;
-  } catch {}
+  } catch (err) { console.error(`[sandbox] anon session create failed for ${jobName}: ${err.message}`); }
 
   jobStatusCache.set(jobName, { podName, podIp, phase: "Running" });
   console.log(`[sandbox] anon ${jobName} ready at ${podIp}:3005 session=${sessionId}`);

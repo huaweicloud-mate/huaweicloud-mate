@@ -58,13 +58,13 @@ export function mcpRouter(app) {
         try {
           user.domainId = await getDomainId(ak, sk) || crypto.createHash("sha256").update(ak).digest("hex").slice(0, 16);
           await setUser(userId, { ...user, domainId: user.domainId });
-        } catch {}
+        } catch (err) { console.error(`[mcp] getDomainId failed: ${err.message}`); }
       }
       if (user.domainId) {
         try {
           const existing = await getVoucher(user.domainId);
           voucherInfo = (existing && existing.status === 1) ? "已领取" : "未领取";
-        } catch {}
+        } catch (err) { console.error(`[mcp] getVoucher failed: ${err.message}`); }
       }
 
       // 临时凭证模式：后端 STS 换临时 AK/SK/Token
@@ -94,7 +94,7 @@ export function mcpRouter(app) {
         try {
           const { getOrCreateContainer } = await import("./sandbox.js");
           await getOrCreateContainer(userId, { ...user, ak: sandboxAk, sk: sandboxSk, securityToken: sandboxToken });
-        } catch {}
+        } catch (err) { console.error(`[mcp] sandbox preheat failed: ${err.message}`); }
       });
 
       return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type:"text", text: JSON.stringify({ success: true, token, mode: (ak && sk) ? "real" : "mock", voucher: voucherInfo || undefined, ...tempInfo }) }] } });
@@ -110,7 +110,7 @@ export function mcpRouter(app) {
       const ak = args?.ak || "", sk = args?.sk || "", region = args?.region || "cn-south-1";
       if (!ak || !sk) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"ak 和 sk 不能为空" }], isError:true } });
       await setUser(userId, { ...user, ak, sk, region, createdAt: Date.now() });
-      try { const { destroyContainer } = await import("./sandbox.js"); await destroyContainer(userId); } catch {}
+      try { const { destroyContainer } = await import("./sandbox.js"); await destroyContainer(userId); } catch (err) { console.error(`[mcp] destroyContainer on credential update failed: ${err.message}`); }
       return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ success:true, message:"AK/SK 已更新，旧沙箱已销毁" }) }] } });
     }
 

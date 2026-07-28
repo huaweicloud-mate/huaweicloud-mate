@@ -21,7 +21,7 @@ pool.execute(`CREATE TABLE IF NOT EXISTS voucher_records (
   status     TINYINT      DEFAULT 1,
   claimed_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_ak_hash (ak_hash)
-)`).catch(() => {});
+)`).catch((err) => { console.error(`[db] CREATE TABLE voucher_records failed: ${err.message}`); });
 
 pool.execute(`CREATE TABLE IF NOT EXISTS tasks (
   id          VARCHAR(36)  PRIMARY KEY,
@@ -35,7 +35,7 @@ pool.execute(`CREATE TABLE IF NOT EXISTS tasks (
   updated_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_user_id (user_id),
   INDEX idx_status (status)
-)`).catch(() => {});
+)`).catch((err) => { console.error(`[db] CREATE TABLE tasks failed: ${err.message}`); });
 
 // ── 代金券 ──
 
