@@ -93,10 +93,13 @@ export async function insertTask(task) {
   );
 }
 
+const TASK_UPDATE_WHITELIST = new Set(["status", "progress", "output", "error", "currentStep"]);
+
 export async function updateTaskDb(id, fields) {
   const sets = [];
   const vals = [];
   for (const [k, v] of Object.entries(fields)) {
+    if (!TASK_UPDATE_WHITELIST.has(k)) continue;
     sets.push(`${k} = ?`);
     vals.push(v ?? null);
   }
