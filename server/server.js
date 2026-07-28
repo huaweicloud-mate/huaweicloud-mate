@@ -86,6 +86,12 @@ app.get("/api/v1/health", async (req, res) => {
 
 // ── 二维码登录 ──
 import { readFile } from "node:fs/promises";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const tplSuccess = readFile(join(__dirname, "templates", "confirm-success.html"), "utf-8");
+const tplExpired = readFile(join(__dirname, "templates", "confirm-expired.html"), "utf-8");
 
 app.get("/auth/qr/:code.png", async (req, res) => {
   try { const img = await readFile(`/tmp/qrcode-login-${req.params.code}.png`); res.setHeader("Content-Type", "image/png"); res.send(img); } catch { res.status(404).send("QR not found"); }
@@ -96,8 +102,8 @@ app.post("/auth/login", (req, res) => { const code = generateLoginCode(); res.js
 app.get("/auth/confirm/:code", async (req, res) => {
   const token = await confirmLoginCode(req.params.code);
   res.setHeader("Content-Type", "text/html; charset=utf-8");
-  if (token) { res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>登录成功</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5}.box{background:#fff;border-radius:12px;padding:32px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.1)}h2{color:#0a0;margin:0 0 12px}.done{font-weight:bold;font-size:18px}p{color:#666;margin:0}</style></head><body><div class="box"><h2 class="done">已确认</h2><p>返回终端继续操作</p></div></body></html>`); }
-  else { res.status(404).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>确认码无效</title><style>body{font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5}.box{background:#fff;border-radius:12px;padding:32px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.1)}h2{color:#c00}p{color:#666}</style></head><body><div class="box"><h2>确认码无效或已过期</h2><p>请返回终端重新发起登录</p></div></body></html>`); }
+  if (token) { res.send(await tplSuccess); }
+  else { res.status(404).send(await tplExpired); }
 });
 
 app.get("/auth/token/:code", (req, res) => { res.json(pollLoginCode(req.params.code)); });
