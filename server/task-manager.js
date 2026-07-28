@@ -98,8 +98,14 @@ function track(taskId, updates) {
   const task = getCached(taskId);
   if (!task) return;
   Object.assign(task, updates, { updatedAt: new Date().toISOString() });
-  // 异步写 MySQL，不阻塞事件流
-  updateTaskDb(taskId, updates).catch(() => {});
+  updateTaskDb(taskId, updates).catch((err) => {
+    console.error(`[task-manager] DB update failed for task ${taskId}: ${err.message}, retrying...`);
+    setTimeout(() => {
+      updateTaskDb(taskId, updates).catch((err2) => {
+        console.error(`[task-manager] DB update retry failed for task ${taskId}: ${err2.message}`);
+      });
+    }, 1000);
+  });
 }
 
 function getCached(taskId) {

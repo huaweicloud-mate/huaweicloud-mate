@@ -48,3 +48,30 @@ describe("B4: cancelTask userId/user_id compatibility", () => {
     expect(getTaskFn).toMatch(/userId:\s*r\.user_id/);
   });
 });
+
+describe("B8: DB update failure logging and retry", () => {
+  it("track should log error on updateTaskDb failure, not silent catch", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    const trackFn = code.slice(code.indexOf("function track("), code.indexOf("function getCached("));
+    expect(trackFn).not.toMatch(/\.catch\(\(\)\s*=>\s*\{\s*\}\)/);
+    expect(trackFn).toContain("console.error");
+  });
+
+  it("track should retry updateTaskDb on failure", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    const trackFn = code.slice(code.indexOf("function track("), code.indexOf("function getCached("));
+    const firstCatch = trackFn.indexOf(".catch(");
+    const retryCall = trackFn.indexOf("updateTaskDb", firstCatch + 1);
+    expect(retryCall).toBeGreaterThan(firstCatch);
+  });
+
+  it("retry should also log error on second failure", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    const trackFn = code.slice(code.indexOf("function track("), code.indexOf("function getCached("));
+    const errorLogs = [...trackFn.matchAll(/console\.error/g)];
+    expect(errorLogs.length).toBeGreaterThanOrEqual(2);
+  });
+});
