@@ -55,6 +55,7 @@ async function createTask(userId, description, context, user) {
   activeTaskCache.set(taskId, task);
 
   executeTask(taskId, user).catch((err) => {
+    console.error(`[task-manager] executeTask failed for ${taskId}: ${err.message}`);
     track(taskId, { status: "failed", progress: 0, currentStep: `任务启动失败: ${err.message}`, error: err.message });
     publish(taskId, { type: "failed", status: "failed", error: err.message });
   });
