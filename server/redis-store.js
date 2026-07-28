@@ -5,15 +5,25 @@ import Redis from "ioredis";
 const REDIS_URL = process.env.REDIS_URL || "";
 
 let redis = null;
-(async () => {
+let redisReady = null;
+
+const redisConnectPromise = (async () => {
   if (REDIS_URL) {
     try {
       redis = new Redis(REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 2, retryStrategy: () => null });
       await redis.ping();
       console.log("[redis-store] Redis connected");
-    } catch { redis = null; console.log("[redis-store] Redis unavailable"); }
+      redisReady = true;
+    } catch (err) { redis = null; redisReady = false; console.log(`[redis-store] Redis unavailable: ${err.message}`); }
+  } else {
+    redisReady = true;
   }
 })();
+
+export async function ensureRedis() {
+  await redisConnectPromise;
+  return isRedisAvailable();
+}
 
 export function isRedisAvailable() { return redis !== null; }
 

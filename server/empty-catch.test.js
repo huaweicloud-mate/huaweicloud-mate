@@ -48,3 +48,29 @@ describe("Q2: all .catch() callbacks should log errors", () => {
     }
   });
 });
+
+describe("Q9: Redis async connection startup window", () => {
+  it("redis-store should export ensureRedis", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./redis-store.js", import.meta.url), "utf-8");
+    expect(code).toContain("export async function ensureRedis");
+  });
+
+  it("ensureRedis should await redisConnectPromise before returning", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./redis-store.js", import.meta.url), "utf-8");
+    const ensureFn = code.slice(code.indexOf("async function ensureRedis"));
+    expect(ensureFn).toContain("redisConnectPromise");
+    expect(ensureFn).toContain("await");
+  });
+
+  it("server.js should await ensureRedis before accepting requests", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./server.js", import.meta.url), "utf-8");
+    const listenBlock = code.slice(code.indexOf("app.listen"));
+    const logLine = listenBlock.indexOf("已启动");
+    const ensureLine = listenBlock.indexOf("ensureRedis");
+    expect(ensureLine).toBeGreaterThan(0);
+    expect(ensureLine).toBeLessThan(logLine);
+  });
+});
