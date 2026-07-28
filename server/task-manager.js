@@ -17,11 +17,13 @@ async function createTask(userId, description, context, user) {
     createdAt: now, updatedAt: now,
   };
 
-  // 写入 MySQL 为主
   await insertTask(task);
   activeTaskCache.set(taskId, task);
 
-  executeTask(taskId, user);
+  executeTask(taskId, user).catch((err) => {
+    track(taskId, { status: "failed", progress: 0, currentStep: `任务启动失败: ${err.message}`, error: err.message });
+    publish(taskId, { type: "failed", status: "failed", error: err.message });
+  });
 
   return task;
 }
@@ -43,8 +45,8 @@ async function executeTask(taskId, user) {
     });
 
     if (!container) {
-      track(taskId, { status: "completed", progress: 100, currentStep: "完成", output: "K8s 不可达，无法创建沙箱" });
-      publish(taskId, { type: "completed", status: "completed", message: "K8s 不可达" });
+      track(taskId, { status: "failed", progress: 0, currentStep: "沙箱创建失败", error: "K8s 不可达，无法创建沙箱" });
+      publish(taskId, { type: "failed", status: "failed", error: "K8s 不可达，无法创建沙箱" });
       return;
     }
 
