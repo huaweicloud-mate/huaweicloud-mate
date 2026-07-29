@@ -1,52 +1,52 @@
 // server/incentive.js — 激励服务客户端
 // 两个接口: check-coupon-issued (查是否已领), issue-coupon (发券)
+// APPCODE 分开配置: INCENTIVE_CHECK_APPCODE / INCENTIVE_ISSUE_APPCODE
 
-const INCENTIVE_BASE = process.env.INCENTIVE_API_URL || "https://apigw-beta.huawei.com/api/v1/hdincentiveservice/coupon";
+const CHECK_URL = process.env.INCENTIVE_CHECK_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-beta.huawei.com/api/v1/hdincentiveservice/coupon"}/check-coupon-issued`;
+const ISSUE_URL = process.env.INCENTIVE_ISSUE_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-beta.huawei.com/api/v1/hdincentiveservice/coupon"}/issue-coupon`;
+
 const INCENTIVE_HW_ID = process.env.INCENTIVE_HW_ID || "com.huawei.cloudbu.developer.community";
 const INCENTIVE_APPKEY = process.env.INCENTIVE_APPKEY || "";
-const INCENTIVE_APPCODE = process.env.INCENTIVE_APPCODE || "";
 const INCENTIVE_AUTH_TOKEN = process.env.INCENTIVE_AUTH_TOKEN || "";
+
+// 两个接口的 APPCODE 不同
+const CHECK_APPCODE = process.env.INCENTIVE_CHECK_APPCODE || process.env.INCENTIVE_APPCODE || "5MkJTaYq6L6S8xBm1TtOcLoBOfuDKkrV2bj3T8fvlGWtLp2WaJzKCP5darNWFa19";
+const ISSUE_APPCODE = process.env.INCENTIVE_ISSUE_APPCODE || process.env.INCENTIVE_APPCODE || "dqNEJDPTs24IglOAwhA7UfFaknYd15s1F5lTxY3co0u02CLQCCckclhdkL2LGj94";
 
 const ACTIVITY_ID = process.env.INCENTIVE_ACTIVITY_ID || "A000330";
 const ACTIVITY_PRODUCT_ID = process.env.INCENTIVE_ACTIVITY_PRODUCT_ID || "5649bf1d2bc74d648ac6cd5496ebba91";
 const VOUCHER_FACE_AMOUNT = process.env.INCENTIVE_FACE_AMOUNT || "100";
 const VOUCHER_CURRENCY = process.env.INCENTIVE_CURRENCY || "CNY";
-const MAX_VOUCHERS = parseInt(process.env.INCENTIVE_MAX_VOUCHERS || "0"); // 0=不限制
+const MAX_VOUCHERS = parseInt(process.env.INCENTIVE_MAX_VOUCHERS || "0");
 
-const headers = {
+const baseHeaders = {
   "Content-Type": "application/json",
   "X-HW-ID": INCENTIVE_HW_ID,
   "X-HW-APPKEY": INCENTIVE_APPKEY,
-  "X-APIG-APPCODE": INCENTIVE_APPCODE,
   "X-auth-token": INCENTIVE_AUTH_TOKEN,
 };
 
-/**
- * 查询用户是否已领取代金券
- * @returns { issued: boolean, raw: object }
- */
 export async function checkCouponIssued(customerId) {
   try {
-    const resp = await fetch(`${INCENTIVE_BASE}/check-coupon-issued`, {
-      method: "POST", headers,
+    const resp = await fetch(CHECK_URL, {
+      method: "POST",
+      headers: { ...baseHeaders, "X-APIG-APPCODE": CHECK_APPCODE },
       body: JSON.stringify({ customer_id: customerId, scene_type: 40 }),
       signal: AbortSignal.timeout(10000),
     });
     const data = await resp.json();
+    console.log(`[incentive] check-coupon response: ${JSON.stringify(data).slice(0, 200)}`);
     if (data.error_code) {
-      console.error(`[incentive] check-coupon error: ${data.error_code} ${data.error_msg}`);
+      console.error(`[incentive] check error: ${data.error_code} ${data.error_msg}`);
       return { issued: false, error: data.error_msg };
     }
     return { issued: data.issued_tag === 1, raw: data };
   } catch (err) {
-    console.error(`[incentive] check-coupon failed: ${err.message}`);
+    console.error(`[incentive] check failed: ${err.message}`);
     return { issued: false, error: err.message };
   }
 }
 
-/**
- * 查询 hdkitservice 本地是否已达领取上限
- */
 export async function checkLocalQuota() {
   if (MAX_VOUCHERS <= 0) return { reached: false };
   try {
@@ -69,14 +69,11 @@ export async function checkLocalQuota() {
   }
 }
 
-/**
- * 发放代金券
- * @returns { success: boolean, couponId?: string, error?: string }
- */
 export async function issueCoupon(customerId) {
   try {
-    const resp = await fetch(`${INCENTIVE_BASE}/issue-coupon`, {
-      method: "POST", headers,
+    const resp = await fetch(ISSUE_URL, {
+      method: "POST",
+      headers: { ...baseHeaders, "X-APIG-APPCODE": ISSUE_APPCODE },
       body: JSON.stringify({
         customer_id: customerId,
         activity_id: ACTIVITY_ID,
@@ -89,13 +86,15 @@ export async function issueCoupon(customerId) {
       signal: AbortSignal.timeout(15000),
     });
     const data = await resp.json();
+    console.log(`[incentive] issue-coupon response: ${JSON.stringify(data).slice(0, 300)}`);
     if (data.error_code) {
-      console.error(`[incentive] issue-coupon error: ${data.error_code} ${data.error_msg}`);
+      console.error(`[incentive] issue error: ${data.error_code} ${data.error_msg}`);
       return { success: false, error: data.error_msg };
     }
-    return { success: true, couponId: data.coupon_id, raw: data };
+    const couponId = data.coupon_id || data.data?.coupon_id || `vc_${Date.now()}`;
+    return { success: true, couponId, raw: data };
   } catch (err) {
-    console.error(`[incentive] issue-coupon failed: ${err.message}`);
+    console.error(`[incentive] issue failed: ${err.message}`);
     return { success: false, error: err.message };
   }
 }
