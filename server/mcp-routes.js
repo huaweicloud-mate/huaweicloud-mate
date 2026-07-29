@@ -7,6 +7,9 @@ import { getUser, setUser, findUserIdByAk } from "./redis-store.js";
 import { getDomainId, getVoucher, claimVoucher, markVoucherClaimed } from "./db.js";
 import { createAnonymousContainer } from "./sandbox.js";
 import { createTemporaryCredentials } from "./sts.js";
+import { checkCouponIssued, checkLocalQuota, issueCoupon } from "./incentive.js";
+
+const VOUCHER_FACE_AMOUNT = process.env.INCENTIVE_FACE_AMOUNT || "100";
 
 const PUBLIC_URL = process.env.PUBLIC_URL || "http://127.0.0.1:3000";
 
@@ -52,19 +55,39 @@ export function mcpRouter(app) {
       const user = await getUser(userId);
       user.domainId = user.domainId || "";
 
-      // 查券（仅首次）
-      let voucherInfo = "";
-      if (ak && sk && !user.domainId) {
+      // 查券：本地 MySQL + 激励服务 + 上限 三重校验
+      let voucherInfo = "", voucherAllowed = false;
+      if (ak && sk) {
         try {
-          user.domainId = await getDomainId(ak, sk) || crypto.createHash("sha256").update(ak).digest("hex").slice(0, 16);
-          await setUser(userId, { ...user, domainId: user.domainId });
+          if (!user.domainId) {
+            user.domainId = await getDomainId(ak, sk) || crypto.createHash("sha256").update(ak).digest("hex").slice(0, 16);
+            await setUser(userId, { ...user, domainId: user.domainId });
+          }
         } catch (err) { console.error(`[mcp] getDomainId failed: ${err.message}`); }
-      }
-      if (user.domainId) {
+
         try {
-          const existing = await getVoucher(user.domainId);
-          voucherInfo = (existing && existing.status === 1) ? "已领取" : "未领取";
-        } catch (err) { console.error(`[mcp] getVoucher failed: ${err.message}`); }
+          // 第0层: 检查本地是否已达上限
+          const quota = await checkLocalQuota();
+          if (quota.reached) {
+            voucherInfo = "已达领取上限";
+            voucherAllowed = false;
+          } else {
+            // 第1层: 本地 MySQL
+            const local = await getVoucher(user.domainId);
+            const localClaimed = local && local.status === 1;
+            // 第2层: 激励服务
+            const incentive = await checkCouponIssued(user.domainId);
+            const incentiveClaimed = incentive.issued;
+
+            if (localClaimed || incentiveClaimed) {
+              voucherInfo = "已领取";
+              voucherAllowed = false;
+            } else {
+              voucherInfo = "未领取";
+              voucherAllowed = true;
+            }
+          }
+        } catch (err) { console.error(`[mcp] voucher check failed: ${err.message}`); }
       }
 
       // 临时凭证模式：后端 STS 换临时 AK/SK/Token
@@ -97,7 +120,7 @@ export function mcpRouter(app) {
         } catch (err) { console.error(`[mcp] sandbox preheat failed: ${err.message}`); }
       });
 
-      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type:"text", text: JSON.stringify({ success: true, token, mode: (ak && sk) ? "real" : "mock", voucher: voucherInfo || undefined, ...tempInfo }) }] } });
+      return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type:"text", text: JSON.stringify({ success: true, token, mode: (ak && sk) ? "real" : "mock", voucher: voucherInfo || undefined, voucherAllowed, ...tempInfo }) }] } });
     }
 
     // ── huaweicloud_set_credentials ──
@@ -114,14 +137,24 @@ export function mcpRouter(app) {
       return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ success:true, message:"AK/SK 已更新，旧沙箱已销毁" }) }] } });
     }
 
-    // ── huaweicloud_voucher_status ──
+      // ── huaweicloud_voucher_status ──
     if (name === "huaweicloud_voucher_status") {
       const payload = verifyJwt(args?.token || "");
       if (!payload) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"token无效" }], isError:true } });
       const u = await getUser(payload.sub);
       if (!u?.domainId) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请提供 AK/SK 登录以查询" }], isError:true } });
-      const existing = await getVoucher(u.domainId);
-      return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify(existing && existing.status === 1 ? { claimed:true, voucherId:existing.voucherId, amount:existing.amount } : { claimed:false }) }] } });
+
+      const local = await getVoucher(u.domainId);
+      const incentive = await checkCouponIssued(u.domainId);
+      const quota = await checkLocalQuota();
+      return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({
+        claimed: (local && local.status === 1) || incentive.issued,
+        localClaimed: !!(local && local.status === 1),
+        incentiveClaimed: incentive.issued,
+        quotaReached: quota.reached,
+        voucherId: local?.voucher_id || null,
+        amount: local?.amount || null,
+      }) }] } });
     }
 
     // ── huaweicloud_voucher_claim ──
@@ -131,18 +164,33 @@ export function mcpRouter(app) {
       const u = await getUser(payload.sub);
       if (!u?.domainId || !u?.ak || !u?.sk) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请先登录并绑定 AK/SK" }], isError:true } });
 
-      const existing = await getVoucher(u.domainId);
-      if (existing && existing.status === 1) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"已领取过" }) }] } });
+      // 重新双检：本地 + 激励
+      const local = await getVoucher(u.domainId);
+      if (local && local.status === 1) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"已领取过" }) }] } });
+
+      const incentiveCheck = await checkCouponIssued(u.domainId);
+      if (incentiveCheck.issued) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"激励侧已领取过" }) }] } });
+
+      // 上限检查
+      const quota = await checkLocalQuota();
+      if (quota.reached) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:`已达领取上限(${quota.max})` }) }], isError:true } });
 
       const akHash = crypto.createHash("sha256").update(u.ak).digest("hex");
-      try {
-        const voucherId = `vc_${Date.now()}`;
-        const amount = 100;
-        await claimVoucher(u.domainId, akHash, voucherId, amount);
-        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ success:true, voucherId, amount, message:"领取成功" }) }] } });
-      } catch (err) {
+
+      // 调激励服务发券
+      const issueResult = await issueCoupon(u.domainId);
+      if (!issueResult.success) {
         await markVoucherClaimed(u.domainId, akHash);
-        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"激励侧已领取过" }) }] } });
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:`发券失败: ${issueResult.error}` }) }], isError:true } });
+      }
+
+      // 写本地 MySQL
+      try {
+        await claimVoucher(u.domainId, akHash, issueResult.couponId, parseInt(VOUCHER_FACE_AMOUNT) || 100);
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ success:true, voucherId:issueResult.couponId, amount: parseInt(VOUCHER_FACE_AMOUNT)||100, message:"领取成功" }) }] } });
+      } catch (err) {
+        console.error(`[mcp] claimVoucher DB write failed: ${err.message}`);
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ success:true, voucherId:issueResult.couponId, amount: parseInt(VOUCHER_FACE_AMOUNT)||100, message:"领取成功(DB写入失败，已发券)" }) }] } });
       }
     }
 
