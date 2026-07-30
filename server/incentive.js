@@ -34,9 +34,10 @@ const baseHeaders = {
 
 export async function checkCouponIssued(customerId) {
   const body = JSON.stringify({ customer_id: customerId, scene_type: 40 });
+  const maskedCustomerId = customerId.slice(0, 8);
   console.log(`[incentive] check-coupon REQUEST → ${CHECK_URL}`);
-  console.log(`[incentive] check-coupon BODY → ${body}`);
-  console.log(`[incentive] check-coupon HEADERS → X-APIG-APPCODE:${CHECK_APPCODE.slice(0,20)}... X-auth-token:${INCENTIVE_AUTH_TOKEN.slice(0,20)}...`);
+  console.log(`[incentive] check-coupon BODY → customer_id=${maskedCustomerId}*** scene_type=40`);
+  console.log(`[incentive] check-coupon HEADERS → X-APIG-APPCODE:${CHECK_APPCODE.slice(0,8)}*** X-auth-token:${INCENTIVE_AUTH_TOKEN.slice(0,8)}***`);
   try {
     const resp = await fetch(CHECK_URL, {
       method: "POST",
@@ -45,7 +46,8 @@ export async function checkCouponIssued(customerId) {
       signal: AbortSignal.timeout(10000),
     });
     const data = await resp.json();
-    console.log(`[incentive] check-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(data).slice(0, 200)}`);
+    const { customer_id, ...safeData } = data;
+    console.log(`[incentive] check-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(safeData).slice(0, 200)}`);
     if (data.error_code) {
       console.error(`[incentive] check error: ${data.error_code} ${data.error_msg}`);
       return { issued: false, error: data.error_msg };
@@ -89,8 +91,9 @@ export async function issueCoupon(customerId) {
     is_send_notify: "0",
     service_resource_type: 1,
   });
+  const maskedCustomerId = customerId.slice(0, 8);
   console.log(`[incentive] issue-coupon REQUEST → ${ISSUE_URL}`);
-  console.log(`[incentive] issue-coupon BODY → customer_id=${customerId} activity_id=${ACTIVITY_ID} activity_product_id=${ACTIVITY_PRODUCT_ID} face_amount=${VOUCHER_FACE_AMOUNT} currency_code=${VOUCHER_CURRENCY}`);
+  console.log(`[incentive] issue-coupon BODY → customer_id=${maskedCustomerId}*** activity_id=${ACTIVITY_ID} activity_product_id=${ACTIVITY_PRODUCT_ID} face_amount=${VOUCHER_FACE_AMOUNT} currency_code=${VOUCHER_CURRENCY}`);
   try {
     const resp = await fetch(ISSUE_URL, {
       method: "POST",
@@ -99,7 +102,8 @@ export async function issueCoupon(customerId) {
       signal: AbortSignal.timeout(15000),
     });
     const data = await resp.json();
-    console.log(`[incentive] issue-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(data).slice(0, 300)}`);
+    const { customer_id, ...issueSafeData } = data;
+    console.log(`[incentive] issue-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(issueSafeData).slice(0, 300)}`);
     if (data.error_code) {
       console.error(`[incentive] issue error: ${data.error_code} ${data.error_msg}`);
       return { success: false, error: data.error_msg, errorCode: data.error_code };
