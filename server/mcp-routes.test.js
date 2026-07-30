@@ -23,11 +23,11 @@ describe("B2: voucher claim no self-referencing fetch", () => {
     expect(claimSection).not.toMatch(/fetch\(.+voucher\/claim/);
   });
 
-  it("voucherId should be generated inline, not from external response", async () => {
+  it("voucherId should come from incentive API issueResult.couponId", async () => {
     const fs = await import("node:fs/promises");
     const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
     const claimSection = code.slice(code.indexOf("huaweicloud_voucher_claim"));
-    expect(claimSection).toMatch(/voucherId\s*=\s*`vc_\$\{Date\.now\(\)\}`/);
+    expect(claimSection).toContain("issueResult.couponId");
   });
 
   it("markVoucherClaimed should be in catch block as fallback", async () => {
@@ -110,5 +110,36 @@ describe("CX-7: invalid/expired token should not fallthrough to anonymous", () =
     const anonymousFallback = invokeSection.indexOf("createAnonymousContainer");
     expect(invalidCheck).toBeGreaterThan(0);
     expect(anonymousFallback).toBeGreaterThan(invalidCheck);
+  });
+});
+
+describe("CX-9: multi-region independent tokens", () => {
+  it("auth should use ak:region as index key, not just ak", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    const authSection = code.slice(code.indexOf("huaweicloud_auth"));
+    expect(authSection).toContain("akRegionKey");
+    expect(authSection).toMatch(/ak.*:.*region/);
+  });
+
+  it("redis-store akidx should include region in key", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./redis-store.js", import.meta.url), "utf-8");
+    const setUserFn = code.slice(code.indexOf("async function setUser"), code.indexOf("async function delUser"));
+    expect(setUserFn).toMatch(/akidx:.*region/);
+  });
+
+  it("redis-store delUser should include region in akidx key", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./redis-store.js", import.meta.url), "utf-8");
+    const delUserFn = code.slice(code.indexOf("async function delUser"), code.indexOf("async function findUserIdByAk"));
+    expect(delUserFn).toMatch(/akidx:.*region/);
+  });
+
+  it("different regions should produce different userId", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    const authSection = code.slice(code.indexOf("huaweicloud_auth"));
+    expect(authSection).toContain("findUserIdByAk(akRegionKey)");
   });
 });

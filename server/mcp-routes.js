@@ -46,7 +46,8 @@ export function mcpRouter(app) {
       const ak = args?.ak || "", sk = args?.sk || "", region = args?.region || "cn-south-1";
       const useTemp = args?.temp_credential === true || args?.temp_credential === "true" || args?.temp_credential === 1;
 
-      let userId = ak ? (await findUserIdByAk(ak)) : null;
+      const akRegionKey = ak && region ? `${ak}:${region}` : ak;
+      let userId = akRegionKey ? (await findUserIdByAk(akRegionKey)) : null;
       if (!userId) {
         userId = crypto.randomUUID().slice(0, 8);
         await setUser(userId, { userId, ak, sk, region, createdAt: Date.now() });

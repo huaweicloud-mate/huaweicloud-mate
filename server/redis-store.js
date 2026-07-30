@@ -43,13 +43,13 @@ export async function setUser(userId, data) {
   for (const [k, v] of Object.entries(data)) flat[k] = String(v ?? "");
   await redis.hset(`user:${userId}`, flat);
   await redis.expire(`user:${userId}`, 86400); // 24h TTL
-  if (data.ak) await redis.setex(`akidx:${data.ak}`, 86400, userId);
+  if (data.ak) await redis.setex(`akidx:${data.ak}${data.region ? ':' + data.region : ''}`, 86400, userId);
 }
 
 export async function delUser(userId) {
   if (!redis) throw new Error("Redis unavailable");
   const data = await redis.hgetall(`user:${userId}`);
-  if (data?.ak) await redis.del(`akidx:${data.ak}`);
+  if (data?.ak) await redis.del(`akidx:${data.ak}${data.region ? ':' + data.region : ''}`);
   await redis.del(`user:${userId}`);
 }
 
