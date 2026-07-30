@@ -1,6 +1,6 @@
 FROM node:22-alpine
 
-RUN apk add --no-cache curl bash gcompat terraform
+RUN apk add --no-cache curl bash gcompat
 
 ARG KOO_CLI_URL=https://cn-north-4-hdn-koocli.obs.cn-north-4.myhuaweicloud.com/cli/latest/hcloud_install.sh
 RUN curl -fsSL ${KOO_CLI_URL} -o /tmp/hcloud_install.sh \

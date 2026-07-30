@@ -5,6 +5,7 @@ import { getOrCreateContainer, destroyContainer, releaseContainer } from "./sand
 import { insertTask, updateTaskDb, getTaskDb, listTasksByUser } from "./db.js";
 import { getUser } from "./redis-store.js";
 
+const TASK_CACHE_TTL_MS = parseInt(process.env.TASK_CACHE_TTL_MS || "60000");
 const activeTaskCache = new Map();
 const taskSubscribers = new Map();
 let eventCounter = 0;
@@ -138,6 +139,9 @@ function track(taskId, updates) {
   const task = getCached(taskId);
   if (!task) return;
   Object.assign(task, updates, { updatedAt: new Date().toISOString() });
+  if (["completed", "failed", "cancelled"].includes(task.status)) {
+    setTimeout(() => { activeTaskCache.delete(taskId); }, TASK_CACHE_TTL_MS);
+  }
   updateTaskDb(taskId, updates).catch((err) => {
     console.error(`[task-manager] DB update failed for task ${taskId}: ${err.message}, retrying...`);
     setTimeout(() => {

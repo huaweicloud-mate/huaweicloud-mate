@@ -5,7 +5,7 @@ import crypto from "node:crypto";
 import { verifyJwt, issueJwt, isRedisAvailable } from "./auth.js";
 import { getUser, setUser, findUserIdByAk } from "./redis-store.js";
 import { getDomainId, getVoucher, claimVoucher, markVoucherClaimed } from "./db.js";
-import { createAnonymousContainer } from "./sandbox.js";
+import { createAnonymousContainer, getConcurrencyStats, isAtConcurrencyLimit } from "./sandbox.js";
 import { createTemporaryCredentials } from "./sts.js";
 import { checkCouponIssued, checkLocalQuota, issueCoupon, isBetaAPI } from "./incentive.js";
 
@@ -117,6 +117,11 @@ export function mcpRouter(app) {
         } catch (err) {
           tempInfo = { temp_credential: false, sts_error: err.message };
         }
+      }
+
+      // 并发检查（仅对新用户或非运行中沙箱的用户）
+      if (isAtConcurrencyLimit(userId)) {
+        return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type:"text", text: JSON.stringify({ success: false, error: `已达最大并发沙箱数 (${getConcurrencyStats().max})，请稍后重试` }) }] } });
       }
 
       const token = issueJwt(userId);
@@ -260,7 +265,8 @@ export function mcpRouter(app) {
     try {
       const task = await createTask(userId, intent, { source:"mcp" }, user);
       const text = await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => { unsubscribe(); reject(new Error("超时")); }, 300000);
+        const INVOKE_TIMEOUT = parseInt(process.env.INVOKE_TIMEOUT || "300000");
+        const timeout = setTimeout(() => { unsubscribe(); reject(new Error("超时")); }, INVOKE_TIMEOUT);
         const unsubscribe = streamTask(task.id, (event) => {
           if (event.status === "completed") { clearTimeout(timeout); unsubscribe(); resolve(task.output || event.message || "完成"); }
           else if (event.status === "failed") { clearTimeout(timeout); unsubscribe(); reject(new Error(event.error || "失败")); }

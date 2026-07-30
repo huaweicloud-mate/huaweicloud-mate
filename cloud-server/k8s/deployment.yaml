@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hc-devkit-server
+  namespace: huaweicloud-agent
+  labels:
+    app: hc-devkit-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hc-devkit-server
+  template:
+    metadata:
+      labels:
+        app: hc-devkit-server
+    spec:
+      imagePullSecrets:
+        - name: swr-secret
+      containers:
+        - name: server
+          image: swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "3000"
+            - name: NAMESPACE
+              value: "huaweicloud-agent"
+            - name: SANDBOX_IMAGE
+              value: "swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:latest"
+            - name: MAX_SANDBOXES
+              value: "5"
+            - name: MAX_ANON_SANDBOXES
+              value: "3"
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: a2a-server-config
+                  key: REDIS_URL
+            - name: MYSQL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: a2a-server-config
+                  key: MYSQL_HOST
+            - name: MYSQL_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: a2a-server-config
+                  key: MYSQL_PORT
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: a2a-server-config
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: a2a-server-config
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: a2a-server-config
+                  key: MYSQL_DATABASE
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: a2a-server-config
+                  key: JWT_SECRET
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: a2a-server-config
+                  key: DEEPSEEK_API_KEY
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20

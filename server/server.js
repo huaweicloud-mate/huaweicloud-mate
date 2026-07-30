@@ -3,7 +3,7 @@
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import { authFlexible, issueJwt, generateLoginCode, confirmLoginCode, pollLoginCode, registerUser, isRedisAvailable, CODE_TTL_MS } from "./auth.js";
+import { authFlexible, issueJwt, generateLoginCode, confirmLoginCode, pollLoginCode, registerUser, isRedisAvailable, CODE_TTL_MS, verifyJwt } from "./auth.js";
 import { createTask, getTask, streamTask, cancelTask, listUserTasks, initTaskCache } from "./task-manager.js";
 import { getConcurrencyStats, reconcileActiveJobs } from "./sandbox.js";
 import { checkSchema } from "./db.js";
@@ -16,6 +16,13 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
+app.use((req, res, next) => {
+  if (req.path === "/mcp" && req.method === "POST" && req.body?.params?.arguments?.token) {
+    const payload = verifyJwt(req.body.params.arguments.token);
+    if (payload) req.userId = payload.sub;
+  }
+  next();
+});
 app.use(rateLimit({ windowMs: 60000, max: 300, keyGenerator: (req) => req.userId || req.ip }));
 
 // ── AgentCard ──

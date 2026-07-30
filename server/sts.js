@@ -22,12 +22,17 @@ export async function createTemporaryCredentials(ak, sk, region = "cn-south-1") 
       template: {
         spec: {
           restartPolicy: "Never",
+          imagePullSecrets: [{ name: "swr-secret" }],
           containers: [{
             name: "sts",
             image: SANDBOX_IMAGE,
+            env: [
+              { name: "HCLOUD_ACCESS_KEY", value: ak },
+              { name: "HCLOUD_SECRET_KEY", value: sk },
+            ],
             command: ["sh", "-c"],
             args: [
-              `hcloud configure set --cli-access-key=${ak} --cli-secret-key=${sk} --cli-region=${region} --agree-privacy-policy=true >/dev/null 2>&1; hcloud IAM CreateTemporaryAccessKeyByToken --region=${region} --cli-access-key=${ak} --cli-secret-key=${sk} --auth.identity.methods.1=token --auth.identity.token.duration_seconds=21600 --agree-privacy-policy=true 2>/dev/null`,
+              `hcloud configure set --cli-region=${region} --agree-privacy-policy=true >/dev/null 2>&1; hcloud IAM CreateTemporaryAccessKeyByToken --region=${region} --auth.identity.methods.1=token --auth.identity.token.duration_seconds=21600 --agree-privacy-policy=true 2>/dev/null`,
             ],
           }],
         },

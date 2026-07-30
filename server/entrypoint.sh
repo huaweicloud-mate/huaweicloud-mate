@@ -3,6 +3,16 @@ set -e
 
 mkdir -p ~/.hcloud
 
+# 拉取 skills（已有则跳过）
+if [ ! -f /skills/.skills-ready ]; then
+  git clone --depth 1 https://gitcode.com/huaweicloud/huaweicloud-skills.git /tmp/skills 2>/dev/null || true
+  if [ -d /tmp/skills/skills ]; then
+    cp -r /tmp/skills/skills/* /skills/ 2>/dev/null || true
+    rm -rf /tmp/skills
+    touch /skills/.skills-ready
+  fi
+fi
+
 # 配置 hcloud CLI（长期凭证 或 临时凭证）
 if [ -n "${HW_SECURITY_TOKEN}" ]; then
   hcloud configure set \
@@ -26,6 +36,7 @@ cat > ~/.hcloud/credentials << EOF
 huaweicloud_access_key = ${HW_ACCESS_KEY}
 huaweicloud_secret_key = ${HW_SECRET_KEY}
 EOF
+chmod 600 ~/.hcloud/credentials
 
 opencode serve --port 3005 --hostname 0.0.0.0 &
 OP_SERVER=$!
