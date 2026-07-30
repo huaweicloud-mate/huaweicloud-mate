@@ -32,7 +32,7 @@ export async function createTemporaryCredentials(ak, sk, region = "cn-south-1") 
             ],
             command: ["sh", "-c"],
             args: [
-              `hcloud configure set --cli-region=${region} --agree-privacy-policy=true >/dev/null 2>&1; hcloud IAM CreateTemporaryAccessKeyByToken --region=${region} --auth.identity.methods.1=token --auth.identity.token.duration_seconds=21600 --agree-privacy-policy=true 2>/dev/null`,
+              `hcloud configure set --cli-access-key=${ak} --cli-secret-key=${sk} --cli-region=${region} --cli-agree-privacy-statement=true >/dev/null 2>&1; hcloud IAM CreateTemporaryAccessKeyByToken --region=${region} --auth.identity.methods.1=token --auth.identity.token.duration_seconds=21600 2>/dev/null`,
             ],
           }],
         },
@@ -57,14 +57,20 @@ export async function createTemporaryCredentials(ak, sk, region = "cn-south-1") 
     const podName = pods.items[0].metadata.name;
 
     const logResp = await coreApi.readNamespacedPodLog(podName, NAMESPACE, "sts");
-    const stdout = typeof logResp === "string" ? logResp : (logResp?.body || "");
-
-    const cleanLines = stdout.split("\n").filter(l => l.trim().startsWith("{"));
-    const cleanOutput = cleanLines.join("\n");
-    const match = cleanOutput.match(/\{[\s\S]*"credential"[\s\S]*\}/);
-    if (!match) throw new Error(`No credential JSON: ${stdout.slice(0, 300)}`);
-
-    const data = JSON.parse(match[0]);
+    let data;
+    if (logResp?.body?.credential) {
+      data = logResp.body;
+    } else {
+      let stdout;
+      if (typeof logResp === "string") stdout = logResp;
+      else if (typeof logResp?.body === "string") stdout = logResp.body;
+      else stdout = JSON.stringify(logResp);
+      const cleanLines = stdout.split("\n").filter(l => l.trim().startsWith("{"));
+      const cleanOutput = cleanLines.join("\n");
+      const match = cleanOutput.match(/\{[\s\S]*"credential"[\s\S]*\}/);
+      if (!match) throw new Error(`No credential JSON: ${stdout.slice(0, 300)}`);
+      data = JSON.parse(match[0]);
+    }
     const cred = data.credential;
     if (!cred?.access) throw new Error(`Missing access: ${match[0].slice(0, 200)}`);
 
