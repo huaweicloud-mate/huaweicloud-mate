@@ -129,6 +129,24 @@ describe("M3: activeTaskCache recovery and SSE reconnect", () => {
   });
 });
 
+describe("L1-8: SSE Last-Event-ID replay should not replay all events when no new events", () => {
+  it("replayFrom=-1 should return empty array, not all events", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    const streamFn = code.slice(code.indexOf("function streamTask("), code.indexOf("async function cancelTask"));
+    expect(streamFn).toMatch(/replayFrom\s*>=\s*0\s*\?\s*task\.events\.slice\(replayFrom\)\s*:\s*\[\]/);
+  });
+
+  it("should not fall back to task.events when no events match", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./task-manager.js", import.meta.url), "utf-8");
+    const streamFn = code.slice(code.indexOf("function streamTask("), code.indexOf("async function cancelTask"));
+    const replayLine = streamFn.match(/replayFrom\s*>=\s*0\s*\?[^;]+;/);
+    expect(replayLine).not.toBeNull();
+    expect(replayLine[0]).not.toContain("task.events;");
+  });
+});
+
 describe("M4: set_credentials should not use stale user in executeTask", () => {
   it("executeTask should re-read user from Redis before creating sandbox", async () => {
     const fs = await import("node:fs/promises");

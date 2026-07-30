@@ -164,7 +164,7 @@ function streamTask(taskId, callback, lastEventId = 0) {
   const task = getCached(taskId);
   if (task) {
     const replayFrom = task.events.findIndex((e) => (e.id || 0) > lastEventId);
-    const replayEvents = replayFrom >= 0 ? task.events.slice(replayFrom) : task.events;
+    const replayEvents = replayFrom >= 0 ? task.events.slice(replayFrom) : [];
     for (const event of replayEvents) { try { callback(event); } catch (_) {} }
   }
 
