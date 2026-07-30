@@ -40,47 +40,19 @@ pool.execute(`CREATE TABLE IF NOT EXISTS tasks (
 // ── 代金券 ──
 
 export async function getDomainId(ak, sk) {
-  try {
-    // 1. 环境变量配置（生产环境：IAM委托/Agency方式获取）
-    const map = process.env.DOMAIN_ID_MAP || "";
-    const pair = map.split(",").find(p => p.startsWith(ak + "="));
-    if (pair) return pair.split("=")[1];
-
-    // 2. 临时已知值（IAM SigV4 待修复前过渡）
-    const KNOWN = {
-      "HPUARREPRFZ9BCWWMWYH": "019f7db180667694be0e55cbbc5875ca",
-      "HPUA02NFXRLXVWXUME36": "019dd22c0e187ece844aa25a025fd36c",
-    };
-    if (KNOWN[ak]) return KNOWN[ak];
-
-    // 3. 尝试 IAM API 获取
-    const region = "cn-south-1";
-    const host = `iam.${region}.myhuaweicloud.com`;
-    const path = "/v3/auth/domains";
-    const method = "GET";
-    const t = new Date();
-    const ts = t.toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
-    const body = "";
-    const sha256 = (d) => crypto.createHash("sha256").update(d).digest("hex");
-    const hmacSha256 = (k, d) => crypto.createHmac("sha256", k).update(d).digest();
-
-    const canonicalHeaders = `host:${host}\nx-sdk-date:${ts}\n`;
-    const signedHeaders = "host;x-sdk-date";
-    const canonicalRequest = `${method}\n${path}\n\n${canonicalHeaders}\n${signedHeaders}\n${sha256(body)}`;
-    const datestamp = t.toISOString().slice(0, 10).replace(/-/g, "");
-    const scope = `${datestamp}/${region}/iam/sdk_request`;
-    const stringToSign = `SDK-HMAC-SHA256\n${ts}\n${scope}\n${sha256(canonicalRequest)}`;
-    const kDate = hmacSha256(sk, datestamp);
-    const kRegion = hmacSha256(kDate, region);
-    const kService = hmacSha256(kRegion, "iam");
-    const kSigning = hmacSha256(kService, "sdk_request");
-    const sig = crypto.createHmac("sha256", kSigning).update(stringToSign).digest("hex");
-    const auth = `SDK-HMAC-SHA256 Access=${ak}, SignedHeaders=${signedHeaders}, Signature=${sig}`;
-
-    const resp = await fetch(`https://${host}${path}`, { method, headers: { "X-Sdk-Date": ts, "Authorization": auth } });
-    const data = await resp.json();
-    return data?.domains?.[0]?.id || null;
-  } catch { return null; }
+  const { execSync } = await import("node:child_process");
+  const cmd = [
+    "printf 'y\\n' | hcloud IAM KeystoneListAuthDomains",
+    "--cli-region=cn-south-1",
+    `--cli-access-key=${ak}`,
+    `--cli-secret-key=${sk}`,
+  ].join(" ");
+  console.log(`[db] getDomainId hcloud REQUEST → ak=${ak.slice(0,8)}*** sk=${sk.slice(0,4)}***`);
+  const stdout = execSync(cmd, { encoding: "utf8", timeout: 15000, stdio: ["ignore", "pipe", "pipe"] });
+  const data = JSON.parse(stdout);
+  const domainId = data?.domains?.[0]?.id;
+  console.log(`[db] getDomainId RESPONSE → domainId=${domainId}`);
+  return domainId;
 }
 
 export async function getVoucher(domainId) {

@@ -1,4 +1,10 @@
 FROM swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:20260727223046
+USER root
+RUN mkdir -p /app /home/node/.hcloud && chown -R 1000:1000 /app /home/node/.hcloud
+
+# KooCLI 初始化：接受隐私协议
+RUN printf '{"agreePrivacy":"true","current":"default","profiles":[{"name":"default","mode":"AKSK"}]}' > /home/node/.hcloud/config.json
+
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --production --ignore-scripts
