@@ -207,9 +207,12 @@ export function mcpRouter(app) {
     if (jwtToken) {
       const payload = verifyJwt(jwtToken);
       if (payload) { user = await getUser(payload.sub); if (user) userId = payload.sub; }
+      if (!userId) {
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"token无效或已过期，请重新调用 huaweicloud_auth 获取新 token" }], isError:true } });
+      }
     }
 
-    // 无 token → 匿名沙箱
+    // 无 token →%→ 匿名沙箱
     if (!userId) {
       try {
         const container = await createAnonymousContainer();

@@ -93,3 +93,22 @@ describe("Q11: AgentCard cache headers", () => {
     expect(code).toMatch(/public.*max-age=3600/);
   });
 });
+
+describe("CX-7: invalid/expired token should not fallthrough to anonymous", () => {
+  it("invoke with invalid token should return error, not anonymous response", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    const invokeSection = code.slice(code.indexOf("huaweicloud_invoke"));
+    expect(invokeSection).toContain("token无效或已过期");
+  });
+
+  it("invalid token check should come before anonymous fallback", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    const invokeSection = code.slice(code.indexOf("huaweicloud_invoke"));
+    const invalidCheck = invokeSection.indexOf("token无效或已过期");
+    const anonymousFallback = invokeSection.indexOf("createAnonymousContainer");
+    expect(invalidCheck).toBeGreaterThan(0);
+    expect(anonymousFallback).toBeGreaterThan(invalidCheck);
+  });
+});
