@@ -41,6 +41,19 @@ pool.execute(`CREATE TABLE IF NOT EXISTS tasks (
 
 export async function getDomainId(ak, sk) {
   try {
+    // 1. 环境变量配置（生产环境：IAM委托/Agency方式获取）
+    const map = process.env.DOMAIN_ID_MAP || "";
+    const pair = map.split(",").find(p => p.startsWith(ak + "="));
+    if (pair) return pair.split("=")[1];
+
+    // 2. 临时已知值（IAM SigV4 待修复前过渡）
+    const KNOWN = {
+      "HPUARREPRFZ9BCWWMWYH": "019f7db180667694be0e55cbbc5875ca",
+      "HPUA02NFXRLXVWXUME36": "019dd22c0e187ece844aa25a025fd36c",
+    };
+    if (KNOWN[ak]) return KNOWN[ak];
+
+    // 3. 尝试 IAM API 获取
     const region = "cn-south-1";
     const host = `iam.${region}.myhuaweicloud.com`;
     const path = "/v3/auth/domains";
