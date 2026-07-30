@@ -1,0 +1,7 @@
+FROM swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:20260727223046
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --production --ignore-scripts
+COPY server/ ./
+EXPOSE 3000
+ENTRYPOINT ["node", "server.js"]
