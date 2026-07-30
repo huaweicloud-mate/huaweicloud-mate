@@ -15,7 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({ limit: "1mb", protoAction: "remove", constructorAction: "remove" }));
 app.use((req, res, next) => {
   if (req.path === "/mcp" && req.method === "POST" && req.body?.params?.arguments?.token) {
     const payload = verifyJwt(req.body.params.arguments.token);
@@ -73,7 +73,9 @@ app.get("/tasks", authFlexible, async (req, res) => {
 });
 
 // ── 用户注册 ──
-app.post("/api/v1/register", async (req, res) => {
+const registerLimiter = rateLimit({ windowMs: 3600000, max: 10, keyGenerator: (req) => req.ip, message: { error: "注册请求过于频繁，请稍后再试" } });
+
+app.post("/api/v1/register", registerLimiter, async (req, res) => {
   const { userId, ak, sk, projectId, openaiKey, region } = req.body;
   if (!userId || !ak || !sk) return res.status(400).json({ error: "缺少 userId, ak, sk" });
   try {
@@ -104,7 +106,9 @@ app.get("/auth/qr/:code.png", async (req, res) => {
   try { const img = await readFile(`/tmp/qrcode-login-${req.params.code}.png`); res.setHeader("Content-Type", "image/png"); res.send(img); } catch { res.status(404).send("QR not found"); }
 });
 
-app.post("/auth/login", (req, res) => { const code = generateLoginCode(); res.json({ code, expiresIn: CODE_TTL_MS / 1000 }); });
+const loginLimiter = rateLimit({ windowMs: 60000, max: 20, keyGenerator: (req) => req.ip, message: { error: "登录请求过于频繁" } });
+
+app.post("/auth/login", loginLimiter, (req, res) => { const code = generateLoginCode(); res.json({ code, expiresIn: CODE_TTL_MS / 1000 }); });
 
 app.get("/auth/confirm/:code", async (req, res) => {
   const token = await confirmLoginCode(req.params.code);

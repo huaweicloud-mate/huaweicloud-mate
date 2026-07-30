@@ -2,9 +2,10 @@
 // DCS Redis 为唯一用户数据源，无内存备份
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
-import { getUser, setUser, delUser, findUserIdByAk, isRedisAvailable } from "./redis-store.js";
+import { getUser, setUser, delUser, findUserIdByAk, isRedisAvailable, setLoginCode, getLoginCode, delLoginCode } from "./redis-store.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(64).toString("hex");
+if (!process.env.JWT_SECRET) { console.error("[auth] JWT_SECRET environment variable is required. Exiting."); process.exit(1); }
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES = process.env.JWT_EXPIRES || "12h";
 const SESSION_TIMEOUT_MS = parseInt(process.env.SESSION_TIMEOUT_MS || "1800000");
 
@@ -148,9 +149,10 @@ const loginIntentStore = new Map();
 export function generateLoginCode(opts) {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code;
-  do { code = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join(""); } while (loginCodeStore.has(code));
+  do { code = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join(""); } while (loginCodeStore.has(code));
   const userId = crypto.randomUUID().slice(0, 8);
   loginCodeStore.set(code, { createdAt: Date.now(), confirmed: false, userId, ak: opts?.ak || "", sk: opts?.sk || "", region: opts?.region || "" });
+  setLoginCode(code, loginCodeStore.get(code), Math.ceil(CODE_TTL_MS / 1000)).catch(() => {});
   return code;
 }
 
@@ -162,7 +164,7 @@ export function getLoginIntent(code) {
 
 export async function confirmLoginCode(code) {
   if (!isRedisAvailable()) return null;
-  const entry = loginCodeStore.get(code);
+  const entry = getLoginCode(code) ? await getLoginCode(code) : loginCodeStore.get(code);
   if (!entry) return null;
   if (Date.now() - entry.createdAt > CODE_TTL_MS) { loginCodeStore.delete(code); return null; }
   const userId = entry.userId;
@@ -183,7 +185,7 @@ export function pollLoginCode(code) {
     const token = issueJwt(entry.userId);
     if (!entry.graceSet) {
       entry.graceSet = true;
-      setTimeout(() => loginCodeStore.delete(code), CODE_GRACE_MS);
+      setTimeout(() => { loginCodeStore.delete(code); delLoginCode(code); }, CODE_GRACE_MS);
     }
     return { confirmed: true, token };
   }
