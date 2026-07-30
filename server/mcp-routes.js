@@ -216,6 +216,13 @@ export function mcpRouter(app) {
       }
     }
 
+    if (user && user.temp_credential === "true" && user.temp_expires_at) {
+      const expiresAt = new Date(user.temp_expires_at).getTime();
+      if (Date.now() > expiresAt) {
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"临时凭证已过期，请重新调用 huaweicloud_auth 获取新的临时凭证" }], isError:true } });
+      }
+    }
+
     // 无 token →%→ 匿名沙箱
     if (!userId) {
       try {

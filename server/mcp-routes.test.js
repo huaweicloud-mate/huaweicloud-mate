@@ -143,3 +143,37 @@ describe("CX-9: multi-region independent tokens", () => {
     expect(authSection).toContain("findUserIdByAk(akRegionKey)");
   });
 });
+
+describe("CX-32: temp credential expiration check in invoke", () => {
+  it("invoke should check temp_credential and temp_expires_at", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    const invokeSection = code.slice(code.indexOf("huaweicloud_invoke"));
+    expect(invokeSection).toContain("temp_credential");
+    expect(invokeSection).toContain("temp_expires_at");
+  });
+
+  it("invoke should compare Date.now() with expiresAt", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    const invokeSection = code.slice(code.indexOf("huaweicloud_invoke"));
+    expect(invokeSection).toMatch(/Date\.now\(\)\s*>\s*expiresAt/);
+  });
+
+  it("expired temp credential should return re-auth prompt", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    const invokeSection = code.slice(code.indexOf("huaweicloud_invoke"));
+    expect(invokeSection).toContain("临时凭证已过期");
+  });
+
+  it("expiration check should come before sandbox creation", async () => {
+    const fs = await import("node:fs/promises");
+    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
+    const invokeSection = code.slice(code.indexOf("huaweicloud_invoke"));
+    const expireCheck = invokeSection.indexOf("临时凭证已过期");
+    const sandboxCreate = invokeSection.indexOf("createTask");
+    expect(expireCheck).toBeGreaterThan(0);
+    expect(sandboxCreate).toBeGreaterThan(expireCheck);
+  });
+});
