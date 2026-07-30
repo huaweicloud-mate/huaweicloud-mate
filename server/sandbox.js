@@ -132,11 +132,11 @@ async function getOrCreateContainer(userId, user) {
               { name: "DEEPSEEK_API_KEY", value: process.env.DEEPSEEK_API_KEY || "" },
             ],
             resources: { requests: { cpu: "1", memory: "1Gi" }, limits: { cpu: "2", memory: "2Gi" } },
-            volumeMounts: [{ name: "skills", mountPath: "/skills" }, { name: "workspace", mountPath: "/workspace" }, { name: "tmp", mountPath: "/tmp" }, { name: "node-home", mountPath: "/home/node" }],
+            volumeMounts: [{ name: "skills", mountPath: "/skills" }, { name: "workspace", mountPath: "/workspace" }, { name: "tmp", mountPath: "/tmp" }, { name: "hcloud-home", mountPath: "/home/node/.hcloud" }, { name: "node-home", mountPath: "/home/node" }],
             securityContext: { runAsNonRoot: true, runAsUser: 1000, allowPrivilegeEscalation: false, capabilities: { drop: ["ALL"] }, readOnlyRootFilesystem: true, seccompProfile: { type: "RuntimeDefault" } },
             readinessProbe: { httpGet: { path: "/global/health", port: 3005 }, initialDelaySeconds: 10, periodSeconds: 5 },
           }],
-          volumes: [{ name: "skills", emptyDir: {} }, { name: "workspace", emptyDir: {} }, { name: "tmp", emptyDir: {} }, { name: "node-home", emptyDir: {} }],
+          volumes: [{ name: "skills", emptyDir: {} }, { name: "workspace", emptyDir: {} }, { name: "tmp", emptyDir: {} }, { name: "hcloud-home", emptyDir: {} }, { name: "node-home", emptyDir: {} }],
         },
       },
     },
@@ -153,18 +153,11 @@ async function getOrCreateContainer(userId, user) {
   const podIp = await getPodIp(podName);
 
   let sessionId = null;
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const sResp = await fetch(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
-      const session = await sResp.json();
-      sessionId = session.id;
-      break;
-    } catch (err) {
-      console.error(`[sandbox] session create attempt ${attempt}/3 failed for ${jobName}: ${err.message}`);
-      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
-    }
-  }
-  if (!sessionId) console.error(`[sandbox] session create failed after 3 retries for ${jobName}`);
+  try {
+    const sResp = await fetch(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    const session = await sResp.json();
+    sessionId = session.id;
+  } catch (err) { console.error(`[sandbox] session create failed for ${jobName}: ${err.message}`); }
 
   jobStatusCache.set(jobName, { podName, podIp, phase: "Running" });
   if (isRedisAvailable()) {
@@ -242,40 +235,48 @@ export async function reconcileActiveJobs() {
 // ── 匿名沙箱（公共只读 AK/SK，不关联用户） ──
 
 async function createAnonymousContainer() {
+  const lockKey = `lock:sandbox:anon`;
+  const locked = await acquireLock(lockKey, 60000);
+  if (!locked) {
+    throw new Error("匿名沙箱创建过于频繁，请稍后重试");
+  }
+
   await checkAnonConcurrency();
   await checkConcurrency();
-  const jobName = `sandbox-anon-${Date.now().toString(36)}`;
-  const job = {
-    apiVersion: "batch/v1",
-    kind: "Job",
-    metadata: { name: jobName, namespace: NAMESPACE, labels: { app: "sandbox" } },
-    spec: {
-      ttlSecondsAfterFinished: ANON_SANDBOX_TTL, // 快速清理
-      template: {
-        metadata: { labels: { app: "sandbox", "job-name": jobName } },
-        spec: {
-          imagePullSecrets: [{ name: "swr-secret" }],
-           restartPolicy: "Never",
-           containers: [{
-            name: "sandbox",
-            image: SANDBOX_IMAGE,
-            imagePullPolicy: "Always",
-            env: [
-              { name: "NODE_PATH", value: "/usr/local/lib/node_modules" },
-              { name: "HW_ACCESS_KEY", value: "" },
-              { name: "HW_SECRET_KEY", value: "" },
-              { name: "DEEPSEEK_API_KEY", value: process.env.DEEPSEEK_API_KEY || "" },
-            ],
-            resources: { requests: { cpu: "1", memory: "1Gi" }, limits: { cpu: "2", memory: "2Gi" } },
-            volumeMounts: [{ name: "skills", mountPath: "/skills" }, { name: "workspace", mountPath: "/workspace" }, { name: "tmp", mountPath: "/tmp" }, { name: "node-home", mountPath: "/home/node" }],
-            securityContext: { runAsNonRoot: true, runAsUser: 1000, allowPrivilegeEscalation: false, capabilities: { drop: ["ALL"] }, readOnlyRootFilesystem: true, seccompProfile: { type: "RuntimeDefault" } },
-            readinessProbe: { httpGet: { path: "/global/health", port: 3005 }, initialDelaySeconds: 10, periodSeconds: 5 },
-          }],
-          volumes: [{ name: "skills", emptyDir: {} }, { name: "workspace", emptyDir: {} }, { name: "tmp", emptyDir: {} }, { name: "node-home", emptyDir: {} }],
+
+  try {
+    const jobName = `sandbox-anon-${Date.now().toString(36)}`;
+    const job = {
+      apiVersion: "batch/v1",
+      kind: "Job",
+      metadata: { name: jobName, namespace: NAMESPACE, labels: { app: "sandbox" } },
+      spec: {
+        ttlSecondsAfterFinished: ANON_SANDBOX_TTL, // 快速清理
+        template: {
+          metadata: { labels: { app: "sandbox", "job-name": jobName } },
+          spec: {
+            imagePullSecrets: [{ name: "swr-secret" }],
+             restartPolicy: "Never",
+             containers: [{
+              name: "sandbox",
+              image: SANDBOX_IMAGE,
+              imagePullPolicy: "Always",
+              env: [
+                { name: "NODE_PATH", value: "/usr/local/lib/node_modules" },
+                { name: "HW_ACCESS_KEY", value: "" },
+                { name: "HW_SECRET_KEY", value: "" },
+                { name: "DEEPSEEK_API_KEY", value: process.env.DEEPSEEK_API_KEY || "" },
+              ],
+              resources: { requests: { cpu: "1", memory: "1Gi" }, limits: { cpu: "2", memory: "2Gi" } },
+              volumeMounts: [{ name: "skills", mountPath: "/skills" }, { name: "workspace", mountPath: "/workspace" }, { name: "tmp", mountPath: "/tmp" }, { name: "hcloud-home", mountPath: "/home/node/.hcloud" }, { name: "node-home", mountPath: "/home/node" }],
+              securityContext: { runAsNonRoot: true, runAsUser: 1000, allowPrivilegeEscalation: false, capabilities: { drop: ["ALL"] }, readOnlyRootFilesystem: true, seccompProfile: { type: "RuntimeDefault" } },
+              readinessProbe: { httpGet: { path: "/global/health", port: 3005 }, initialDelaySeconds: 10, periodSeconds: 5 },
+            }],
+            volumes: [{ name: "skills", emptyDir: {} }, { name: "workspace", emptyDir: {} }, { name: "tmp", emptyDir: {} }, { name: "hcloud-home", emptyDir: {} }, { name: "node-home", emptyDir: {} }],
+          },
         },
       },
-    },
-  };
+    };
 
   await batchApi.createNamespacedJob(NAMESPACE, job).catch(async (err) => {
     if (err.statusCode === 409) { console.log(`[sandbox] anon ${jobName} exists`); return; }
@@ -294,6 +295,9 @@ async function createAnonymousContainer() {
   jobStatusCache.set(jobName, { podName, podIp, phase: "Running" });
   console.log(`[sandbox] anon ${jobName} ready at ${podIp}:3005 session=${sessionId}`);
   return { id: podName, podIp, sessionId };
+  } finally {
+    releaseLock(lockKey).catch(err => console.error(`[sandbox] releaseLock anon failed: ${err.message}`));
+  }
 }
 
 async function destroyAnonymousContainer(podId) {

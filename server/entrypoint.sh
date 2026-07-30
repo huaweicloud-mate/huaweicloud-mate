@@ -39,12 +39,19 @@ echo '{}' > ~/.config/opencode/opencode.jsonc
 opencode serve --port 3005 --hostname 0.0.0.0 &
 OP_SERVER=$!
 
+STARTED=false
 for i in $(seq 1 30); do
     if curl -s http://127.0.0.1:3005/global/health > /dev/null 2>&1; then
+        STARTED=true
         break
     fi
     sleep 1
 done
+
+if [ "$STARTED" = false ]; then
+  echo "[sandbox] opencode startup timeout"
+  exit 1
+fi
 
 echo "[sandbox] ready"
 
