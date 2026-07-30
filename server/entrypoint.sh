@@ -3,14 +3,15 @@ set -e
 
 mkdir -p ~/.hcloud
 
-# 拉取 skills（已有则跳过）
+# 拉取 skills（可选，失败不影响沙箱启动）
 if [ ! -f /skills/.skills-ready ]; then
-  git clone --depth 1 https://gitcode.com/huaweicloud/huaweicloud-skills.git /tmp/skills 2>/dev/null || true
+  git clone --depth 1 https://gitcode.com/huaweicloud/huaweicloud-skills.git /tmp/skills 2>/dev/null || \
+  git clone --depth 1 https://github.com/huaweicloud/huaweicloud-skills.git /tmp/skills 2>/dev/null || true
   if [ -d /tmp/skills/skills ]; then
     cp -r /tmp/skills/skills/* /skills/ 2>/dev/null || true
     rm -rf /tmp/skills
-    touch /skills/.skills-ready
   fi
+  touch /skills/.skills-ready
 fi
 
 # 配置 hcloud CLI（长期凭证 或 临时凭证）
@@ -32,6 +33,19 @@ sed -i 's/"agreePrivacy": "false"/"agreePrivacy": "true"/' ~/.hcloud/config.json
 
 # 不创建 credentials 明文文件,仅用 hcloud configure 加密存储
 chmod 600 ~/.hcloud/config.json 2>/dev/null || true
+
+# 配置 opencode MCP server — 通过 hc-devkit stdio 代理直连云端
+mkdir -p ~/.config/opencode
+cat > ~/.config/opencode/opencode.jsonc << 'MCPEOF'
+{
+  "mcpServers": {
+    "huaweicloud": {
+      "command": "node",
+      "args": ["/hc-devkit.js"]
+    }
+  }
+}
+MCPEOF
 
 opencode serve --port 3005 --hostname 0.0.0.0 &
 OP_SERVER=$!

@@ -11,7 +11,6 @@ const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 5,
   connectTimeout: 10000,
-  acquireTimeout: 10000,
 });
 
 // 建表
@@ -31,6 +30,8 @@ pool.execute(`CREATE TABLE IF NOT EXISTS tasks (
   description TEXT         NOT NULL,
   status      VARCHAR(16)  DEFAULT 'pending',
   progress    INT          DEFAULT 0,
+  currentStep VARCHAR(64)  DEFAULT '',
+  artifacts   JSON,
   output      MEDIUMTEXT,
   error       TEXT,
   created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
