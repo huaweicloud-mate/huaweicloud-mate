@@ -1,6 +1,6 @@
 {
   "name": "hc-devkit",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "Huawei Cloud DevKit - MCP plugin for managing cloud resources",
   "type": "module",
   "bin": {
@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@huaweicloud/huaweicloud-sdk-core": "^3.1.207",
+    "@huaweicloud/huaweicloud-sdk-iam": "^3.1.207",
     "@kubernetes/client-node": "^0.22.0",
     "cors": "^2.8.0",
     "express": "^5.0.0",

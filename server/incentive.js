@@ -19,6 +19,12 @@ const VOUCHER_FACE_AMOUNT = process.env.INCENTIVE_FACE_AMOUNT || "100";
 const VOUCHER_CURRENCY = process.env.INCENTIVE_CURRENCY || "CNY";
 const MAX_VOUCHERS = parseInt(process.env.INCENTIVE_MAX_VOUCHERS || "0");
 
+// 判断当前是否为测试环境
+export function isBetaAPI() {
+  const url = process.env.INCENTIVE_API_URL || CHECK_URL || "";
+  return url.includes("apigw-beta");
+}
+
 const baseHeaders = {
   "Content-Type": "application/json",
   "X-HW-ID": INCENTIVE_HW_ID,
@@ -27,15 +33,19 @@ const baseHeaders = {
 };
 
 export async function checkCouponIssued(customerId) {
+  const body = JSON.stringify({ customer_id: customerId, scene_type: 40 });
+  console.log(`[incentive] check-coupon REQUEST → ${CHECK_URL}`);
+  console.log(`[incentive] check-coupon BODY → ${body}`);
+  console.log(`[incentive] check-coupon HEADERS → X-APIG-APPCODE:${CHECK_APPCODE.slice(0,20)}... X-auth-token:${INCENTIVE_AUTH_TOKEN.slice(0,20)}...`);
   try {
     const resp = await fetch(CHECK_URL, {
       method: "POST",
       headers: { ...baseHeaders, "X-APIG-APPCODE": CHECK_APPCODE },
-      body: JSON.stringify({ customer_id: customerId, scene_type: 40 }),
+      body,
       signal: AbortSignal.timeout(10000),
     });
     const data = await resp.json();
-    console.log(`[incentive] check-coupon response: ${JSON.stringify(data).slice(0, 200)}`);
+    console.log(`[incentive] check-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(data).slice(0, 200)}`);
     if (data.error_code) {
       console.error(`[incentive] check error: ${data.error_code} ${data.error_msg}`);
       return { issued: false, error: data.error_msg };
@@ -70,23 +80,26 @@ export async function checkLocalQuota() {
 }
 
 export async function issueCoupon(customerId) {
+  const body = JSON.stringify({
+    customer_id: customerId,
+    activity_id: ACTIVITY_ID,
+    activity_product_id: ACTIVITY_PRODUCT_ID,
+    face_amount: VOUCHER_FACE_AMOUNT,
+    currency_code: VOUCHER_CURRENCY,
+    is_send_notify: "0",
+    service_resource_type: 1,
+  });
+  console.log(`[incentive] issue-coupon REQUEST → ${ISSUE_URL}`);
+  console.log(`[incentive] issue-coupon BODY → customer_id=${customerId} activity_id=${ACTIVITY_ID} activity_product_id=${ACTIVITY_PRODUCT_ID} face_amount=${VOUCHER_FACE_AMOUNT} currency_code=${VOUCHER_CURRENCY}`);
   try {
     const resp = await fetch(ISSUE_URL, {
       method: "POST",
       headers: { ...baseHeaders, "X-APIG-APPCODE": ISSUE_APPCODE },
-      body: JSON.stringify({
-        customer_id: customerId,
-        activity_id: ACTIVITY_ID,
-        activity_product_id: ACTIVITY_PRODUCT_ID,
-        face_amount: VOUCHER_FACE_AMOUNT,
-        currency_code: VOUCHER_CURRENCY,
-        is_send_notify: "0",
-        service_resource_type: 1,
-      }),
+      body,
       signal: AbortSignal.timeout(15000),
     });
     const data = await resp.json();
-    console.log(`[incentive] issue-coupon response: ${JSON.stringify(data).slice(0, 300)}`);
+    console.log(`[incentive] issue-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(data).slice(0, 300)}`);
     if (data.error_code) {
       console.error(`[incentive] issue error: ${data.error_code} ${data.error_msg}`);
       return { success: false, error: data.error_msg };
