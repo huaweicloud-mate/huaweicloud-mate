@@ -1,0 +1,23 @@
+{
+  "name": "huawei-cloud-devkit",
+  "version": "1.0.0",
+  "description": "HuaweiCloud-Devkit — 通过 MCP 协议委派任务到云端沙箱，管理 ECS/OBS/VPC/IAM/RDS 等华为云服务",
+  "author": {
+    "name": "HC DevKit Team"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "HuaweiCloud-Devkit",
+    "shortDescription": "通过云端 Agent 管理华为云资源：ECS、OBS、VPC、IAM、RDS",
+    "longDescription": "HuaweiCloud DevKit 是一个华为云运维 MCP 插件，通过 OpenCode CLI + hcloud 在云端 Docker 沙箱中执行运维任务。支持 ECS 实例管理、OBS 存储桶操作、VPC 网络配置、IAM 权限管理、RDS 数据库运维等场景。",
+    "developerName": "HC DevKit Team",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": [
+      "帮我在华为云上创建一个 ECS 实例",
+      "查看我的 OBS 存储桶列表",
+      "检查当前 VPC 网络配置"
+    ]
+  }
+}
