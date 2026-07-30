@@ -27,7 +27,7 @@ export async function createTemporaryCredentials(ak, sk, region = "cn-south-1") 
             image: SANDBOX_IMAGE,
             command: ["sh", "-c"],
             args: [
-              `hcloud configure set --cli-access-key=${ak} --cli-secret-key=${sk} --cli-region=${region} --agree-privacy-policy=true >/dev/null 2>&1; hcloud IAM CreateTemporaryAccessKeyByToken --region=${region} --cli-access-key=${ak} --cli-secret-key=${sk} --auth.identity.methods.1=token --auth.identity.token.duration_seconds=21600 --agree-privacy-policy=true`,
+              `hcloud configure set --cli-access-key=${ak} --cli-secret-key=${sk} --cli-region=${region} --agree-privacy-policy=true >/dev/null 2>&1; hcloud IAM CreateTemporaryAccessKeyByToken --region=${region} --cli-access-key=${ak} --cli-secret-key=${sk} --auth.identity.methods.1=token --auth.identity.token.duration_seconds=21600 --agree-privacy-policy=true 2>/dev/null`,
             ],
           }],
         },
@@ -54,7 +54,9 @@ export async function createTemporaryCredentials(ak, sk, region = "cn-south-1") 
     const logResp = await coreApi.readNamespacedPodLog(podName, NAMESPACE, "sts");
     const stdout = typeof logResp === "string" ? logResp : (logResp?.body || "");
 
-    const match = stdout.match(/\{[\s\S]*"credential"[\s\S]*\}/);
+    const cleanLines = stdout.split("\n").filter(l => l.trim().startsWith("{"));
+    const cleanOutput = cleanLines.join("\n");
+    const match = cleanOutput.match(/\{[\s\S]*"credential"[\s\S]*\}/);
     if (!match) throw new Error(`No credential JSON: ${stdout.slice(0, 300)}`);
 
     const data = JSON.parse(match[0]);

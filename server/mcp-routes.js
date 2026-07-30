@@ -116,7 +116,10 @@ export function mcpRouter(app) {
       const sandboxToken = tempCreds ? tempCreds.securityToken : undefined;
       setImmediate(async () => {
         try {
-          const { getOrCreateContainer } = await import("./sandbox.js");
+          const { getOrCreateContainer, destroyContainer } = await import("./sandbox.js");
+          if (tempCreds) {
+            try { await destroyContainer(userId); } catch (_) {}
+          }
           await getOrCreateContainer(userId, { ...user, ak: sandboxAk, sk: sandboxSk, securityToken: sandboxToken });
         } catch (err) { console.error(`[mcp] sandbox preheat failed: ${err.message}`); }
       });
