@@ -3,14 +3,12 @@ set -e
 
 mkdir -p ~/.hcloud
 
-# 拉取 skills（可选，失败不影响沙箱启动）
+# 拉取 skills（可选，curl 下载 tar.gz，失败不影响沙箱启动）
 if [ ! -f /skills/.skills-ready ]; then
-  git clone --depth 1 https://gitcode.com/huaweicloud/huaweicloud-skills.git /tmp/skills 2>/dev/null || \
-  git clone --depth 1 https://github.com/huaweicloud/huaweicloud-skills.git /tmp/skills 2>/dev/null || true
-  if [ -d /tmp/skills/skills ]; then
-    cp -r /tmp/skills/skills/* /skills/ 2>/dev/null || true
-    rm -rf /tmp/skills
-  fi
+  curl -fsSL --connect-timeout 10 https://github.com/huaweicloud/huaweicloud-skills/archive/refs/heads/master.tar.gz -o /tmp/skills.tar.gz 2>/dev/null && \
+    tar xzf /tmp/skills.tar.gz -C /tmp/ 2>/dev/null && \
+    cp -r /tmp/huaweicloud-skills-master/skills/* /skills/ 2>/dev/null && \
+    rm -rf /tmp/skills.tar.gz /tmp/huaweicloud-skills-master || true
   touch /skills/.skills-ready
 fi
 
