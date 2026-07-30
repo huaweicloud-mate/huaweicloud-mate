@@ -11,7 +11,8 @@ import { checkCouponIssued, checkLocalQuota, issueCoupon, isBetaAPI } from "./in
 
 const VOUCHER_FACE_AMOUNT = process.env.INCENTIVE_FACE_AMOUNT || "100";
 
-const PUBLIC_URL = process.env.PUBLIC_URL || "http://127.0.0.1:3000";
+const PUBLIC_URL = process.env.PUBLIC_URL;
+if (!PUBLIC_URL) console.warn("[mcp] PUBLIC_URL not set — AgentCard may point to localhost. Set PUBLIC_URL to the public-facing URL.");
 
 export function mcpRouter(app) {
 
@@ -271,9 +272,16 @@ export function mcpRouter(app) {
       const text = await new Promise((resolve, reject) => {
         const INVOKE_TIMEOUT = parseInt(process.env.INVOKE_TIMEOUT || "300000");
         const timeout = setTimeout(() => { unsubscribe(); reject(new Error("超时")); }, INVOKE_TIMEOUT);
+        let settled = false;
+        const finish = (err, result) => {
+          if (settled) return; settled = true;
+          clearTimeout(timeout);
+          if (err) reject(err); else resolve(result);
+        };
+        req.on("close", () => { unsubscribe(); finish(new Error("客户端已断开"), null); });
         const unsubscribe = streamTask(task.id, (event) => {
-          if (event.status === "completed") { clearTimeout(timeout); unsubscribe(); resolve(task.output || event.message || "完成"); }
-          else if (event.status === "failed") { clearTimeout(timeout); unsubscribe(); reject(new Error(event.error || "失败")); }
+          if (event.status === "completed") { unsubscribe(); finish(null, task.output || event.message || "完成"); }
+          else if (event.status === "failed") { unsubscribe(); finish(new Error(event.error || "失败"), null); }
         });
       });
       return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text }] } });

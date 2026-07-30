@@ -35,7 +35,7 @@ let redisReady = null;
 const redisConnectPromise = (async () => {
   if (REDIS_URL) {
     try {
-      redis = new Redis(REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 2, retryStrategy: () => null });
+      redis = new Redis(REDIS_URL, { lazyConnect: true, maxRetriesPerRequest: 3, retryStrategy: (times) => Math.min(times * 200, 5000) });
       await redis.ping();
       console.log("[redis-store] Redis connected");
       redisReady = true;

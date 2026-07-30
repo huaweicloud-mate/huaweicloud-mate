@@ -153,11 +153,18 @@ async function getOrCreateContainer(userId, user) {
   const podIp = await getPodIp(podName);
 
   let sessionId = null;
-  try {
-    const sResp = await fetch(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
-    const session = await sResp.json();
-    sessionId = session.id;
-  } catch (err) { console.error(`[sandbox] session create failed for ${jobName}: ${err.message}`); }
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const sResp = await fetch(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      const session = await sResp.json();
+      sessionId = session.id;
+      break;
+    } catch (err) {
+      console.error(`[sandbox] session create attempt ${attempt}/3 failed for ${jobName}: ${err.message}`);
+      if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 1000));
+    }
+  }
+  if (!sessionId) console.error(`[sandbox] session create failed after 3 retries for ${jobName}`);
 
   jobStatusCache.set(jobName, { podName, podIp, phase: "Running" });
   if (isRedisAvailable()) {

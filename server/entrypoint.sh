@@ -30,13 +30,8 @@ fi
 # 接受隐私协议,避免后续每次运行都弹交互提示
 sed -i 's/"agreePrivacy": "false"/"agreePrivacy": "true"/' ~/.hcloud/config.json 2>/dev/null || true
 
-# huaweicloud-mate 兼容格式
-cat > ~/.hcloud/credentials << EOF
-[default]
-huaweicloud_access_key = ${HW_ACCESS_KEY}
-huaweicloud_secret_key = ${HW_SECRET_KEY}
-EOF
-chmod 600 ~/.hcloud/credentials
+# 不创建 credentials 明文文件,仅用 hcloud configure 加密存储
+chmod 600 ~/.hcloud/config.json 2>/dev/null || true
 
 opencode serve --port 3005 --hostname 0.0.0.0 &
 OP_SERVER=$!
