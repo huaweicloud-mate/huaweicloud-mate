@@ -17,6 +17,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@huaweicloud/huaweicloud-sdk-core": "^3.1.207",
     "@kubernetes/client-node": "^0.22.0",
     "cors": "^2.8.0",
     "express": "^5.0.0",
