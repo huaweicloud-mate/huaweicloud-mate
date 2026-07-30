@@ -102,7 +102,7 @@ export async function issueCoupon(customerId) {
     console.log(`[incentive] issue-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(data).slice(0, 300)}`);
     if (data.error_code) {
       console.error(`[incentive] issue error: ${data.error_code} ${data.error_msg}`);
-      return { success: false, error: data.error_msg };
+      return { success: false, error: data.error_msg, errorCode: data.error_code };
     }
     const couponId = data.coupon_id || data.data?.coupon_id || `vc_${Date.now()}`;
     return { success: true, couponId, raw: data };

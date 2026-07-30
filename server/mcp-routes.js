@@ -207,7 +207,11 @@ export function mcpRouter(app) {
       const issueResult = await issueCoupon(domainId);
       if (!issueResult.success) {
         await markVoucherClaimed(domainId, akHash);
-        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:`发券失败: ${issueResult.error}` }) }], isError:true } });
+        let errMsg = `发券失败: ${issueResult.error}`;
+        if (issueResult.errorCode === "HD.60630022") {
+          errMsg += ` 请先完成实名认证：https://account.huaweicloud.com/usercenter/?region=cn-north-4&locale=zh-cn#/accountindex/realNameAuthing`;
+        }
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message: errMsg }) }], isError:true } });
       }
 
       // 写本地 MySQL
