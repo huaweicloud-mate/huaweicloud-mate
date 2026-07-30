@@ -34,18 +34,9 @@ sed -i 's/"agreePrivacy": "false"/"agreePrivacy": "true"/' ~/.hcloud/config.json
 # 不创建 credentials 明文文件,仅用 hcloud configure 加密存储
 chmod 600 ~/.hcloud/config.json 2>/dev/null || true
 
-# 配置 opencode MCP server — 通过 hc-devkit stdio 代理直连云端
+# opencode 配置(1.18.x 不支持 mcpServers 键,仅保留基础配置)
 mkdir -p ~/.config/opencode
-cat > ~/.config/opencode/opencode.jsonc << 'MCPEOF'
-{
-  "mcpServers": {
-    "huaweicloud": {
-      "command": "node",
-      "args": ["/hc-devkit.js"]
-    }
-  }
-}
-MCPEOF
+echo '{}' > ~/.config/opencode/opencode.jsonc
 
 opencode serve --port 3005 --hostname 0.0.0.0 &
 OP_SERVER=$!
