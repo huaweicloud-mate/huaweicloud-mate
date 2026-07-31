@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "huaweicloud-devkit": {
+      "type": "http",
+      "url": "http://113.45.151.224:3000/mcp",
+      "enabled": true,
+      "timeout": 300000
+    }
+  }
+}

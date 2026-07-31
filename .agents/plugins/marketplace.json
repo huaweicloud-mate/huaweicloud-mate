@@ -1,0 +1,20 @@
+{
+  "name": "HuaweiCloud-Devkit",
+  "interface": {
+    "displayName": "HuaweiCloud-Devkit"
+  },
+  "plugins": [
+    {
+      "name": "huawei-cloud-devkit",
+      "source": {
+        "source": "local",
+        "path": "./plugins/huawei-cloud-devkit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}
