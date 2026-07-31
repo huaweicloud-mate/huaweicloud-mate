@@ -55,6 +55,15 @@ setInterval(() => {
 
 export function mcpRouter(app) {
 
+  // ── 调试日志：记录所有 /mcp 请求 ──
+  app.use("/mcp", (req, res, next) => {
+    const ts = new Date().toISOString();
+    const sessionId = req.headers["mcp-session-id"] || "-";
+    const method = req.body?.method || `HTTP ${req.method}`;
+    console.log(`[mcp-trace] ${ts} | ${req.method} /mcp | method=${method} | session=${sessionId?.slice(0,20)}... | ip=${req.ip}`);
+    next();
+  });
+
   // ── GET /mcp — SSE 通道 (Streamable HTTP) ──
   app.get("/mcp", (req, res) => {
     const sessionId = req.headers["mcp-session-id"] || req.query.sessionId;
@@ -100,7 +109,7 @@ export function mcpRouter(app) {
         { name: "huaweicloud_invoke",          description: "操作华为云资源。", inputSchema: { type:"object", properties:{ intent:{type:"string"}, token:{type:"string"}}, required:["intent"] } },
       ] } });
     }
-    if (call.method === "notifications/initialized") return res.json({ jsonrpc: "2.0", id: call.id, result: {} });
+    if (call.method === "notifications/initialized") { console.log(`[mcp-trace] >>> RECEIVED notifications/initialized <<< session=${req.headers["mcp-session-id"]?.slice(0,20)}...`); return res.json({ jsonrpc: "2.0", id: call.id, result: {} }); }
     next();
   });
 
