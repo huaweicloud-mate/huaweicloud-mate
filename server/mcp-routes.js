@@ -109,7 +109,7 @@ export function mcpRouter(app) {
         { name: "huaweicloud_invoke",          description: "操作华为云资源。", inputSchema: { type:"object", properties:{ intent:{type:"string"}, token:{type:"string"}}, required:["intent"] } },
       ] } });
     }
-    if (call.method === "notifications/initialized") { console.log(`[mcp-trace] >>> RECEIVED notifications/initialized <<< session=${req.headers["mcp-session-id"]?.slice(0,20)}...`); return res.json({ jsonrpc: "2.0", id: call.id, result: {} }); }
+    if (call.method === "notifications/initialized") { console.log(`[mcp-trace] >>> RECEIVED notifications/initialized <<< session=${req.headers["mcp-session-id"]?.slice(0,20)}...`); return res.status(202).end(); }
     next();
   });
 
