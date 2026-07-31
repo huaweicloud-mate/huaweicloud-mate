@@ -108,7 +108,7 @@ export function mcpRouter(app) {
               voucherAllowed = true;
             }
           }
-        } catch (err) { console.error(`[mcp] voucher check failed: ${err.message}`); }
+        } catch (err) { console.error(`[mcp] voucher check failed: ${err.message}`); voucherInfo = "查询失败"; }
         }
       }
 
