@@ -28,7 +28,7 @@ rl.on("line", async (line) => {
   // initialize / notifications — handled locally
   if (method === "initialize") {
     return respond(call.id, {
-      protocolVersion: "2024-11-05",
+      protocolVersion: "2025-03-26",
       capabilities: { tools: {} },
       serverInfo: { name: "hc-devkit", version: "0.1.0" },
     });
