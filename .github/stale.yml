@@ -1,0 +1,22 @@
+# Configuration for probot/stale
+daysUntilStale: 60
+daysUntilClose: 7
+exemptLabels:
+  - pinned
+  - security
+staleLabel: wontfix
+markComment: >
+  This issue has been automatically marked as stale because it has not had
+  recent activity. It will be closed if no further activity occurs within 7 days.
+closeComment: >
+  This issue has been automatically closed due to inactivity.
+  If you believe this is still relevant, please reopen it.
+pulls:
+  daysUntilStale: 30
+  daysUntilClose: 7
+  markComment: >
+    This PR has been automatically marked as stale. It will be closed if no
+    further activity occurs within 7 days.
+  closeComment: >
+    This PR has been automatically closed due to inactivity.
+    If you'd like to continue, please reopen it.

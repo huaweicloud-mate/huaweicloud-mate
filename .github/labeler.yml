@@ -1,0 +1,21 @@
+documentation:
+  - changed-files:
+    - any-glob-to-any-file: '**/*.md'
+    - any-glob-to-any-file: 'docs/**'
+dependencies:
+  - changed-files:
+    - any-glob-to-any-file: 'package-lock.json'
+    - any-glob-to-any-file: 'package.json'
+github-actions:
+  - changed-files:
+    - any-glob-to-any-file: '.github/workflows/**'
+core:
+  - changed-files:
+    - any-glob-to-any-file: 'packages/**/src/**'
+plugins:
+  - changed-files:
+    - any-glob-to-any-file: 'plugins/**'
+tests:
+  - changed-files:
+    - any-glob-to-any-file: '**/*.test.*'
+    - any-glob-to-any-file: '**/*.spec.*'
