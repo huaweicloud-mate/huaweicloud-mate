@@ -62,6 +62,34 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: DEEPSEEK_API_KEY
+            - name: INCENTIVE_API_URL
+              value: "https://apigw-beta.huawei.com/api/v1/hdincentiveservice/coupon"
+            - name: INCENTIVE_HW_ID
+              value: "com.huawei.cloudbu.developer.community"
+            - name: INCENTIVE_APPKEY
+              value: "qUj0aJHBiL5RW5VUEW5hCg=="
+            - name: INCENTIVE_APPCODE
+              value: "5MkJTaYq6L6S8xBm1Tt0cLoB0fuDKkrV2bj3T8fvlGWtLp2WaJzKCP5darNWFa19"
+            - name: INCENTIVE_ACTIVITY_ID
+              value: "A000330"
+            - name: INCENTIVE_ACTIVITY_PRODUCT_ID
+              value: "5649bf1d2bc74d648ac6cd5496ebba91"
+            - name: INCENTIVE_MAX_VOUCHERS
+              value: "200"
+            - name: INCENTIVE_AUTH_TOKEN
+              value: "MIIF7QYJKoZIhvcNAQcCoIIF3jCCBdoCAQExDTALBglghkgBZQMEAgEwggN4BgkqhkiG9w0BBwGgggNpBIIDZXsidG9rZW4iOnsiZXhwaXJlc19hdCI6IjIwMjYtMDctMzBUMTE6MjA6NTEuNjYzMDAwWiIsInNpZ25hdHVyZSI6IkVBcGpiaTF1YjNKMGFDMDNBQUFBQUFBQUFERzRNc1hIdGttdWh6a1lIWFNuWU12VEJ2aGNXVkg0bWh0T2Y4eGxLRjVRUVA1VXhpcDNLazl0dis4bDZFSWVWZXBkY1F6ZEhoWEVnNEF4eDBIbkVzMlN6NmtDVEhPSnd4R2lhUWZtRHM3MmI4NEhialZNUmpmMWp3UVNYNlB3QVZJRnJRQVcweE9pb01WcGE3OWg0WUhlU2hCeHlWNk9KV0V3eXU0bU5XYmRkSmlZS3lHcVdaTHh2Z0w5bjM5bmxKSFE1Zk05WGJJM2IrTjdLZVNCbnF2ckVhb2tNWmlQQnZSWTRCSVNVbTh3SUtpV25ONDM4SjRBWkIrL3BPZDVvdXhDMld5a2gyRmJwck9XN3ZqRk9TajVQVThHQWRma1JOTGMzS2NWVmlxVEJSdlZnV1QzbmIrc012MXJVNkkzTUc2bHV2Zk1ZWTZQRzRsaXVXalZEQ1lwIiwibWV0aG9kcyI6WyJwYXNzd29yZCJdLCJjYXRhbG9nIjpbXSwiZG9tYWluIjp7Im5hbWUiOiJvcF9zdmNfcGFydG5lcnNvIiwiaWQiOiIwZGEwMTdiODY0ODBkMjY5MGZmMGMwMTkyNWIwMzRjMCJ9LCJyb2xlcyI6W3sibmFtZSI6InNlY3VfYWRtaW4iLCJpZCI6IjAifSx7Im5hbWUiOiJ0ZV9hZ2VuY3kiLCJpZCI6IjAifSx7Im5hbWUiOiJ0ZV9hZG1pbiIsImlkIjoiMCJ9XSwiaXNzdWVkX2F0IjoiMjAyNi0wNy0yOVQxMToyMDo1MS42NjMwMDBaIiwidXNlciI6eyJkb21haW4iOnsibmFtZSI6Im9wX3N2Y19wYXJ0bmVyc28iLCJpZCI6IjBkYTAxN2I4NjQ4MGQyNjkwZmYwYzAxOTI1YjAzNGMwIn0sIm5hbWUiOiJvcF9zdmNfcGFydG5lcnNvIiwicGFzc3dvcmRfZXhwaXJlc19hdCI6IiIsImlkIjoiMmViZmU0ZWU3ODY3NGVhN2IwMDAwZTg4ZGUwY2Q0MTMifX19MYICSDCCAkQCAQEwgZ4wgYUxCzAJBgNVBAYTAkNOMRIwEAYDVQQIDAlHdWFuZ0RvbmcxETAPBgNVBAcMCFNoZW5aaGVuMS4wLAYDVQQKDCVIdWF3ZWkgU29mdHdhcmUgVGVjaG5vbG9naWVzIENvLiwgTHRkMQ4wDAYDVQQLDAVDbG91ZDEPMA0GA1UEAwwGaWFtcGtpAhReTYYHeZSSvDYk7gWASwMEZEnZozALBglghkgBZQMEAgEwDQYJKoZIhvcNAQEBBQAEggGAoSL2f7y8gETv4esXaoSTkVdOPZhy0LGKQBCH2-wLvZpUhSlJwxAmFUNHaRzMjukiqITcnGL6oa2MhS8lDDf2Luda2fcmDAveeL4J99TecdpWNflPJnH+sjh+Y3p8pF3OtmcHZiCge8rO5hg47aINnSG+pkNHKuZszK419MLQjN+vIZsgf5eN7GQpa+72yr8Y7++MWuT3P4lTXun9kGKoxZpGa5nueuC3lPiqNTOh8SrdkhtPGHx-37OmKaF58TcVVmAZ+rgJWRyZSTs-1h7VnRi3FT9iLj7yiB-k4IruXFyh9u4EQKknDxRhfcYRywRdx46UHIaVIhtiGvssQCT7X2OA3pHMRKibOpdoqY3j1CrZmDWlDVic1hbMOpBMDVcskNWUgeVtNp5SzGsxhVuBJK1072WAIyVs3xpd6-NtCzaoG3pvT6iqE0+2E9BwT1SV6Is0F5XtmD-YZB4VL+CQJTPpyAI-lsJvAejDnzCdq9J2Dy1M-XHnv4nwYEkEzCoI"
+            - name: INCENTIVE_FACE_AMOUNT
+              value: "10"
+            - name: INCENTIVE_CURRENCY
+              value: "CNY"
+            - name: INCENTIVE_CHECK_APPCODE
+              value: "5MkJTaYq6L6S8xBm1TtOcLoBOfuDKkrV2bj3T8fvlGWtLp2WaJzKCP5darNWFa19"
+            - name: INCENTIVE_ISSUE_APPCODE
+              value: "dqNEJDPTs24IglOAwhA7UfFaknYd15s1F5lTxY3co0u02CLQCCckclhdkL2LGj94"
+            - name: MAX_ANON_SANDBOXES
+              value: "100"
+            - name: MAX_SANDBOXES
+              value: "100"
           resources:
             requests:
               cpu: 500m
