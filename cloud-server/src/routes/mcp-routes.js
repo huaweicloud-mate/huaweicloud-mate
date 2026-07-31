@@ -24,7 +24,7 @@ export function mcpRouter(app) {
     }
     if (call.method === "tools/list") {
       return res.json({ jsonrpc: "2.0", id: call.id, result: { tools: [
-        { name: "huaweicloud_auth",           description: "认证。测试环境需传domain_id(华为云账号ID)。temp_credential=true时后端用AK/SK换临时凭证，沙箱仅收到临时AK/SK/SecurityToken(24h)。", inputSchema: { type:"object", properties:{ ak:{type:"string"},sk:{type:"string"},region:{type:"string"},domain_id:{type:"string",description:"测试环境必填：华为云账号ID"},temp_credential:{type:"boolean"} } } },
+        { name: "huaweicloud_auth",           description: "认证。测试环境需传domain_id(华为云账号ID)。temp_credential=true时后端用AK/SK换临时凭证，沙箱仅收到临时AK/SK/SecurityToken(6h)。", inputSchema: { type:"object", properties:{ ak:{type:"string"},sk:{type:"string"},region:{type:"string"},domain_id:{type:"string",description:"测试环境必填：华为云账号ID"},temp_credential:{type:"boolean"} } } },
         { name: "huaweicloud_set_credentials",description: "更新 AK/SK，自动销毁旧沙箱。", inputSchema: { type:"object", properties:{ token:{type:"string"},ak:{type:"string"},sk:{type:"string"},region:{type:"string"}}, required:["token","ak","sk"] } },
         { name: "huaweicloud_voucher_status", description: "查询代金券领取状态。", inputSchema: { type:"object", properties:{ token:{type:"string"}}, required:["token"] } },
         { name: "huaweicloud_voucher_claim",  description: "领取代金券（一人一次）。", inputSchema: { type:"object", properties:{ token:{type:"string"}}, required:["token"] } },
