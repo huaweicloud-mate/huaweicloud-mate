@@ -21,7 +21,7 @@
   "dependencies": {
     "@huaweicloud/huaweicloud-sdk-core": "^3.1.207",
     "@huaweicloud/huaweicloud-sdk-iam": "^3.1.207",
-    "@kubernetes/client-node": "^0.22.0",
+    "@kubernetes/client-node": "^1.4.0",
     "cors": "^2.8.0",
     "express": "^5.0.0",
     "express-rate-limit": "^7.0.0",
