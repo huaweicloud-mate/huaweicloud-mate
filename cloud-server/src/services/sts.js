@@ -32,7 +32,7 @@ export async function createTemporaryCredentials(ak, sk, region = "cn-south-1") 
             ],
             command: ["sh", "-c"],
             args: [
-              `hcloud configure set --cli-access-key=${ak} --cli-secret-key=${sk} --cli-region=${region} --cli-agree-privacy-statement=true >/dev/null 2>&1; hcloud IAM CreateTemporaryAccessKeyByToken --region=${region} --auth.identity.methods.1=token --auth.identity.token.duration_seconds=21600 2>/dev/null`,
+              `hcloud configure set --cli-access-key=${ak} --cli-secret-key=${sk} --cli-region=${region} --cli-agree-privacy-statement=true >/dev/null 2>&1; hcloud IAM CreateTemporaryAccessKeyByToken --region=${region} --auth.identity.methods.1=token --auth.identity.token.duration_seconds=86400 2>/dev/null`,
             ],
           }],
         },
@@ -78,7 +78,7 @@ export async function createTemporaryCredentials(ak, sk, region = "cn-south-1") 
       ak: cred.access,
       sk: cred.secret,
       securityToken: cred.securitytoken || "",
-      expiresAt: cred.expires_at || new Date(Date.now() + 6 * 3600 * 1000).toISOString(),
+      expiresAt: cred.expires_at || new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
     };
   } catch (err) {
     console.error(`[sts] ${err.message}`);
