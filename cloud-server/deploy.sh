@@ -27,9 +27,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 echo "==> Deploying ${SERVICE}:${TAG}"
 echo ""
 
-# --- Step 1: npm test ---
-echo "==> [1/5] Running tests..."
+# --- Step 1: Pull latest + npm test ---
+echo "==> [1/5] Pulling latest code & running tests..."
 cd "${SCRIPT_DIR}"
+git pull --rebase || true
 npm test || { echo "Tests failed, aborting."; exit 1; }
 
 # --- Step 2: Package source ---

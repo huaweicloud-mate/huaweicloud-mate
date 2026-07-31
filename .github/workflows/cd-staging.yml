@@ -5,7 +5,7 @@ on:
     branches: [main, develop]
 
 jobs:
-  build-push:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +21,25 @@ jobs:
           SWR_USER: ${{ secrets.SWR_USER }}
           SWR_PASSWORD: ${{ secrets.SWR_PASSWORD }}
         run: |
+          TAG=$(date +%Y%m%d%H%M%S)
+          echo "TAG=$TAG" >> $GITHUB_ENV
           echo "$SWR_PASSWORD" | docker login -u "$SWR_USER" --password-stdin swr.cn-south-1.myhuaweicloud.com
-          docker build -t swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:${GITHUB_SHA::8} -f cloud-server/docker/Dockerfile.server.hcloud .
-          docker push swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:${GITHUB_SHA::8}
+          docker build -t swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:$TAG -f cloud-server/docker/Dockerfile.server.hcloud .
+          docker tag swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:$TAG swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:latest
+          docker push swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:$TAG
+          docker push swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:latest
+
+      - name: Deploy to CCE
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.BUILD_HOST }}
+          username: ${{ secrets.BUILD_USER }}
+          password: ${{ secrets.BUILD_PASSWORD }}
+          script: |
+            kubectl --kubeconfig=/tmp/kubeconfig.json \
+              -n huaweicloud-agent \
+              set image deployment/hdkitservice \
+              server=swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:$TAG
+            kubectl --kubeconfig=/tmp/kubeconfig.json \
+              -n huaweicloud-agent \
+              rollout status deployment/hdkitservice --timeout=60s
