@@ -1,6 +1,6 @@
 FROM node:22-alpine
 
-RUN apk add --no-cache curl bash gcompat
+RUN apk add --no-cache curl bash gcompat git
 
 # Terraform
 RUN curl -fsSL https://releases.hashicorp.com/terraform/1.11.4/terraform_1.11.4_linux_amd64.zip -o /tmp/tf.zip \

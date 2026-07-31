@@ -2,13 +2,10 @@
 set -e
 
 # ── Skills ──
-mkdir -p /skills
-if [ ! -f /skills/.skills-ready ]; then
-  curl -fsSL --connect-timeout 10 https://github.com/huaweicloud/huaweicloud-skills/archive/refs/heads/master.tar.gz -o /tmp/skills.tar.gz 2>/dev/null && \
-    tar xzf /tmp/skills.tar.gz -C /tmp/ 2>/dev/null && \
-    cp -r /tmp/huaweicloud-skills-master/skills/* /skills/ 2>/dev/null && \
-    rm -rf /tmp/skills.tar.gz /tmp/huaweicloud-skills-master || true
-  touch /skills/.skills-ready
+if [ ! -d /skills/.git ]; then
+  git clone --depth 1 https://gitcode.com/huaweicloud/huaweicloud-skills.git /tmp/huaweicloud-skills 2>/dev/null && \
+    cp -r /tmp/huaweicloud-skills/skills/* /skills/ 2>/dev/null && \
+    rm -rf /tmp/huaweicloud-skills || true
 fi
 
 # ── hcloud CLI ──
