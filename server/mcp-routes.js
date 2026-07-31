@@ -4,7 +4,7 @@ import { createTask, streamTask } from "./task-manager.js";
 import crypto from "node:crypto";
 import { verifyJwt, issueJwt, isRedisAvailable } from "./auth.js";
 import { getUser, setUser, findUserIdByAk } from "./redis-store.js";
-import { getDomainId, getVoucher, claimVoucher, markVoucherClaimed } from "./db.js";
+import { getDomainId, claimVoucher } from "./db.js";
 import { createAnonymousContainer, getConcurrencyStats, isAtConcurrencyLimit } from "./sandbox.js";
 import { createTemporaryCredentials } from "./sts.js";
 import { checkCouponIssued, checkLocalQuota, issueCoupon, isBetaAPI } from "./incentive.js";
@@ -95,14 +95,12 @@ export function mcpRouter(app) {
             voucherInfo = "已达领取上限";
             voucherAllowed = false;
           } else {
-            // 第1层: 本地 MySQL
-            const local = await getVoucher(domainId);
-            const localClaimed = local && local.status === 1;
-            // 第2层: 激励服务
+            // 以激励服务接口为准判断是否已领取
             const incentive = await checkCouponIssued(domainId);
-            const incentiveClaimed = incentive.issued;
-
-            if (localClaimed || incentiveClaimed) {
+            if (incentive.serviceError) {
+              voucherInfo = "查询失败";
+              voucherAllowed = false;
+            } else if (incentive.issued) {
               voucherInfo = "已领取";
               voucherAllowed = false;
             } else {
@@ -179,16 +177,13 @@ export function mcpRouter(app) {
       const domainId = u.domainId;
       if (u.domain_id_missing === "true") return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed: false, message: "华为云账号获取失败，请重新调用 huaweicloud_auth 并确认 AK/SK 有效" }) }], isError:true } });
       if (!domainId) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请先调用 huaweicloud_auth 完成认证" }], isError:true } });
-      const local = await getVoucher(domainId);
       const incentive = await checkCouponIssued(domainId);
       const quota = await checkLocalQuota();
       return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({
-        claimed: (local && local.status === 1) || incentive.issued,
-        localClaimed: !!(local && local.status === 1),
+        claimed: incentive.issued,
         incentiveClaimed: incentive.issued,
+        serviceError: incentive.serviceError || false,
         quotaReached: quota.reached,
-        voucherId: local?.voucher_id || null,
-        amount: local?.amount || null,
       }) }] } });
     }
 
@@ -207,12 +202,10 @@ export function mcpRouter(app) {
       const akHash = crypto.createHash("sha256").update(u.ak).digest("hex");
       if (u.ak_hash && u.ak_hash !== akHash) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:"AK 已变更，请重新调用 huaweicloud_auth 完成认证" }) }], isError:true } });
 
-      // 重新双检：本地 + 激励
-      const local = await getVoucher(domainId);
-      if (local && local.status === 1) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"已领取过" }) }] } });
-
+      // 以激励服务接口为准确认是否已领取
       const incentiveCheck = await checkCouponIssued(domainId);
-      if (incentiveCheck.issued) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"激励侧已领取过" }) }] } });
+      if (incentiveCheck.serviceError) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:"激励服务查询失败，请稍后重试" }) }], isError:true } });
+      if (incentiveCheck.issued) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"已领取过" }) }] } });
 
       // 上限检查
       const quota = await checkLocalQuota();
@@ -221,7 +214,9 @@ export function mcpRouter(app) {
       // 调激励服务发券
       const issueResult = await issueCoupon(domainId);
       if (!issueResult.success) {
-        await markVoucherClaimed(domainId, akHash);
+        if (issueResult.errorCode === "HD.60620016") {
+          return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"已领取过" }) }] } });
+        }
         let errMsg = `发券失败: ${issueResult.error}`;
         if (issueResult.errorCode === "HD.60630022") {
           errMsg += ` 请先完成实名认证：https://account.huaweicloud.com/usercenter/?region=cn-north-4&locale=zh-cn#/accountindex/realNameAuthing`;

@@ -30,16 +30,8 @@ describe("B2: voucher claim no self-referencing fetch", () => {
     expect(claimSection).toContain("issueResult.couponId");
   });
 
-  it("markVoucherClaimed should be in catch block as fallback", async () => {
-    const fs = await import("node:fs/promises");
-    const code = await fs.readFile(new URL("./mcp-routes.js", import.meta.url), "utf-8");
-    const claimSection = code.slice(code.indexOf("huaweicloud_voucher_claim"));
-    const catchIdx = claimSection.indexOf("catch");
-    const markIdx = claimSection.indexOf("markVoucherClaimed");
-    expect(catchIdx).toBeGreaterThan(0);
-    expect(markIdx).toBeGreaterThan(catchIdx);
-  });
 });
+
 
 describe("B6: unknown tool should not fallthrough to invoke", () => {
   it("non-invoke tool name should return error code -32601", async () => {

@@ -50,12 +50,12 @@ export async function checkCouponIssued(customerId) {
     console.log(`[incentive] check-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(safeData).slice(0, 200)}`);
     if (data.error_code) {
       console.error(`[incentive] check error: ${data.error_code} ${data.error_msg}`);
-      return { issued: false, error: data.error_msg };
+      return { issued: false, serviceError: true, error: data.error_msg };
     }
     return { issued: data.issued_tag === 1, raw: data };
   } catch (err) {
     console.error(`[incentive] check failed: ${err.message}`);
-    return { issued: false, error: err.message };
+    return { issued: false, serviceError: true, error: err.message };
   }
 }
 
@@ -108,7 +108,11 @@ export async function issueCoupon(customerId) {
       console.error(`[incentive] issue error: ${data.error_code} ${data.error_msg}`);
       return { success: false, error: data.error_msg, errorCode: data.error_code };
     }
-    const couponId = data.coupon_id || data.data?.coupon_id || `vc_${Date.now()}`;
+    const couponId = data.coupon_id || data.data?.coupon_id;
+    if (!couponId) {
+      console.error(`[incentive] issue response missing coupon_id: ${JSON.stringify(issueSafeData).slice(0, 300)}`);
+      return { success: false, error: "发券失败" };
+    }
     return { success: true, couponId, raw: data };
   } catch (err) {
     console.error(`[incentive] issue failed: ${err.message}`);
