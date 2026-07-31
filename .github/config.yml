@@ -1,0 +1,9 @@
+# Configuration for welcome bot
+newIssueWelcomeComment: >
+  👋 Thanks for opening your first issue! Please follow the issue template
+  and provide all requested information. A maintainer will review shortly.
+newPRWelcomeComment: >
+  🎉 Thanks for opening this pull request! Please make sure the PR description
+  is complete, all CI checks pass, and you've addressed review feedback.
+firstPRMergeComment: >
+  🎊 Congrats on merging your first PR! Welcome to the community!
