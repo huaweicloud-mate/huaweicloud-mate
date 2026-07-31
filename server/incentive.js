@@ -17,7 +17,12 @@ const ISSUE_APPCODE = process.env.INCENTIVE_ISSUE_APPCODE || process.env.INCENTI
 
 const ACTIVITY_ID = process.env.INCENTIVE_ACTIVITY_ID || "A000330";
 const ACTIVITY_PRODUCT_ID = process.env.INCENTIVE_ACTIVITY_PRODUCT_ID || "5649bf1d2bc74d648ac6cd5496ebba91";
-const VOUCHER_FACE_AMOUNT = process.env.INCENTIVE_FACE_AMOUNT || "10";
+const rawAmount = parseInt(process.env.INCENTIVE_FACE_AMOUNT);
+if (!rawAmount || rawAmount <= 0) {
+  console.error("[incentive] INCENTIVE_FACE_AMOUNT 未配置或无效，请设置后重启");
+  process.exit(1);
+}
+const VOUCHER_FACE_AMOUNT = String(Math.min(rawAmount, 500));
 const VOUCHER_CURRENCY = process.env.INCENTIVE_CURRENCY || "CNY";
 const MAX_VOUCHERS = parseInt(process.env.INCENTIVE_MAX_VOUCHERS || "0");
 
