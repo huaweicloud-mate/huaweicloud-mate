@@ -59,25 +59,33 @@ export function mcpRouter(app) {
       // 查券：本地 MySQL + 激励服务 + 上限 三重校验
       let voucherInfo = "", voucherAllowed = false;
       if (ak && sk) {
-        let domainId;
-        if (isBetaAPI()) {
-          // 测试环境：用户必须提供 domain_id
-          domainId = args?.domain_id || "";
-          if (!domainId) {
-            return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"测试环境需提供 domain_id 参数" }], isError:true } });
-          }
-        } else {
-          // 生产环境：hcloud 实时获取
-          try {
-            domainId = await getDomainId(ak, sk);
-          } catch (err) {
-            console.error(`[mcp] getDomainId failed: ${err.message}`);
-            return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:`获取华为云账号信息失败: ${err.message}` }], isError:true } });
-          }
-        }
-        // 存入 Redis 供后续 voucher_status/claim 使用
-        await setUser(userId, { ...user, ak, sk, region, domainId, createdAt: Date.now() });
+        let domainId = user.domainId || "";
+        let domainIdMissing = false;
 
+        if (!domainId) {
+          if (isBetaAPI()) {
+            domainId = args?.domain_id || "";
+          } else {
+            try {
+              domainId = await getDomainId(ak, sk);
+            } catch (err) {
+              console.error(`[mcp] getDomainId failed: ${err.message}`);
+              domainIdMissing = true;
+            }
+          }
+          // 先写入 Redis（无论 domainId 是否获取成功），使后续 status/claim 可读状态
+          await setUser(userId, {
+            ...user, ak, sk, region,
+            domainId: domainId || "",
+            domain_id_missing: domainIdMissing || !domainId ? "true" : undefined,
+            createdAt: Date.now(),
+          });
+        }
+
+        if (!domainId) {
+          voucherInfo = "华为云账号获取失败，请确认 AK/SK 有效（测试环境需传入 domain_id）";
+          voucherAllowed = false;
+        } else {
         try {
           // 第0层: 检查本地是否已达上限
           const quota = await checkLocalQuota();
@@ -101,6 +109,7 @@ export function mcpRouter(app) {
             }
           }
         } catch (err) { console.error(`[mcp] voucher check failed: ${err.message}`); }
+        }
       }
 
       // 临时凭证模式：后端 STS 换临时 AK/SK/Token
@@ -166,6 +175,7 @@ export function mcpRouter(app) {
       if (!u?.ak || !u?.sk) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请提供 AK/SK 登录以查询" }], isError:true } });
 
       const domainId = u.domainId;
+      if (u.domain_id_missing === "true") return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed: false, message: "华为云账号获取失败，请重新调用 huaweicloud_auth 并确认 AK/SK 有效" }) }], isError:true } });
       if (!domainId) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请先调用 huaweicloud_auth 完成认证" }], isError:true } });
       const local = await getVoucher(domainId);
       const incentive = await checkCouponIssued(domainId);
@@ -189,6 +199,7 @@ export function mcpRouter(app) {
 
       // 从 Redis 读取 auth 时存储的 domainId
       const domainId = u.domainId;
+      if (u.domain_id_missing === "true") return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:"华为云账号获取失败，请重新调用 huaweicloud_auth 并确认 AK/SK 有效" }) }], isError:true } });
       if (!domainId) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请先调用 huaweicloud_auth 完成认证" }], isError:true } });
 
       // 重新双检：本地 + 激励
