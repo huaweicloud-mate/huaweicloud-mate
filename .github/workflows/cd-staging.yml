@@ -25,9 +25,7 @@ jobs:
           echo "TAG=$TAG" >> $GITHUB_ENV
           echo "$SWR_PASSWORD" | docker login -u "$SWR_USER" --password-stdin swr.cn-south-1.myhuaweicloud.com
           docker build -t swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:$TAG -f cloud-server/docker/Dockerfile.server.hcloud .
-          docker tag swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:$TAG swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:latest
           docker push swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:$TAG
-          docker push swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:latest
 
       - name: Deploy to CCE
         uses: appleboy/ssh-action@v1

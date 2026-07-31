@@ -21,7 +21,6 @@ K8S_NAMESPACE="${K8S_NAMESPACE:-huaweicloud-agent}"
 
 TAG="$(date +%Y%m%d%H%M%S)"
 IMAGE="${SWR_REGISTRY}/${SERVICE}:${TAG}"
-IMAGE_LATEST="${SWR_REGISTRY}/${SERVICE}:latest"
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "==> Deploying ${SERVICE}:${TAG}"
@@ -57,9 +56,7 @@ sshpass -p "${BUILD_PASS}" ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 
 
   echo '${SWR_PASS}' | docker login -u '${SWR_USER}' --password-stdin ${SWR_REGISTRY} 2>/dev/null
   docker build --network host -t ${IMAGE} -f cloud-server/docker/Dockerfile.server.hcloud .
-  docker tag ${IMAGE} ${IMAGE_LATEST}
   docker push ${IMAGE}
-  docker push ${IMAGE_LATEST}
   echo 'BUILD_OK'
 "
 
