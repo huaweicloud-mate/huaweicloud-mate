@@ -1,11 +1,26 @@
-
-# Terraform state (含集群证书、EIP)
+# Terraform state (contains credentials, certificates, EIPs)
 *.tfstate
 *.tfstate.backup
+.terraform/
 
-# 本地配置
+# Dependencies
+node_modules/
+
+# Local config
 opencode.json
 .config/
-.terraform/
-node_modules/
-node_modules/
+
+# Environment
+.env
+.env.local
+
+# Build artifacts
+dist/
+*.tsbuildinfo
+
+# Backup files
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db

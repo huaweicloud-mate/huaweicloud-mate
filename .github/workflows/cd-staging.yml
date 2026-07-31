@@ -1,0 +1,33 @@
+name: CD Staging
+
+on:
+  push:
+    branches: [main, develop]
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Build Docker image
+        run: |
+          docker build -t swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:${GITHUB_SHA::8} -f cloud-server/docker/Dockerfile.server .
+
+      - name: Push to SWR
+        env:
+          SWR_PASSWORD: ${{ secrets.SWR_PASSWORD }}
+        run: |
+          docker login -u cn-south-1@ZRR000212 -p $SWR_PASSWORD swr.cn-south-1.myhuaweicloud.com
+          docker push swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:${GITHUB_SHA::8}

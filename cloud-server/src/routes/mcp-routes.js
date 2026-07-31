@@ -1,13 +1,13 @@
 // cloud-server/mcp-routes.js — MCP over HTTP 端点
 // 用户数据从 DCS Redis 读写，无内存 Map
-import { createTask, streamTask } from "./task-manager.js";
+import { createTask, streamTask } from "../services/task-manager.js";
 import crypto from "node:crypto";
-import { verifyJwt, issueJwt, isRedisAvailable } from "./auth.js";
-import { getUser, setUser, findUserIdByAk } from "./redis-store.js";
-import { getDomainId, getVoucher, claimVoucher, markVoucherClaimed } from "./db.js";
-import { createAnonymousContainer, getConcurrencyStats, isAtConcurrencyLimit } from "./sandbox.js";
-import { createTemporaryCredentials } from "./sts.js";
-import { checkCouponIssued, checkLocalQuota, issueCoupon, isBetaAPI } from "./incentive.js";
+import { verifyJwt, issueJwt, isRedisAvailable } from "../middleware/auth.js";
+import { getUser, setUser, findUserIdByAk } from "../services/redis-store.js";
+import { getDomainId, getVoucher, claimVoucher, markVoucherClaimed } from "../services/db.js";
+import { createAnonymousContainer, getConcurrencyStats, isAtConcurrencyLimit } from "../services/sandbox.js";
+import { createTemporaryCredentials } from "../services/sts.js";
+import { checkCouponIssued, checkLocalQuota, issueCoupon, isBetaAPI } from "../services/incentive.js";
 
 const VOUCHER_FACE_AMOUNT = process.env.INCENTIVE_FACE_AMOUNT || "100";
 

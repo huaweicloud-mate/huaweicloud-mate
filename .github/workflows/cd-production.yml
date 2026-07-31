@@ -1,0 +1,31 @@
+name: CD Production
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Build and Push Docker image
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          docker build -t swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:$TAG -f cloud-server/docker/Dockerfile.server .
+          docker login -u cn-south-1@ZRR000212 -p ${{ secrets.SWR_PASSWORD }} swr.cn-south-1.myhuaweicloud.com
+          docker push swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hdkitservice:$TAG

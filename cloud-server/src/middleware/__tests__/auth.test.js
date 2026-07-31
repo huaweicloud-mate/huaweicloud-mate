@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import crypto from "node:crypto";
-import { verifySignature, CODE_TTL_MS } from "./auth.js";
+import { verifySignature, CODE_TTL_MS } from "../auth.js";
 
 const AK = "HPUARREPRFZ9BCWWMWYH";
 const SK = "MNQxuUR5uH8Hsqr5JKi6ZGjn8vgtuCv84X8jdzJU";
@@ -89,7 +89,7 @@ describe("B7: CODE_TTL_MS consistency", () => {
 
   it("server.js should use CODE_TTL_MS / 1000 for expiresIn, not hardcoded 30", async () => {
     const fs = await import("node:fs/promises");
-    const code = await fs.readFile(new URL("./server.js", import.meta.url), "utf-8");
+    const code = await fs.readFile(new URL("../../server.js", import.meta.url), "utf-8");
     expect(code).toContain("CODE_TTL_MS / 1000");
     expect(code).not.toMatch(/expiresIn:\s*30\b/);
   });
@@ -98,7 +98,7 @@ describe("B7: CODE_TTL_MS consistency", () => {
 describe("M6: pollLoginCode concurrent grace period", () => {
   it("pollLoginCode should use setTimeout grace period, not immediate delete", async () => {
     const fs = await import("node:fs/promises");
-    const code = await fs.readFile(new URL("./auth.js", import.meta.url), "utf-8");
+    const code = await fs.readFile(new URL("../auth.js", import.meta.url), "utf-8");
     const pollFn = code.slice(code.indexOf("function pollLoginCode"), code.indexOf("export {"));
     expect(pollFn).toContain("setTimeout");
     expect(pollFn).toContain("CODE_GRACE_MS");
@@ -108,14 +108,14 @@ describe("M6: pollLoginCode concurrent grace period", () => {
 
   it("grace period should only be set once (graceSet flag)", async () => {
     const fs = await import("node:fs/promises");
-    const code = await fs.readFile(new URL("./auth.js", import.meta.url), "utf-8");
+    const code = await fs.readFile(new URL("../auth.js", import.meta.url), "utf-8");
     const pollFn = code.slice(code.indexOf("function pollLoginCode"), code.indexOf("export {"));
     expect(pollFn).toContain("graceSet");
   });
 
   it("CODE_GRACE_MS should be defined as 5000", async () => {
     const fs = await import("node:fs/promises");
-    const code = await fs.readFile(new URL("./auth.js", import.meta.url), "utf-8");
+    const code = await fs.readFile(new URL("../auth.js", import.meta.url), "utf-8");
     expect(code).toMatch(/CODE_GRACE_MS\s*=\s*5000/);
   });
 });

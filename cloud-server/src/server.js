@@ -3,13 +3,13 @@
 import express from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
-import { authFlexible, issueJwt, generateLoginCode, confirmLoginCode, pollLoginCode, registerUser, isRedisAvailable, CODE_TTL_MS, verifyJwt } from "./auth.js";
-import { createTask, getTask, streamTask, cancelTask, listUserTasks, initTaskCache } from "./task-manager.js";
-import { getConcurrencyStats, reconcileActiveJobs } from "./sandbox.js";
-import { checkSchema } from "./db.js";
-import { getAgentCard } from "./agent-card.js";
-import { countUsers, ensureRedis } from "./redis-store.js";
-import { mcpRouter } from "./mcp-routes.js";
+import { authFlexible, issueJwt, generateLoginCode, confirmLoginCode, pollLoginCode, registerUser, isRedisAvailable, CODE_TTL_MS, verifyJwt } from "./middleware/auth.js";
+import { createTask, getTask, streamTask, cancelTask, listUserTasks, initTaskCache } from "./services/task-manager.js";
+import { getConcurrencyStats, reconcileActiveJobs } from "./services/sandbox.js";
+import { checkSchema } from "./services/db.js";
+import { getAgentCard } from "./services/agent-card.js";
+import { countUsers, ensureRedis } from "./services/redis-store.js";
+import { mcpRouter } from "./routes/mcp-routes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -99,8 +99,8 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const tplSuccess = readFile(join(__dirname, "templates", "confirm-success.html"), "utf-8");
-const tplExpired = readFile(join(__dirname, "templates", "confirm-expired.html"), "utf-8");
+const tplSuccess = readFile(join(__dirname, "views", "confirm-success.html"), "utf-8");
+const tplExpired = readFile(join(__dirname, "views", "confirm-expired.html"), "utf-8");
 
 app.get("/auth/qr/:code.png", async (req, res) => {
   try { const img = await readFile(`/tmp/qrcode-login-${req.params.code}.png`); res.setHeader("Content-Type", "image/png"); res.send(img); } catch { res.status(404).send("QR not found"); }

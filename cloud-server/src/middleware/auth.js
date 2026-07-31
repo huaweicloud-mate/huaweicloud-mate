@@ -2,7 +2,7 @@
 // DCS Redis 为唯一用户数据源，无内存备份
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
-import { getUser, setUser, delUser, findUserIdByAk, isRedisAvailable, setLoginCode, getLoginCode, delLoginCode } from "./redis-store.js";
+import { getUser, setUser, delUser, findUserIdByAk, isRedisAvailable, setLoginCode, getLoginCode, delLoginCode } from "../services/redis-store.js";
 
 if (!process.env.JWT_SECRET) { console.error("[auth] JWT_SECRET environment variable is required. Exiting."); process.exit(1); }
 const JWT_SECRET = process.env.JWT_SECRET;

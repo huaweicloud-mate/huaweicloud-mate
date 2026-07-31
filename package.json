@@ -4,16 +4,18 @@
   "description": "Huawei Cloud DevKit - MCP plugin for managing cloud resources",
   "type": "module",
   "bin": {
-    "hc-devkit": "./bin/hc-devkit.js"
+    "hc-devkit": "./scripts/hc-devkit.js"
   },
   "files": [
-    "bin/",
-    "server/",
+    "scripts/",
     "README.md"
   ],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "start": "node server/server.js",
-    "dev": "node --watch server/server.js",
+    "start": "node cloud-server/src/server.js",
+    "dev": "node --watch cloud-server/src/server.js",
     "test": "vitest run"
   },
   "dependencies": {
