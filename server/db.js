@@ -51,7 +51,7 @@ export async function getDomainId(ak, sk) {
     `--cli-secret-key=${sk}`,
   ].join(" ");
   console.log(`[db] getDomainId hcloud REQUEST → ak=${ak.slice(0,8)}*** sk=${sk.slice(0,4)}***`);
-  const stdout = execSync(cmd, { encoding: "utf8", timeout: 15000, stdio: ["ignore", "pipe", "pipe"] });
+  const stdout = execSync(cmd, { encoding: "utf8", timeout: 5000, killSignal: "SIGKILL", stdio: ["ignore", "pipe", "pipe"] });
   const data = JSON.parse(stdout);
   const domainId = data?.domains?.[0]?.id;
   console.log(`[db] getDomainId RESPONSE → domainId=${domainId}`);
