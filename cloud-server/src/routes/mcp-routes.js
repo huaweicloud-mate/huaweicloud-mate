@@ -9,7 +9,7 @@ import { createAnonymousContainer, getConcurrencyStats, isAtConcurrencyLimit } f
 import { createTemporaryCredentials } from "../services/sts.js";
 import { checkCouponIssued, checkLocalQuota, issueCoupon, isBetaAPI } from "../services/incentive.js";
 
-const VOUCHER_FACE_AMOUNT = process.env.INCENTIVE_FACE_AMOUNT || "100";
+const VOUCHER_FACE_AMOUNT = process.env.INCENTIVE_FACE_AMOUNT || "10";
 
 const PUBLIC_URL = process.env.PUBLIC_URL;
 if (!PUBLIC_URL) console.warn("[mcp] PUBLIC_URL not set — AgentCard may point to localhost. Set PUBLIC_URL to the public-facing URL.");
@@ -230,7 +230,7 @@ export function mcpRouter(app) {
 
       // 写本地 MySQL
       try {
-        await claimVoucher(domainId, akHash, issueResult.couponId, parseInt(VOUCHER_FACE_AMOUNT) || 100);
+        await claimVoucher(domainId, akHash, issueResult.couponId, parseInt(VOUCHER_FACE_AMOUNT) || 10);
         return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ success:true, voucherId:issueResult.couponId, amount: parseInt(VOUCHER_FACE_AMOUNT)||100, message:"领取成功" }) }] } });
       } catch (err) {
         console.error(`[mcp] claimVoucher DB write failed: ${err.message}`);
