@@ -74,10 +74,12 @@ export function mcpRouter(app) {
             }
           }
           // 先写入 Redis（无论 domainId 是否获取成功），使后续 status/claim 可读状态
+          const akHash = crypto.createHash("sha256").update(ak).digest("hex");
           await setUser(userId, {
             ...user, ak, sk, region,
             domainId: domainId || "",
             domain_id_missing: domainIdMissing || !domainId ? "true" : undefined,
+            ak_hash: domainId && !domainIdMissing ? akHash : undefined,
             createdAt: Date.now(),
           });
         }
@@ -202,6 +204,9 @@ export function mcpRouter(app) {
       if (u.domain_id_missing === "true") return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:"华为云账号获取失败，请重新调用 huaweicloud_auth 并确认 AK/SK 有效" }) }], isError:true } });
       if (!domainId) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请先调用 huaweicloud_auth 完成认证" }], isError:true } });
 
+      const akHash = crypto.createHash("sha256").update(u.ak).digest("hex");
+      if (u.ak_hash && u.ak_hash !== akHash) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:"AK 已变更，请重新调用 huaweicloud_auth 完成认证" }) }], isError:true } });
+
       // 重新双检：本地 + 激励
       const local = await getVoucher(domainId);
       if (local && local.status === 1) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"已领取过" }) }] } });
@@ -212,8 +217,6 @@ export function mcpRouter(app) {
       // 上限检查
       const quota = await checkLocalQuota();
       if (quota.reached) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:`已达领取上限(${quota.max})` }) }], isError:true } });
-
-      const akHash = crypto.createHash("sha256").update(u.ak).digest("hex");
 
       // 调激励服务发券
       const issueResult = await issueCoupon(domainId);
