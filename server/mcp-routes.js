@@ -14,12 +14,76 @@ const VOUCHER_FACE_AMOUNT = process.env.INCENTIVE_FACE_AMOUNT || "10";
 const PUBLIC_URL = process.env.PUBLIC_URL;
 if (!PUBLIC_URL) console.warn("[mcp] PUBLIC_URL not set — AgentCard may point to localhost. Set PUBLIC_URL to the public-facing URL.");
 
+// ── Session Manager (Streamable HTTP) ──
+const SESSION_TTL = 30 * 60 * 1000; // 30 min
+const sessions = new Map();
+
+function getOrCreateSession(sessionId) {
+  if (sessionId) {
+    const existing = sessions.get(sessionId);
+    if (existing) { existing.createdAt = Date.now(); return existing; }
+  }
+  const id = `mcp-${crypto.randomUUID()}`;
+  const session = { id, createdAt: Date.now(), subscribers: new Set() };
+  sessions.set(id, session);
+  return session;
+}
+
+export function pushNotification(sessionId, notification) {
+  const session = sessions.get(sessionId);
+  if (!session) return;
+  const line = `data: ${JSON.stringify(notification)}\n\n`;
+  for (const sseRes of session.subscribers) {
+    try { sseRes.write(line); } catch (err) { console.error(`[mcp] SSE write failed: ${err.message}`); }
+  }
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, s] of sessions) {
+    if (now - s.createdAt > SESSION_TTL) {
+      for (const sub of s.subscribers) { try { sub.end(); } catch (err) { console.error(`[mcp] SSE end failed for stale session ${id}: ${err.message}`); } }
+      sessions.delete(id);
+    }
+  }
+}, 60000);
+
 export function mcpRouter(app) {
 
+  // ── GET /mcp — SSE 通道 (Streamable HTTP) ──
+  app.get("/mcp", (req, res) => {
+    const sessionId = req.headers["mcp-session-id"] || req.query.sessionId;
+    if (!sessionId) return res.status(400).json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing mcp-session-id header or sessionId query param" }, id: null });
+    const session = getOrCreateSession(sessionId);
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.setHeader("Mcp-Session-Id", session.id);
+
+    session.subscribers.add(res);
+
+    const heartbeat = setInterval(() => { try { res.write(": heartbeat\n\n"); } catch { clearInterval(heartbeat); } }, 15000);
+
+    req.on("close", () => {
+      clearInterval(heartbeat);
+      session.subscribers.delete(res);
+    });
+
+    req.socket.setTimeout(0);
+
+    res.write(`event: endpoint\ndata: /mcp\n\n`);
+  });
+
+  // ── POST /mcp — JSON-RPC 通道 (Streamable HTTP) ──
   app.post("/mcp", (req, res, next) => {
     const call = req.body;
     if (!call || !call.method) return next();
     if (call.method === "initialize") {
+      const sessionId = req.headers["mcp-session-id"];
+      const session = getOrCreateSession(sessionId);
+      res.set("Mcp-Session-Id", session.id);
       return res.json({ jsonrpc: "2.0", id: call.id, result: { protocolVersion: "2024-11-05", capabilities: { tools: {} }, serverInfo: { name: "hc-devkit", version: "5.0.0" } } });
     }
     if (call.method === "tools/list") {
@@ -277,6 +341,7 @@ export function mcpRouter(app) {
 
     // 有 token → 用户沙箱
     try {
+      const mcpSessionId = req.headers["mcp-session-id"];
       const task = await createTask(userId, intent, { source:"mcp" }, user);
       const text = await new Promise((resolve, reject) => {
         const INVOKE_TIMEOUT = parseInt(process.env.INVOKE_TIMEOUT || "300000");
@@ -289,6 +354,14 @@ export function mcpRouter(app) {
         };
         req.on("close", () => { unsubscribe(); finish(new Error("客户端已断开"), null); });
         const unsubscribe = streamTask(task.id, (event) => {
+          // SSE 进度通知
+          if (mcpSessionId) {
+            pushNotification(mcpSessionId, {
+              jsonrpc: "2.0",
+              method: "notifications/progress",
+              params: { taskId: task.id, status: event.status, progress: event.progress, message: event.message, step: event.currentStep, timestamp: event.timestamp },
+            });
+          }
           if (event.status === "completed") { unsubscribe(); finish(null, task.output || event.message || "完成"); }
           else if (event.status === "failed") { unsubscribe(); finish(new Error(event.error || "失败"), null); }
         });
