@@ -2,7 +2,7 @@
 import mysql from "mysql2/promise";
 import crypto from "node:crypto";
 
-const pool = mysql.createPool({
+export const pool = mysql.createPool({
   host: process.env.MYSQL_HOST || "mysql",
   port: parseInt(process.env.MYSQL_PORT || "3306"),
   user: process.env.MYSQL_USER || "root",

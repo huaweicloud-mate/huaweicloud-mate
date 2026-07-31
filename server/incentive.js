@@ -2,6 +2,8 @@
 // 两个接口: check-coupon-issued (查是否已领), issue-coupon (发券)
 // APPCODE 分开配置: INCENTIVE_CHECK_APPCODE / INCENTIVE_ISSUE_APPCODE
 
+import { pool } from "./db.js";
+
 const CHECK_URL = process.env.INCENTIVE_CHECK_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-beta.huawei.com/api/v1/hdincentiveservice/coupon"}/check-coupon-issued`;
 const ISSUE_URL = process.env.INCENTIVE_ISSUE_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-beta.huawei.com/api/v1/hdincentiveservice/coupon"}/issue-coupon`;
 
@@ -62,17 +64,7 @@ export async function checkCouponIssued(customerId) {
 export async function checkLocalQuota() {
   if (MAX_VOUCHERS <= 0) return { reached: false };
   try {
-    const { default: mysql } = await import("mysql2/promise");
-    const pool = mysql.createPool({
-      host: process.env.MYSQL_HOST || "10.0.1.242",
-      port: parseInt(process.env.MYSQL_PORT || "3306"),
-      user: process.env.MYSQL_USER || "root",
-      password: process.env.MYSQL_PASSWORD,
-      database: process.env.MYSQL_DATABASE || "hdkitservice",
-      connectTimeout: 5000,
-    });
     const [rows] = await pool.execute("SELECT COUNT(*) as cnt FROM voucher_records WHERE status = 1");
-    await pool.end();
     const cnt = rows[0]?.cnt || 0;
     return { reached: cnt >= MAX_VOUCHERS, count: cnt, max: MAX_VOUCHERS };
   } catch (err) {
