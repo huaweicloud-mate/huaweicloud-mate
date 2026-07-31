@@ -125,10 +125,13 @@ app.post("/api/v1/incentive/voucher/claim", (req, res) => res.json({ success: tr
 
 mcpRouter(app);
 
-app.listen(PORT, async () => {
+const server = app.listen(PORT, async () => {
   await ensureRedis();
   console.log(`[A2A Server] 华为云 Agent 已启动 @ http://0.0.0.0:${PORT}`);
   console.log(`[A2A Server] AgentCard @ http://0.0.0.0:${PORT}/.well-known/agent.json`);
   await reconcileActiveJobs();
   await initTaskCache();
 });
+
+server.keepAliveTimeout = 30000;   // 30s，防止 ELB 过早断开
+server.headersTimeout = 31000;     // 比 keepAliveTimeout 稍大
