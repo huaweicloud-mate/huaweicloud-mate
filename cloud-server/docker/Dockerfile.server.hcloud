@@ -8,6 +8,6 @@ RUN printf '{"agreePrivacy":"true","current":"default","profiles":[{"name":"defa
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --production --ignore-scripts
-COPY server/ ./
+COPY cloud-server/src/ ./
 EXPOSE 3000
 ENTRYPOINT ["node", "server.js"]

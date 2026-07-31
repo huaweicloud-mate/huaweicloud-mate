@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hc-devkit
+  namespace: huaweicloud-agent
+  labels:
+    app: hc-devkit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hc-devkit
+  template:
+    metadata:
+      labels:
+        app: hc-devkit
+    spec:
+      imagePullSecrets:
+        - name: swr-secret
+      containers:
+        - name: server
+          image: swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/hc-devkit:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "3000"
+            - name: NAMESPACE
+              value: "huaweicloud-agent"
+            - name: PUBLIC_URL
+              value: "http://hc-devkit.huaweicloud-agent:3000"
+            - name: SANDBOX_IMAGE
+              value: "swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:latest"
+            - name: MAX_SANDBOXES
+              value: "5"
+            - name: MAX_ANON_SANDBOXES
+              value: "3"
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: JWT_SECRET
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: REDIS_URL
+            - name: MYSQL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MYSQL_HOST
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MYSQL_PASSWORD
+            - name: DEEPSEEK_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DEEPSEEK_API_KEY
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hc-devkit
+  namespace: huaweicloud-agent
+  labels:
+    app: hc-devkit
+spec:
+  type: LoadBalancer
+  selector:
+    app: hc-devkit
+  ports:
+    - port: 3000
+      targetPort: 3000
+      protocol: TCP
