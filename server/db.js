@@ -58,11 +58,6 @@ export async function getDomainId(ak, sk) {
   return domainId;
 }
 
-export async function getVoucher(domainId) {
-  const [rows] = await pool.execute("SELECT * FROM voucher_records WHERE domain_id = ?", [domainId]);
-  return rows[0] || null;
-}
-
 export async function claimVoucher(domainId, akHash, voucherId, amount) {
   await pool.execute("INSERT INTO voucher_records (domain_id, ak_hash, voucher_id, amount, status) VALUES (?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE voucher_id=?, amount=?, status=1",
     [domainId, akHash, voucherId, amount, voucherId, amount]);
