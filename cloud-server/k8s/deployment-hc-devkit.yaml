@@ -32,7 +32,7 @@ spec:
             - name: PUBLIC_URL
               value: "http://hc-devkit.huaweicloud-agent:3000"
             - name: SANDBOX_IMAGE
-              value: "swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:latest"
+              value: "swr.cn-south-1.myhuaweicloud.com/huaweicloud-agent/sandbox:20260730210614"
             - name: MAX_SANDBOXES
               value: "5"
             - name: MAX_ANON_SANDBOXES
