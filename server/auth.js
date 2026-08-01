@@ -152,7 +152,7 @@ export function generateLoginCode(opts) {
   do { code = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join(""); } while (loginCodeStore.has(code));
   const userId = crypto.randomUUID().slice(0, 8);
   loginCodeStore.set(code, { createdAt: Date.now(), confirmed: false, userId, ak: opts?.ak || "", sk: opts?.sk || "", region: opts?.region || "" });
-  setLoginCode(code, loginCodeStore.get(code), Math.ceil(CODE_TTL_MS / 1000)).catch(() => {});
+  setLoginCode(code, loginCodeStore.get(code), Math.ceil(CODE_TTL_MS / 1000)).catch((err) => { console.error("[auth] Failed to persist login code to Redis:", err.message); });
   return code;
 }
 

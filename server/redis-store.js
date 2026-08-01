@@ -132,7 +132,7 @@ export async function getLoginCode(code) {
 
 export async function delLoginCode(code) {
   if (!redis) return;
-  try { await redis.del(`logincode:${code}`); } catch {}
+  try { await redis.del(`logincode:${code}`); } catch (err) { console.error("[redis-store] Failed to delete login code:", err.message); }
 }
 
 // ── 健康/统计 ──

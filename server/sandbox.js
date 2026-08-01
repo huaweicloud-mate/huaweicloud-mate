@@ -305,4 +305,56 @@ async function destroyAnonymousContainer(podId) {
   // 这里仅从缓存移除
 }
 
-export { getOrCreateContainer, createAnonymousContainer, releaseContainer, destroyContainer, getConcurrencyStats, isAtConcurrencyLimit };
+// ── 沙箱 GC：定期扫描并清理过期 / 僵尸 Pod ──
+
+const GC_INTERVAL_MS = parseInt(process.env.SANDBOX_GC_INTERVAL_MS || "300000");
+
+function startSandboxGC() {
+  setInterval(async () => {
+    try {
+      const { body } = await coreApi.listNamespacedPod(
+        NAMESPACE, undefined, undefined, undefined, "status.phase=Running", "app=sandbox"
+      );
+      const now = Date.now();
+
+      for (const pod of body.items) {
+        const podName = pod.metadata.name;
+        const jobName = pod.metadata.labels?.["job-name"] || "";
+        const startTime = pod.status?.startTime;
+        const podIp = pod.status?.podIP;
+        const isAnon = jobName.startsWith("sandbox-anon-");
+
+        if (!jobName || !startTime) continue;
+
+        const ageSec = (now - new Date(startTime).getTime()) / 1000;
+        const maxAge = isAnon ? ANON_SANDBOX_TTL : USER_SANDBOX_TTL;
+        let reason = null;
+
+        if (ageSec > maxAge) {
+          reason = `age ${ageSec.toFixed(0)}s > TTL ${maxAge}s`;
+        } else if (podIp) {
+          try {
+            const resp = await fetch(`http://${podIp}:3005/global/health`, { signal: AbortSignal.timeout(3000) });
+            if (!resp.ok) reason = `health check returned ${resp.status}`;
+          } catch {
+            reason = `health check unreachable`;
+          }
+        }
+
+        if (reason) {
+          console.log(`[sandbox] GC: deleting ${podName} (${reason})`);
+          await batchApi.deleteNamespacedJob(jobName, NAMESPACE).catch(
+            (err) => console.error(`[sandbox] GC deleteNamespacedJob failed for ${jobName}: ${err.message}`)
+          );
+          jobStatusCache.delete(jobName);
+        }
+      }
+    } catch (err) {
+      console.error(`[sandbox] GC sweep failed: ${err.message}`);
+    }
+  }, GC_INTERVAL_MS);
+
+  console.log(`[sandbox] GC started (interval=${GC_INTERVAL_MS}ms, userTTL=${USER_SANDBOX_TTL}s, anonTTL=${ANON_SANDBOX_TTL}s)`);
+}
+
+export { getOrCreateContainer, createAnonymousContainer, releaseContainer, destroyContainer, getConcurrencyStats, isAtConcurrencyLimit, startSandboxGC };

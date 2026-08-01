@@ -5,7 +5,7 @@ import cors from "cors";
 import rateLimit from "express-rate-limit";
 import { authFlexible, issueJwt, generateLoginCode, confirmLoginCode, pollLoginCode, registerUser, isRedisAvailable, CODE_TTL_MS, verifyJwt } from "./auth.js";
 import { createTask, getTask, streamTask, cancelTask, listUserTasks, initTaskCache } from "./task-manager.js";
-import { getConcurrencyStats, reconcileActiveJobs } from "./sandbox.js";
+import { getConcurrencyStats, reconcileActiveJobs, startSandboxGC } from "./sandbox.js";
 import { checkSchema } from "./db.js";
 import { getAgentCard } from "./agent-card.js";
 import { countUsers, ensureRedis } from "./redis-store.js";
@@ -131,6 +131,7 @@ const server = app.listen(PORT, async () => {
   console.log(`[A2A Server] AgentCard @ http://0.0.0.0:${PORT}/.well-known/agent.json`);
   await reconcileActiveJobs();
   await initTaskCache();
+  startSandboxGC();
 });
 
 server.keepAliveTimeout = 30000;   // 30s，防止 ELB 过早断开
