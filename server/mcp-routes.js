@@ -110,12 +110,14 @@ export function mcpRouter(app) {
       ] } });
     }
     if (call.method === "notifications/initialized") { console.log(`[mcp-trace] >>> RECEIVED notifications/initialized <<< session=${req.headers["mcp-session-id"]?.slice(0,20)}...`); return res.status(202).end(); }
+    if (call.method === "ping") return res.status(200).end();
+    if (call.id === undefined) return res.status(202).end();
     next();
   });
 
   app.post("/mcp", async (req, res) => {
     const call = req.body;
-    if (!call || call.method !== "tools/call") return res.status(400).json({ error: "invalid MCP request" });
+    if (!call || call.method !== "tools/call") return res.json({ jsonrpc: "2.0", id: call?.id || null, error: { code: -32601, message: `Method not found: ${call?.method || "unknown"}` } });
     const { name, arguments: args } = call.params || {};
 
     // ── huaweicloud_auth ──

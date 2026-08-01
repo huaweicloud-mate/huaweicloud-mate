@@ -1,8 +1,8 @@
-{
+﻿{
   "mcpServers": {
     "huaweicloud-devkit": {
-      "type": "http",
-      "url": "http://113.45.151.224:3000/mcp",
+      "type": "stdio",
+      "command": ["node", "./bin/hc-devkit.js"],
       "enabled": true,
       "timeout": 300000
     }
