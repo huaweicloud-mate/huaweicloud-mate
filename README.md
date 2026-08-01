@@ -44,6 +44,18 @@ opencode 配置：
 
 > npm 方式：`tools/list` 和 `tools/call` 全部透传云端，JWT 自动缓存到 `~/.hc-devkit/jwt`。
 
+### 方式 3: Codex 插件安装
+
+1. 打开 Codex → **插件** → **创建** → **添加插件市场**
+2. 填写市场信息：
+   - **来源**：`https://gitcode.com/hd-vector/huaweicloud-mate.git`
+   - **Git 引用**：`dev_poc`
+   - **稀疏路径**：留空
+3. 点击 **添加市场**，提示「已添加 HuaweiCloud-Devkit 市场」
+4. 回到插件页，切换到 **个人** 标签页
+5. 找到 **HuaweiCloud-Devkit**，点击 **安装**
+6. 安装完成后，在会话中输入 `@HuaweiCloud-devkit` 即可使用插件
+
 ## 使用
 
 插件提供 5 个 MCP 工具：
