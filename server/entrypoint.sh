@@ -25,6 +25,14 @@ fi
 sed -i 's/"agreePrivacy": "false"/"agreePrivacy": "true"/' ~/.hcloud/config.json 2>/dev/null || true
 chmod 600 ~/.hcloud/config.json 2>/dev/null || true
 
+# 凭证文件供 opencode / SDK 使用
+cat > ~/.hcloud/credentials << EOF
+[default]
+ak=${HW_ACCESS_KEY}
+sk=${HW_SECRET_KEY}
+EOF
+chmod 600 ~/.hcloud/credentials
+
 # 软链接到 huaweicloud-mate 期望的 KooCLI 路径
 mkdir -p ~/.hcloud-agent/koocli/current/
 ln -sf /usr/local/bin/hcloud ~/.hcloud-agent/koocli/current/hcloud
