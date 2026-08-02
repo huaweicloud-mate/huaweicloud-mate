@@ -29,7 +29,7 @@ chmod 600 ~/.hcloud/config.json 2>/dev/null || true
 mkdir -p ~/.config/opencode
 cat > ~/.config/opencode/opencode.jsonc << EOFCT
 {
-  "skills": "/skills",
+  
   "mcp": {
     "huaweicloud-mate": {
       "type": "local",
