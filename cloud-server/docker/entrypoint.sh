@@ -25,6 +25,10 @@ fi
 sed -i 's/"agreePrivacy": "false"/"agreePrivacy": "true"/' ~/.hcloud/config.json 2>/dev/null || true
 chmod 600 ~/.hcloud/config.json 2>/dev/null || true
 
+# 软链接到 huaweicloud-mate 期望的 KooCLI 路径
+mkdir -p ~/.hcloud-agent/koocli/current/
+ln -sf /usr/local/bin/hcloud ~/.hcloud-agent/koocli/current/hcloud
+
 # ── opencode config ──
 mkdir -p ~/.config/opencode
 cat > ~/.config/opencode/opencode.jsonc << EOFCT
