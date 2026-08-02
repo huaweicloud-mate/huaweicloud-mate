@@ -45,14 +45,6 @@ ln -sf /usr/local/bin/hcloud ~/.hcloud-agent/koocli/current/hcloud
 mkdir -p ~/.config/opencode
 cat > ~/.config/opencode/opencode.jsonc << EOFCT
 {
-  "env": {
-    "HW_ACCESS_KEY": "${HW_ACCESS_KEY}",
-    "HW_SECRET_KEY": "${HW_SECRET_KEY}",
-    "HUAWEICLOUD_SDK_AK": "${HW_ACCESS_KEY}",
-    "HUAWEICLOUD_SDK_SK": "${HW_SECRET_KEY}",
-    "HW_REGION": "${HW_REGION:-cn-south-1}",
-    "HCLOUD_CREDENTIALS_PATH": "${HOME}/.hcloud/credentials"
-  },
   "mcp": {
     "huaweicloud-mate": {
       "type": "local",
