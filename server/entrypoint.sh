@@ -33,6 +33,10 @@ sk=${HW_SECRET_KEY}
 EOF
 chmod 600 ~/.hcloud/credentials
 
+# SDK 标准环境变量
+export HUAWEICLOUD_SDK_AK="${HW_ACCESS_KEY}"
+export HUAWEICLOUD_SDK_SK="${HW_SECRET_KEY}"
+
 # 软链接到 huaweicloud-mate 期望的 KooCLI 路径
 mkdir -p ~/.hcloud-agent/koocli/current/
 ln -sf /usr/local/bin/hcloud ~/.hcloud-agent/koocli/current/hcloud
@@ -44,6 +48,8 @@ cat > ~/.config/opencode/opencode.jsonc << EOFCT
   "env": {
     "HW_ACCESS_KEY": "${HW_ACCESS_KEY}",
     "HW_SECRET_KEY": "${HW_SECRET_KEY}",
+    "HUAWEICLOUD_SDK_AK": "${HW_ACCESS_KEY}",
+    "HUAWEICLOUD_SDK_SK": "${HW_SECRET_KEY}",
     "HW_REGION": "${HW_REGION:-cn-south-1}",
     "HCLOUD_CREDENTIALS_PATH": "${HOME}/.hcloud/credentials"
   },
