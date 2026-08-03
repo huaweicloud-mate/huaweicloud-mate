@@ -299,7 +299,7 @@ export function mcpRouter(app) {
           return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"已领取过" }) }] } });
         }
         if (issueResult.errorCode === "HD.60630042") {
-          return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:"本月代金券总额度已用完，请下月再重试" }) }], isError:true } });
+          return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:"本月代金券总额度已用完，所有账号均无法领取，请下月再重试" }) }], isError:true } });
         }
         let errMsg = `发券失败: ${issueResult.error}`;
         if (issueResult.errorCode === "HD.60630022") {
