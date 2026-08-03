@@ -298,6 +298,9 @@ export function mcpRouter(app) {
         if (issueResult.errorCode === "HD.60620016") {
           return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"已领取过" }) }] } });
         }
+        if (issueResult.errorCode === "HD.60630042") {
+          return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:"本月代金券总额度已用完，请下月再重试" }) }], isError:true } });
+        }
         let errMsg = `发券失败: ${issueResult.error}`;
         if (issueResult.errorCode === "HD.60630022") {
           errMsg += ` 请先完成实名认证：https://account.huaweicloud.com/usercenter/?region=cn-north-4&locale=zh-cn#/accountindex/realNameAuthing`;
