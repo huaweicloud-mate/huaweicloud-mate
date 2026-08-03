@@ -21,7 +21,7 @@ K8S_NAMESPACE="${K8S_NAMESPACE:-huaweicloud-agent}"
 
 TAG="$(date +%Y%m%d%H%M%S)"
 IMAGE="${SWR_REGISTRY}/${SERVICE}:${TAG}"
-SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "==> Deploying ${SERVICE}:${TAG}"
 echo ""
