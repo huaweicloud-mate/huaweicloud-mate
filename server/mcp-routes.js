@@ -153,16 +153,17 @@ export function mcpRouter(app) {
               domainIdMissing = true;
             }
           }
-          // 先写入 Redis（无论 domainId 是否获取成功），使后续 status/claim 可读状态
-          const akHash = crypto.createHash("sha256").update(ak).digest("hex");
-          await setUser(userId, {
-            ...user, ak, sk, region,
-            domainId: domainId || "",
-            domain_id_missing: domainIdMissing || !domainId ? "true" : undefined,
-            ak_hash: domainId && !domainIdMissing ? akHash : undefined,
-            createdAt: Date.now(),
-          });
         }
+
+        // 无论 domainId 是否已有值，都更新 Redis 中的 ak_hash
+        const akHash = crypto.createHash("sha256").update(ak).digest("hex");
+        await setUser(userId, {
+          ...user, ak, sk, region,
+          domainId: domainId || "",
+          domain_id_missing: domainIdMissing || !domainId ? "true" : undefined,
+          ak_hash: domainId && !domainIdMissing ? akHash : undefined,
+          createdAt: Date.now(),
+        });
 
         if (!domainId) {
           voucherInfo = "华为云账号获取失败，请确认 AK/SK 有效（测试环境需传入 domain_id）";
