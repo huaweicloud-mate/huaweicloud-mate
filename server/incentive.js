@@ -1,19 +1,17 @@
 // server/incentive.js — 激励服务客户端
 // 两个接口: check-coupon-issued (查是否已领), issue-coupon (发券)
-// APPCODE 分开配置: INCENTIVE_CHECK_APPCODE / INCENTIVE_ISSUE_APPCODE
+// APPCODE 统一配置: INCENTIVE_APPCODE
 
 import { pool } from "./db.js";
 
-const CHECK_URL = process.env.INCENTIVE_CHECK_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-beta.huawei.com/api/v1/hdincentiveservice/coupon"}/check-coupon-issued`;
-const ISSUE_URL = process.env.INCENTIVE_ISSUE_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-beta.huawei.com/api/v1/hdincentiveservice/coupon"}/issue-coupon`;
+const CHECK_URL = process.env.INCENTIVE_CHECK_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-dgg-b0.huawei.com/api/v1/hdincentiveservice/coupon"}/check-coupon-issued`;
+const ISSUE_URL = process.env.INCENTIVE_ISSUE_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-dgg-b0.huawei.com/api/v2/hdincentiveservice/coupon"}/issue-coupon`;
 
 const INCENTIVE_HW_ID = process.env.INCENTIVE_HW_ID || "com.huawei.cloudbu.developer.community";
 const INCENTIVE_APPKEY = process.env.INCENTIVE_APPKEY || "";
 const INCENTIVE_AUTH_TOKEN = process.env.INCENTIVE_AUTH_TOKEN || "";
 
-// 两个接口的 APPCODE 不同
-const CHECK_APPCODE = process.env.INCENTIVE_CHECK_APPCODE || process.env.INCENTIVE_APPCODE || "5MkJTaYq6L6S8xBm1TtOcLoBOfuDKkrV2bj3T8fvlGWtLp2WaJzKCP5darNWFa19";
-const ISSUE_APPCODE = process.env.INCENTIVE_ISSUE_APPCODE || process.env.INCENTIVE_APPCODE || "dqNEJDPTs24IglOAwhA7UfFaknYd15s1F5lTxY3co0u02CLQCCckclhdkL2LGj94";
+const APPCODE = process.env.INCENTIVE_APPCODE || "dqNEJDPTs24IglOAwhA7UfFaknYd15s1F5lTxY3co0u02CLQCCckclhdkL2LGj94";
 
 const ACTIVITY_ID = process.env.INCENTIVE_ACTIVITY_ID || "A000330";
 const ACTIVITY_PRODUCT_ID = process.env.INCENTIVE_ACTIVITY_PRODUCT_ID || "5649bf1d2bc74d648ac6cd5496ebba91";
@@ -44,11 +42,11 @@ export async function checkCouponIssued(customerId) {
   const maskedCustomerId = customerId.slice(0, 8);
   console.log(`[incentive] check-coupon REQUEST → ${CHECK_URL}`);
   console.log(`[incentive] check-coupon BODY → customer_id=${maskedCustomerId}*** scene_type=40`);
-  console.log(`[incentive] check-coupon HEADERS → X-APIG-APPCODE:${CHECK_APPCODE.slice(0,8)}*** X-auth-token:${INCENTIVE_AUTH_TOKEN.slice(0,8)}***`);
+  console.log(`[incentive] check-coupon HEADERS → X-APIG-APPCODE:${APPCODE.slice(0,8)}*** X-auth-token:${INCENTIVE_AUTH_TOKEN.slice(0,8)}***`);
   try {
     const resp = await fetch(CHECK_URL, {
       method: "POST",
-      headers: { ...baseHeaders, "X-APIG-APPCODE": CHECK_APPCODE },
+      headers: { ...baseHeaders, "X-APIG-APPCODE": APPCODE },
       body,
       signal: AbortSignal.timeout(10000),
     });
@@ -94,7 +92,7 @@ export async function issueCoupon(customerId) {
   try {
     const resp = await fetch(ISSUE_URL, {
       method: "POST",
-      headers: { ...baseHeaders, "X-APIG-APPCODE": ISSUE_APPCODE },
+      headers: { ...baseHeaders, "X-APIG-APPCODE": APPCODE },
       body,
       signal: AbortSignal.timeout(15000),
     });
