@@ -67,7 +67,6 @@ export function mcpRouter(app) {
   // ── GET /mcp — SSE 通道 (Streamable HTTP) ──
   app.get("/mcp", (req, res) => {
     const sessionId = req.headers["mcp-session-id"] || req.query.sessionId;
-    if (!sessionId) return res.status(400).json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing mcp-session-id header or sessionId query param" }, id: null });
     const session = getOrCreateSession(sessionId);
 
     res.setHeader("Content-Type", "text/event-stream");
