@@ -50,7 +50,7 @@ With the JWT token available, proceed with the user's original Huawei Cloud oper
 
 If `~/.hc-devkit/config` doesn't exist and env vars are not set, guide the user with the exact format:
 
-> Please create `~/.hc-devkit/config` with your Huawei Cloud credentials. Copy the content below and replace only the values:
+> 请在 `~/.hc-devkit/config` 创建配置文件，内容如下（仅替换 YOUR_ACCESS_KEY 和 YOUR_SECRET_KEY）：
 > ```json
 > {
 >   "ak": "YOUR_ACCESS_KEY",

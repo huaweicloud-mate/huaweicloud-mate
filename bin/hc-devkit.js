@@ -53,7 +53,7 @@ async function ensureAuth() {
       if (!cfg.ak || !cfg.sk) {
         if (!configWarned) {
           configWarned = true;
-          console.error("[hc-devkit] No credentials found. Create ~/.hc-devkit/config with contents:");
+          console.error("[hc-devkit] 未找到凭证配置。请在 ~/.hc-devkit/config 创建文件，内容如下（仅替换 YOUR_ACCESS_KEY 和 YOUR_SECRET_KEY）：");
           console.error("  {");
           console.error('    "ak": "YOUR_ACCESS_KEY",');
           console.error('    "sk": "YOUR_SECRET_KEY",');
