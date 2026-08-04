@@ -11,7 +11,7 @@ const INCENTIVE_HW_ID = process.env.INCENTIVE_HW_ID || "com.huawei.cloudbu.devel
 const INCENTIVE_APPKEY = process.env.INCENTIVE_APPKEY || "";
 const INCENTIVE_AUTH_TOKEN = process.env.INCENTIVE_AUTH_TOKEN || "";
 
-const APPCODE = process.env.INCENTIVE_APPCODE || "dqNEJDPTs24IglOAwhA7UfFaknYd15s1F5lTxY3co0u02CLQCCckclhdkL2LGj94";
+const APPCODE = process.env.INCENTIVE_APPCODE || "";
 
 const ACTIVITY_ID = process.env.INCENTIVE_ACTIVITY_ID || "A000330";
 const ACTIVITY_PRODUCT_ID = process.env.INCENTIVE_ACTIVITY_PRODUCT_ID || "5649bf1d2bc74d648ac6cd5496ebba91";
