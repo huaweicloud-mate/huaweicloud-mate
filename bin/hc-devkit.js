@@ -53,7 +53,12 @@ async function ensureAuth() {
       if (!cfg.ak || !cfg.sk) {
         if (!configWarned) {
           configWarned = true;
-          console.error("[hc-devkit] No credentials found. Create ~/.hc-devkit/config or set HUAWEICLOUD_AK / HUAWEICLOUD_SK env vars.");
+          console.error("[hc-devkit] No credentials found. Create ~/.hc-devkit/config with contents:");
+          console.error("  {");
+          console.error('    "ak": "YOUR_ACCESS_KEY",');
+          console.error('    "sk": "YOUR_SECRET_KEY",');
+          console.error('    "region": "cn-south-1"');
+          console.error("  }");
         }
         authPromise = null;
         return;

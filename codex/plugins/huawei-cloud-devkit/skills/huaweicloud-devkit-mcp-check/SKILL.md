@@ -48,14 +48,18 @@ With the JWT token available, proceed with the user's original Huawei Cloud oper
 
 ## Credential Setup (one-time)
 
-The user needs to create `~/.hc-devkit/config` with their Huawei Cloud AK/SK. If the file doesn't exist and env vars are not set, tell the user:
+If `~/.hc-devkit/config` doesn't exist and env vars are not set, guide the user with the exact format:
 
-> Please create `~/.hc-devkit/config` with your Huawei Cloud credentials:
+> Please create `~/.hc-devkit/config` with your Huawei Cloud credentials. Copy the content below and replace only the values:
 > ```json
-> {"ak": "YOUR_AK", "sk": "YOUR_SK", "region": "cn-south-1"}
+> {
+>   "ak": "YOUR_ACCESS_KEY",
+>   "sk": "YOUR_SECRET_KEY",
+>   "region": "cn-south-1"
+> }
 > ```
 
-Do NOT display the actual AK/SK the user provides.
+Do NOT display or ask for the actual AK/SK values.
 
 ## MCP Connectivity Check
 
