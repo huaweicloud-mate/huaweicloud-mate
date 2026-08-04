@@ -12,6 +12,7 @@ const CONFIG_FILE = join(HC_DIR, "config");
 
 let cachedConfig = null;
 let authPromise = null;
+let configWarned = false;
 
 function loadConfig() {
   if (cachedConfig) return cachedConfig;
@@ -50,6 +51,10 @@ async function ensureAuth() {
     try {
       const cfg = loadConfig();
       if (!cfg.ak || !cfg.sk) {
+        if (!configWarned) {
+          configWarned = true;
+          console.error("[hc-devkit] No credentials found. Create ~/.hc-devkit/config or set HUAWEICLOUD_AK / HUAWEICLOUD_SK env vars.");
+        }
         authPromise = null;
         return;
       }
