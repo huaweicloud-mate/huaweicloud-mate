@@ -331,7 +331,7 @@ export function mcpRouter(app) {
       const payload = verifyJwt(jwtToken);
       if (payload) { user = await getUser(payload.sub); if (user) userId = payload.sub; }
       if (!userId) {
-        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"token无效或已过期，请重新调用 huaweicloud_auth 获取新 token" }], isError:true } });
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"token无效或已过期，请重新认证。\n\n如未配置凭证，请在本地 ~/.hc-devkit/config 创建文件：\n{\n  \"ak\": \"YOUR_ACCESS_KEY\",\n  \"sk\": \"YOUR_SECRET_KEY\",\n  \"region\": \"cn-south-1\"\n}" }], isError:true } });
       }
     }
 
@@ -342,7 +342,7 @@ export function mcpRouter(app) {
       }
     }
 
-    // 无 token →%→ 匿名沙箱
+    // 无 token → 匿名沙箱
     if (!userId) {
       try {
         const container = await createAnonymousContainer();
@@ -354,7 +354,7 @@ export function mcpRouter(app) {
         const texts = (data.parts || []).filter(p => p.type === "text").map(p => p.text);
         return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: texts.join("\n") || JSON.stringify(data) }] } });
       } catch (err) {
-        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: `匿名查询失败: ${err.message}` }], isError:true } });
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: `匿名查询失败: ${err.message}\n\n请先配置凭证。在本地 ~/.hc-devkit/config 创建文件，内容如下（仅替换 YOUR_ACCESS_KEY 和 YOUR_SECRET_KEY）：\n{\n  "ak": "YOUR_ACCESS_KEY",\n  "sk": "YOUR_SECRET_KEY",\n  "region": "cn-south-1"\n}` }], isError:true } });
       }
     }
 
