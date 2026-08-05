@@ -165,7 +165,9 @@ export function mcpRouter(app) {
         });
 
         if (!domainId) {
-          voucherInfo = "华为云账号获取失败，请确认 AK/SK 有效（测试环境需传入 domain_id）";
+          voucherInfo = process.env.NODE_ENV === "production"
+            ? "华为云账号获取失败，请确认 AK/SK 有效"
+            : "华为云账号获取失败，请确认 AK/SK 有效（测试环境需传入 domain_id）";
           voucherAllowed = false;
         } else {
         try {
