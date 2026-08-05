@@ -20,13 +20,18 @@ function loadConfig() {
     const raw = readFileSync(CONFIG_FILE, "utf8");
     cachedConfig = JSON.parse(raw);
     if (cachedConfig.ak && cachedConfig.sk) return cachedConfig;
-  } catch {}
+  } catch (e) {
+    console.error(`[hc-devkit] Failed to load config: ${e.message}`);
+  }
   cachedConfig = { ak: process.env.HUAWEICLOUD_AK || "", sk: process.env.HUAWEICLOUD_SK || "", region: process.env.HUAWEICLOUD_REGION || "cn-south-1" };
   return cachedConfig;
 }
 
 function loadJwt() {
-  try { return readFileSync(JWT_FILE, "utf8").trim(); } catch { return ""; }
+  try { return readFileSync(JWT_FILE, "utf8").trim(); } catch (e) {
+    console.error(`[hc-devkit] Failed to load JWT: ${e.message}`);
+    return "";
+  }
 }
 function saveJwt(token) {
   mkdirSync(HC_DIR, { recursive: true });
@@ -69,8 +74,12 @@ async function ensureAuth() {
       });
       const text = data?.result?.content?.[0]?.text;
       if (text) {
-        const parsed = JSON.parse(text);
-        if (parsed.token) saveJwt(parsed.token);
+        try {
+          const parsed = JSON.parse(text);
+          if (parsed.token) saveJwt(parsed.token);
+        } catch (e) {
+          console.error(`[hc-devkit] Failed to parse auth token: ${e.message}`);
+        }
       }
     } catch (e) {
       console.error(`[hc-devkit] Auto-auth failed: ${e.message}`);
@@ -86,7 +95,10 @@ const rl = createInterface({ input: process.stdin });
 rl.on("line", async (line) => {
   if (!line.trim()) return;
   let call;
-  try { call = JSON.parse(line); } catch { return; }
+  try { call = JSON.parse(line); } catch (e) {
+    console.error(`[hc-devkit] Failed to parse input: ${e.message}`);
+    return;
+  }
 
   const method = call.method;
 

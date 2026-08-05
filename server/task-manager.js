@@ -6,6 +6,7 @@ import { insertTask, updateTaskDb, getTaskDb, listTasksByUser } from "./db.js";
 import { getUser } from "./redis-store.js";
 
 const TASK_CACHE_TTL_MS = parseInt(process.env.TASK_CACHE_TTL_MS || "60000");
+const FETCH_RETRY_MAX = parseInt(process.env.FETCH_RETRY_MAX || "3");
 const activeTaskCache = new Map();
 const taskSubscribers = new Map();
 let eventCounter = 0;
@@ -64,6 +65,20 @@ async function createTask(userId, description, context, user) {
   return task;
 }
 
+async function fetchWithRetry(url, options) {
+  let lastErr;
+  for (let i = 0; i < FETCH_RETRY_MAX; i++) {
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      lastErr = err;
+      const delay = Math.pow(2, i) * 1000;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr;
+}
+
 async function executeTask(taskId, user) {
   const task = getCached(taskId);
   if (!task) return;
@@ -96,7 +111,7 @@ async function executeTask(taskId, user) {
     let sessionId = container.sessionId;
 
     if (!sessionId) {
-      const sResp = await fetch(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      const sResp = await fetchWithRetry(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
       const session = await sResp.json();
       sessionId = session.id;
     }
@@ -104,7 +119,7 @@ async function executeTask(taskId, user) {
     track(taskId, { progress: 20, currentStep: "正在分析意图..." });
     publish(taskId, { type: "progress", progress: 20, message: "LLM 分析中" });
 
-    const mResp = await fetch(`http://${podIp}:3005/session/${sessionId}/message`, {
+    const mResp = await fetchWithRetry(`http://${podIp}:3005/session/${sessionId}/message`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ parts: [{ type: "text", text: task.description }] }),
     });
