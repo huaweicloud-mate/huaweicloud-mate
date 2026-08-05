@@ -34,7 +34,7 @@ export async function initPool() {
   return pool;
 }
 
-function p() {
+export function getPool() {
   if (!pool) throw new Error("[db] Pool not initialized. Call initPool() first.");
   return pool;
 }
