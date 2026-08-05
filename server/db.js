@@ -39,6 +39,8 @@ export function getPool() {
   return pool;
 }
 
+const p = () => getPool();
+
 // ── Schema Check ──
 export async function checkSchema() {
   try {

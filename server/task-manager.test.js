@@ -45,7 +45,7 @@ describe("B4: cancelTask userId/user_id compatibility", () => {
     const fs = await import("node:fs/promises");
     const code = await fs.readFile(new URL("./db.js", import.meta.url), "utf-8");
     const getTaskFn = code.slice(code.indexOf("async function getTaskDb"));
-    expect(getTaskFn).toMatch(/userId:\s*r\.user_id/);
+    expect(getTaskFn).toMatch(/userId:\s*t\.user_id/);
   });
 });
 

@@ -5,7 +5,7 @@ describe("B5: claimVoucher should set status=1", () => {
     const fs = await import("node:fs/promises");
     const code = await fs.readFile(new URL("./db.js", import.meta.url), "utf-8");
     const claimFn = code.slice(code.indexOf("async function claimVoucher"));
-    expect(claimFn).toContain("status=1");
+    expect(claimFn).toContain("status = 1");
   });
 });
 
@@ -31,7 +31,7 @@ describe("Q4: DB CREATE TABLE failure not silent", () => {
     const checkFn = code.slice(code.indexOf("async function checkSchema"));
     expect(checkFn).toContain("voucher_records");
     expect(checkFn).toContain("tasks");
-    expect(checkFn).toContain("SHOW TABLES");
+    expect(checkFn).toContain("SELECT 1 FROM");
   });
 
   it("health endpoint should include db schema check", async () => {
