@@ -6,7 +6,7 @@ import rateLimit from "express-rate-limit";
 import { authFlexible, issueJwt, generateLoginCode, confirmLoginCode, pollLoginCode, registerUser, isRedisAvailable, CODE_TTL_MS, verifyJwt } from "./auth.js";
 import { createTask, getTask, streamTask, cancelTask, listUserTasks, initTaskCache } from "./task-manager.js";
 import { getConcurrencyStats, reconcileActiveJobs, startSandboxGC } from "./sandbox.js";
-import { checkSchema } from "./db.js";
+import { checkSchema, initPool } from "./db.js";
 import { getAgentCard } from "./agent-card.js";
 import { countUsers, ensureRedis } from "./redis-store.js";
 import { mcpRouter } from "./mcp-routes.js";
@@ -126,6 +126,7 @@ app.post("/api/v1/incentive/voucher/claim", (req, res) => res.json({ success: tr
 mcpRouter(app);
 
 const server = app.listen(PORT, async () => {
+  await initPool();
   await ensureRedis();
   console.log(`[A2A Server] 华为云 Agent 已启动 @ http://0.0.0.0:${PORT}`);
   console.log(`[A2A Server] AgentCard @ http://0.0.0.0:${PORT}/.well-known/agent.json`);

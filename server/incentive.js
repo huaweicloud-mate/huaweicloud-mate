@@ -2,7 +2,7 @@
 // 两个接口: check-coupon-issued (查是否已领), issue-coupon (发券)
 // APPCODE 统一配置: INCENTIVE_APPCODE
 
-import { pool } from "./db.js";
+import { getPool } from "./db.js";
 
 const CHECK_URL = process.env.INCENTIVE_CHECK_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-dgg-b0.huawei.com/api/v1/hdincentiveservice/coupon"}/check-coupon-issued`;
 const ISSUE_URL = process.env.INCENTIVE_ISSUE_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-dgg-b0.huawei.com/api/v2/hdincentiveservice/coupon"}/issue-coupon`;
@@ -67,7 +67,7 @@ export async function checkCouponIssued(customerId) {
 export async function checkLocalQuota() {
   if (MAX_VOUCHERS <= 0) return { reached: false };
   try {
-    const [rows] = await pool.execute("SELECT COUNT(*) as cnt FROM voucher_records WHERE status = 1");
+    const [rows] = await getPool().execute("SELECT COUNT(*) as cnt FROM voucher_records WHERE status = 1");
     const cnt = rows[0]?.cnt || 0;
     return { reached: cnt >= MAX_VOUCHERS, count: cnt, max: MAX_VOUCHERS };
   } catch (err) {

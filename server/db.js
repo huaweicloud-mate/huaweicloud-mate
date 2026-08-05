@@ -1,47 +1,56 @@
-// cloud-server/db.js — MySQL RDS 数据库操作 (代金券 + 任务)
+// server/db.js — MySQL RDS + Flyway-style migration runner
 import mysql from "mysql2/promise";
 import crypto from "node:crypto";
+import { runMigrations } from "./migrations.js";
 
-export const pool = mysql.createPool({
-  host: process.env.MYSQL_HOST || "mysql",
-  port: parseInt(process.env.MYSQL_PORT || "3306"),
-  user: process.env.MYSQL_USER || "root",
-  password: process.env.MYSQL_PASSWORD,
-  database: process.env.MYSQL_DATABASE || "hdkitservice",
-  waitForConnections: true,
-  connectionLimit: 5,
-  connectTimeout: 10000,
-});
+const DB_NAME = process.env.MYSQL_DATABASE || "hdkitservice";
 
-// 建表
-pool.execute(`CREATE TABLE IF NOT EXISTS voucher_records (
-  domain_id  VARCHAR(32)  PRIMARY KEY,
-  ak_hash    VARCHAR(64)  NOT NULL,
-  voucher_id VARCHAR(64),
-  amount     INT          DEFAULT 100,
-  status     TINYINT      DEFAULT 1,
-  claimed_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_ak_hash (ak_hash)
-)`).catch((err) => { console.error(`[db] CREATE TABLE voucher_records failed: ${err.message}`); });
+let pool;
 
-pool.execute(`CREATE TABLE IF NOT EXISTS tasks (
-  id          VARCHAR(36)  PRIMARY KEY,
-  user_id     VARCHAR(16)  NOT NULL,
-  description TEXT         NOT NULL,
-  status      VARCHAR(16)  DEFAULT 'pending',
-  progress    INT          DEFAULT 0,
-  currentStep VARCHAR(64)  DEFAULT '',
-  artifacts   JSON,
-  output      MEDIUMTEXT,
-  error       TEXT,
-  created_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-  updated_at  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_user_id (user_id),
-  INDEX idx_status (status)
-)`).catch((err) => { console.error(`[db] CREATE TABLE tasks failed: ${err.message}`); });
+export async function initPool() {
+  const init = mysql.createPool({
+    host: process.env.MYSQL_HOST || "mysql",
+    port: parseInt(process.env.MYSQL_PORT || "3306"),
+    user: process.env.MYSQL_USER || "root",
+    password: process.env.MYSQL_PASSWORD,
+    connectTimeout: 10000,
+  });
+
+  await init.execute(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` DEFAULT CHARACTER SET utf8mb4`);
+  await runMigrations(init, DB_NAME);
+  await init.end();
+
+  pool = mysql.createPool({
+    host: process.env.MYSQL_HOST || "mysql",
+    port: parseInt(process.env.MYSQL_PORT || "3306"),
+    user: process.env.MYSQL_USER || "root",
+    password: process.env.MYSQL_PASSWORD,
+    database: DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 5,
+    connectTimeout: 10000,
+  });
+  console.log("[db] Pool initialized, migrations up to date");
+  return pool;
+}
+
+function p() {
+  if (!pool) throw new Error("[db] Pool not initialized. Call initPool() first.");
+  return pool;
+}
+
+// ── Schema Check ──
+export async function checkSchema() {
+  try {
+    const [r1] = await p().execute("SELECT 1 FROM voucher_records LIMIT 1");
+    const [r2] = await p().execute("SELECT 1 FROM tasks LIMIT 1");
+    return { ok: true, tables: { voucher_records: true, tasks: true } };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
 
 // ── 代金券 ──
-
 export async function getDomainId(ak, sk) {
   const { execSync } = await import("node:child_process");
   const cmd = [
@@ -49,67 +58,79 @@ export async function getDomainId(ak, sk) {
     "--cli-region=cn-south-1",
     `--cli-access-key=${ak}`,
     `--cli-secret-key=${sk}`,
+    "2>/dev/null",
   ].join(" ");
-  console.log(`[db] getDomainId hcloud REQUEST → ak=${ak.slice(0,8)}*** sk=${sk.slice(0,4)}***`);
-  const stdout = execSync(cmd, { encoding: "utf8", timeout: 5000, killSignal: "SIGKILL", stdio: ["ignore", "pipe", "pipe"] });
-  const data = JSON.parse(stdout);
-  const domainId = data?.domains?.[0]?.id;
-  console.log(`[db] getDomainId RESPONSE → domainId=${domainId}`);
-  return domainId;
+  try {
+    const raw = execSync(cmd, { timeout: 5000, killSignal: "SIGKILL" }).toString();
+    const match = raw.match(/"id"\s*:\s*"([a-f0-9]+)"/);
+    return match ? match[1] : null;
+  } catch (err) {
+    console.error(`[db] getDomainId failed: ${err.message}`);
+    throw err;
+  }
+}
+
+export async function getVoucher(domainId) {
+  const [rows] = await p().execute("SELECT * FROM voucher_records WHERE domain_id = ?", [domainId]);
+  return rows[0] || null;
 }
 
 export async function claimVoucher(domainId, akHash, voucherId, amount) {
-  await pool.execute("INSERT INTO voucher_records (domain_id, ak_hash, voucher_id, amount, status) VALUES (?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE voucher_id=?, amount=?, status=1",
-    [domainId, akHash, voucherId, amount, voucherId, amount]);
-}
-
-// ── 任务 ──
-
-export async function insertTask(task) {
-  await pool.execute(
-    "INSERT INTO tasks (id, user_id, description, status, progress, output, error) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [task.id, task.userId, task.description, task.status, task.progress, task.output || "", task.error || null]
+  await p().execute(
+    `INSERT INTO voucher_records (domain_id, ak_hash, voucher_id, amount, status)
+     VALUES (?, ?, ?, ?, 1)
+     ON DUPLICATE KEY UPDATE
+       voucher_id = IF(status = 1, voucher_id, VALUES(voucher_id)),
+       amount     = IF(status = 1, amount, VALUES(amount)),
+       status     = IF(status = 1, 1, 2),
+       claimed_at = IF(status = 1, claimed_at, CURRENT_TIMESTAMP)`,
+    [domainId, akHash, voucherId, amount]
   );
 }
 
-const TASK_UPDATE_WHITELIST = new Set(["status", "progress", "output", "error", "currentStep"]);
+export async function markVoucherClaimed(domainId, akHash) {
+  await p().execute(
+    `INSERT INTO voucher_records (domain_id, ak_hash, status)
+     VALUES (?, ?, 2)
+     ON DUPLICATE KEY UPDATE
+       ak_hash = IF(status = 1, ak_hash, VALUES(ak_hash)),
+       status  = IF(status = 1, 1, 2)`,
+    [domainId, akHash]
+  );
+}
+
+// ── 任务管理 ──
+const TASK_UPDATE_WHITELIST = new Set(["status", "progress", "currentStep", "output", "error", "artifacts"]);
+
+export async function insertTask(task) {
+  await p().execute(
+    `INSERT INTO tasks (id, user_id, description, status, progress, currentStep)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [task.id, task.userId, task.description, task.status || "pending", task.progress || 0, task.currentStep || ""]
+  );
+}
 
 export async function updateTaskDb(id, fields) {
-  const sets = [];
-  const vals = [];
-  for (const [k, v] of Object.entries(fields)) {
-    if (!TASK_UPDATE_WHITELIST.has(k)) continue;
-    sets.push(`${k} = ?`);
-    vals.push(v ?? null);
-  }
-  if (sets.length === 0) return;
-  vals.push(id);
-  await pool.execute(`UPDATE tasks SET ${sets.join(", ")} WHERE id = ?`, vals);
+  const entries = Object.entries(fields).filter(([k]) => TASK_UPDATE_WHITELIST.has(k));
+  if (entries.length === 0) return;
+  const sets = entries.map(([k]) => `\`${k}\` = ?`).join(", ");
+  const values = entries.map(([, v]) => typeof v === "object" ? JSON.stringify(v) : v);
+  await p().execute(`UPDATE tasks SET ${sets} WHERE id = ?`, [...values, id]);
 }
 
 export async function getTaskDb(id) {
-  const [rows] = await pool.execute("SELECT * FROM tasks WHERE id = ?", [id]);
-  if (rows.length === 0) return null;
-  const r = rows[0];
-  return { id: r.id, userId: r.user_id, description: r.description, status: r.status, progress: r.progress, output: r.output, error: r.error, createdAt: r.created_at?.toISOString?.() || r.created_at, updatedAt: r.updated_at?.toISOString?.() || r.updated_at };
+  const [rows] = await p().execute("SELECT * FROM tasks WHERE id = ?", [id]);
+  if (!rows[0]) return null;
+  const t = rows[0];
+  return {
+    id: t.id, userId: t.user_id || t.userId, description: t.description,
+    status: t.status, progress: t.progress, currentStep: t.currentStep,
+    output: t.output, error: t.error, artifacts: (() => { try { return typeof t.artifacts === "string" ? JSON.parse(t.artifacts) : t.artifacts; } catch { return t.artifacts; } })(),
+    createdAt: t.created_at, updatedAt: t.updated_at,
+  };
 }
 
 export async function listTasksByUser(userId) {
-  const [rows] = await pool.execute("SELECT id, status, description, progress, created_at FROM tasks WHERE user_id = ? ORDER BY created_at DESC LIMIT 50", [userId]);
-  return rows.map(r => ({ id: r.id, status: r.status, description: r.description, progress: r.progress, createdAt: r.created_at }));
-}
-
-export async function checkSchema() {
-  const results = {};
-  try {
-    const [tables] = await pool.execute("SHOW TABLES");
-    const tableNames = tables.map((t) => Object.values(t)[0]);
-    results.voucher_records = tableNames.includes("voucher_records");
-    results.tasks = tableNames.includes("tasks");
-    results.ok = results.voucher_records && results.tasks;
-  } catch (err) {
-    results.ok = false;
-    results.error = err.message;
-  }
-  return results;
+  const [rows] = await p().execute("SELECT id, description, status, progress, created_at FROM tasks WHERE user_id = ? ORDER BY created_at DESC LIMIT 50", [userId]);
+  return rows;
 }
