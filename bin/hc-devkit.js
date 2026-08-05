@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // bin/hc-devkit.js — local MCP stdio server, proxies everything to cloud hc-devkit
+// --auth-only 模式：仅认证保存JWT，不启动服务器
 import { createInterface } from "node:readline";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
@@ -13,6 +14,35 @@ const CONFIG_FILE = join(HC_DIR, "config");
 let cachedConfig = null;
 let authPromise = null;
 let configWarned = false;
+
+if (process.argv.includes("--auth-only")) {
+  const cfg = loadConfig();
+  if (!cfg.ak || !cfg.sk) {
+    process.stderr.write("[hc-devkit] 未找到凭证。请创建 ~/.hc-devkit/config：\n{\n  \"ak\": \"YOUR_ACCESS_KEY\",\n  \"sk\": \"YOUR_SECRET_KEY\",\n  \"region\": \"cn-south-1\"\n}\n");
+    process.exit(1);
+  }
+  try {
+    const resp = await fetch(CLOUD_URL, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/call", params: { name: "huaweicloud_auth", arguments: { ak: cfg.ak, sk: cfg.sk, region: cfg.region } } }),
+    });
+    const data = await resp.json();
+    const text = data?.result?.content?.[0]?.text;
+    if (text) {
+      const parsed = JSON.parse(text);
+      if (parsed.token) {
+        saveJwt(parsed.token);
+        process.stdout.write(parsed.token);
+        process.exit(0);
+      }
+    }
+    process.stderr.write("[hc-devkit] 认证失败\n");
+    process.exit(1);
+  } catch (err) {
+    process.stderr.write(`[hc-devkit] 认证失败: ${err.message}\n`);
+    process.exit(1);
+  }
+}
 
 function loadConfig() {
   if (cachedConfig) return cachedConfig;
