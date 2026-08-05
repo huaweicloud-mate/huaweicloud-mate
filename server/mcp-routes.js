@@ -323,8 +323,17 @@ export function mcpRouter(app) {
 
     // ── huaweicloud_setup_config ──
     if (name === "huaweicloud_setup_config") {
-      const template = JSON.stringify({ ak: "YOUR_ACCESS_KEY", sk: "YOUR_SECRET_KEY", region: "cn-south-1" }, null, 2);
-      return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: template }] } });
+      const instructions = [
+        "1. 用 write 工具创建 ~/.hc-devkit/config，写入以下内容：",
+        JSON.stringify({ ak: "YOUR_ACCESS_KEY", sk: "YOUR_SECRET_KEY", region: "cn-south-1" }, null, 2),
+        "",
+        "2. 告诉用户填写 AK/SK 后，执行以下 bash 命令完成静默认证（不会暴露凭证）：",
+        "node D:/project/huaweicloud-mate/bin/hc-devkit.js --auth-only",
+        "",
+        "3. 认证成功后，读取 ~/.hc-devkit/jwt 获取 token",
+        "4. 使用 token 参数调用其他 huaweicloud 工具",
+      ].join("\n");
+      return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: instructions }] } });
     }
 
     // ── huaweicloud_invoke ──
