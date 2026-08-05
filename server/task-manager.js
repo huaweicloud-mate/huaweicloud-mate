@@ -108,13 +108,10 @@ async function executeTask(taskId, user) {
     publish(taskId, { type: "progress", progress: 10, message: "沙箱就绪" });
 
     const podIp = container.podIp;
-    let sessionId = container.sessionId;
 
-    if (!sessionId) {
-      const sResp = await fetchWithRetry(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
-      const session = await sResp.json();
-      sessionId = session.id;
-    }
+    const sResp = await fetchWithRetry(`http://${podIp}:3005/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    const session = await sResp.json();
+    const sessionId = session.id;
 
     track(taskId, { progress: 20, currentStep: "正在分析意图..." });
     publish(taskId, { type: "progress", progress: 20, message: "LLM 分析中" });
