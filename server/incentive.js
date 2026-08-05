@@ -25,7 +25,6 @@ if (!rawAmount || rawAmount <= 0) {
 }
 const VOUCHER_FACE_AMOUNT = String(Math.min(rawAmount, 500));
 const VOUCHER_CURRENCY = process.env.INCENTIVE_CURRENCY || "CNY";
-const MAX_VOUCHERS = parseInt(process.env.INCENTIVE_MAX_VOUCHERS || "0");
 
 // ═══ 认证模式 ═══
 
@@ -138,18 +137,6 @@ export async function checkCouponIssued(customerId) {
   } catch (err) {
     console.error(`[incentive] check failed: ${err.message}`);
     return { issued: false, serviceError: true, error: err.message };
-  }
-}
-
-export async function checkLocalQuota() {
-  if (MAX_VOUCHERS <= 0) return { reached: false };
-  try {
-    const [rows] = await getPool().execute("SELECT COUNT(*) as cnt FROM voucher_records WHERE status = 1");
-    const cnt = rows[0]?.cnt || 0;
-    return { reached: cnt >= MAX_VOUCHERS, count: cnt, max: MAX_VOUCHERS };
-  } catch (err) {
-    console.error(`[incentive] quota check failed: ${err.message}`);
-    return { reached: false };
   }
 }
 

@@ -7,7 +7,7 @@ import { getUser, setUser, findUserIdByAk } from "./redis-store.js";
 import { getDomainId, claimVoucher } from "./db.js";
 import { createAnonymousContainer, getConcurrencyStats, isAtConcurrencyLimit } from "./sandbox.js";
 import { createTemporaryCredentials } from "./sts.js";
-import { checkCouponIssued, checkLocalQuota, issueCoupon, isBetaAPI } from "./incentive.js";
+import { checkCouponIssued, issueCoupon, isBetaAPI } from "./incentive.js";
 
 const rawAmount = parseInt(process.env.INCENTIVE_FACE_AMOUNT);
 if (!rawAmount || rawAmount <= 0) {
@@ -169,24 +169,16 @@ export function mcpRouter(app) {
           voucherAllowed = false;
         } else {
         try {
-          // 第0层: 检查本地是否已达上限
-          const quota = await checkLocalQuota();
-          if (quota.reached) {
-            voucherInfo = "已达领取上限";
+          const incentive = await checkCouponIssued(domainId);
+          if (incentive.serviceError) {
+            voucherInfo = "查询失败";
+            voucherAllowed = false;
+          } else if (incentive.issued) {
+            voucherInfo = "已领取";
             voucherAllowed = false;
           } else {
-            // 以激励服务接口为准判断是否已领取
-            const incentive = await checkCouponIssued(domainId);
-            if (incentive.serviceError) {
-              voucherInfo = "查询失败";
-              voucherAllowed = false;
-            } else if (incentive.issued) {
-              voucherInfo = "已领取";
-              voucherAllowed = false;
-            } else {
-              voucherInfo = "未领取";
-              voucherAllowed = true;
-            }
+            voucherInfo = "未领取";
+            voucherAllowed = true;
           }
         } catch (err) { console.error(`[mcp] voucher check failed: ${err.message}`); voucherInfo = "查询失败"; }
         }
@@ -258,12 +250,10 @@ export function mcpRouter(app) {
       if (u.domain_id_missing === "true") return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed: false, message: "华为云账号获取失败，请重新调用 huaweicloud_auth 并确认 AK/SK 有效" }) }], isError:true } });
       if (!domainId) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text:"请先调用 huaweicloud_auth 完成认证" }], isError:true } });
       const incentive = await checkCouponIssued(domainId);
-      const quota = await checkLocalQuota();
       return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({
         claimed: incentive.issued,
         incentiveClaimed: incentive.issued,
         serviceError: incentive.serviceError || false,
-        quotaReached: quota.reached,
       }) }] } });
     }
 
@@ -286,10 +276,6 @@ export function mcpRouter(app) {
       const incentiveCheck = await checkCouponIssued(domainId);
       if (incentiveCheck.serviceError) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:"激励服务查询失败，请稍后重试" }) }], isError:true } });
       if (incentiveCheck.issued) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:true, message:"已领取过" }) }] } });
-
-      // 上限检查
-      const quota = await checkLocalQuota();
-      if (quota.reached) return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ claimed:false, message:`已达领取上限(${quota.max})` }) }], isError:true } });
 
       // 调激励服务发券
       const issueResult = await issueCoupon(domainId);
