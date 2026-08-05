@@ -9,10 +9,10 @@
 
 import { getPool } from "./db.js";
 
-const CHECK_URL = process.env.INCENTIVE_CHECK_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-dgg-b0.huawei.com/api/v1/hdincentiveservice/coupon"}/check-coupon-issued`;
-const ISSUE_URL = process.env.INCENTIVE_ISSUE_URL || `${process.env.INCENTIVE_API_URL || "https://apigw-dgg-b0.huawei.com/api/v2/hdincentiveservice/coupon"}/issue-coupon`;
+const CHECK_URL = process.env.INCENTIVE_CHECK_URL;
+const ISSUE_URL = process.env.INCENTIVE_ISSUE_URL;
 
-const INCENTIVE_HW_ID = process.env.INCENTIVE_HW_ID || "com.huawei.cloudbu.developer.community";
+const INCENTIVE_HW_ID = process.env.INCENTIVE_HW_ID;
 const INCENTIVE_APPKEY = process.env.INCENTIVE_APPKEY || "";
 const APPCODE = process.env.INCENTIVE_APPCODE || "";
 
@@ -106,10 +106,8 @@ async function buildHeaders(extra = {}) {
   };
 }
 
-// 判断当前是否为测试环境
 export function isBetaAPI() {
-  const url = process.env.INCENTIVE_API_URL || CHECK_URL || "";
-  return url.includes("apigw-beta");
+  return process.env.NODE_ENV !== "production";
 }
 
 export async function checkCouponIssued(customerId) {
