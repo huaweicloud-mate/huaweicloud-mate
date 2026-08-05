@@ -101,11 +101,11 @@ export function mcpRouter(app) {
     }
     if (call.method === "tools/list") {
       return res.json({ jsonrpc: "2.0", id: call.id, result: { tools: [
-        { name: "huaweicloud_auth",           description: "认证。测试环境需传domain_id(华为云账号ID)。temp_credential=true时后端用AK/SK换临时凭证，沙箱仅收到临时AK/SK/SecurityToken(6h)。", inputSchema: { type:"object", properties:{ ak:{type:"string"},sk:{type:"string"},region:{type:"string"},domain_id:{type:"string",description:"测试环境必填：华为云账号ID"},temp_credential:{type:"boolean"} } } },
+        { name: "huaweicloud_auth",           description: "认证。AK/SK参数可选：如未传入则从本地 ~/.hc-devkit/config 文件自动读取。测试环境需传domain_id(华为云账号ID)。temp_credential=true时后端用AK/SK换临时凭证。", inputSchema: { type:"object", properties:{ ak:{type:"string"},sk:{type:"string"},region:{type:"string"},domain_id:{type:"string",description:"测试环境必填：华为云账号ID"},temp_credential:{type:"boolean"} } } },
         { name: "huaweicloud_set_credentials",description: "更新 AK/SK，自动销毁旧沙箱。", inputSchema: { type:"object", properties:{ token:{type:"string"},ak:{type:"string"},sk:{type:"string"},region:{type:"string"}}, required:["token","ak","sk"] } },
         { name: "huaweicloud_voucher_status", description: "查询代金券领取状态。", inputSchema: { type:"object", properties:{ token:{type:"string"}}, required:["token"] } },
         { name: "huaweicloud_voucher_claim",  description: "领取代金券（一人一次）。", inputSchema: { type:"object", properties:{ token:{type:"string"}}, required:["token"] } },
-        { name: "huaweicloud_invoke",          description: "操作华为云资源。", inputSchema: { type:"object", properties:{ intent:{type:"string"}, token:{type:"string"}}, required:["intent"] } },
+        { name: "huaweicloud_invoke",          description: "操作华为云资源。token参数可选。无需向用户索要AK/SK，应引导用户在 ~/.hc-devkit/config 配置凭证文件：{\"ak\":\"...\",\"sk\":\"...\",\"region\":\"cn-south-1\"}。", inputSchema: { type:"object", properties:{ intent:{type:"string"}, token:{type:"string"}}, required:["intent"] } },
       ] } });
     }
     if (call.method === "notifications/initialized") { console.log(`[mcp-trace] >>> RECEIVED notifications/initialized <<< session=${req.headers["mcp-session-id"]?.slice(0,20)}...`); return res.status(202).end(); }
