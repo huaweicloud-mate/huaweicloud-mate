@@ -33,10 +33,20 @@ function scanMigrations() {
 /** 执行单个迁移文件 */
 async function runMigration(pool, filename) {
   const version = filename.split("_")[0];
-  const sql = readFileSync(join(MIGRATIONS_DIR, filename), "utf-8");
+  const raw = readFileSync(join(MIGRATIONS_DIR, filename), "utf-8");
 
-  console.log(`[migration] Applying ${filename}...`);
-  await pool.query(sql);
+  // 按分号拆分，逐条执行（pool.query 不支持 multipleStatements）
+  const statements = raw
+    .split(";")
+    .map(s => s.trim())
+    .filter(s => s.length > 0 && !s.startsWith("--")); // 跳过注释行和空语句
+
+  console.log(`[migration] Applying ${filename} (${statements.length} statements)...`);
+
+  for (const sql of statements) {
+    await pool.query(sql);
+  }
+
   await pool.execute("INSERT INTO schema_migrations (version, name) VALUES (?, ?)", [version, filename]);
   console.log(`[migration] ${filename} applied successfully`);
 }
