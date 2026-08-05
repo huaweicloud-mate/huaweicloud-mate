@@ -7,7 +7,8 @@
 //   现网环境: 设置 INCENTIVE_IAM_USERNAME / INCENTIVE_IAM_PASSWORD / INCENTIVE_IAM_DOMAIN_NAME
 //             通过 IAM KeystoneCreateUserTokenByPassword 接口动态获取 X-Subject-Token
 
-import { getPool } from "./db.js";
+import { pool } from "./db.js";
+import dns from "node:dns";
 
 const CHECK_URL = process.env.INCENTIVE_CHECK_URL;
 const ISSUE_URL = process.env.INCENTIVE_ISSUE_URL;
@@ -110,6 +111,27 @@ export function isBetaAPI() {
   return process.env.NODE_ENV !== "production";
 }
 
+async function fetchWithFreshDNS(url, options) {
+  let lastErr;
+  for (let i = 0; i < 2; i++) {
+    try {
+      return await fetch(url, options);
+    } catch (err) {
+      lastErr = err;
+      if (i === 0 && (err.cause?.code === "ECONNREFUSED" || err.cause?.code === "ENOTFOUND" || err.cause?.code === "EAI_AGAIN")) {
+        try {
+          const parsed = new URL(url);
+          await dns.promises.resolve4(parsed.hostname);
+          await dns.promises.resolve6(parsed.hostname);
+        } catch {}
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
 export async function checkCouponIssued(customerId) {
   const body = JSON.stringify({ customer_id: customerId, scene_type: 40 });
   const maskedCustomerId = customerId.slice(0, 8);
@@ -118,7 +140,7 @@ export async function checkCouponIssued(customerId) {
   try {
     const headers = await buildHeaders({ "X-APIG-APPCODE": APPCODE });
     console.log(`[incentive] check-coupon HEADERS → X-APIG-APPCODE:${APPCODE.slice(0,8)}*** X-auth-token:${headers["X-auth-token"].slice(0,8)}***`);
-    const resp = await fetch(CHECK_URL, {
+    const resp = await fetchWithFreshDNS(CHECK_URL, {
       method: "POST",
       headers,
       body,
@@ -154,7 +176,7 @@ export async function issueCoupon(customerId) {
   try {
     const headers = await buildHeaders({ "X-APIG-APPCODE": APPCODE });
     console.log(`[incentive] issue-coupon HEADERS → X-APIG-APPCODE:${APPCODE.slice(0,8)}*** X-auth-token:${headers["X-auth-token"].slice(0,8)}***`);
-    const resp = await fetch(ISSUE_URL, {
+    const resp = await fetchWithFreshDNS(ISSUE_URL, {
       method: "POST",
       headers,
       body,

@@ -101,11 +101,12 @@ export function mcpRouter(app) {
     }
     if (call.method === "tools/list") {
       return res.json({ jsonrpc: "2.0", id: call.id, result: { tools: [
-        { name: "huaweicloud_auth",           description: "认证。测试环境需传domain_id(华为云账号ID)。temp_credential=true时后端用AK/SK换临时凭证，沙箱仅收到临时AK/SK/SecurityToken(6h)。", inputSchema: { type:"object", properties:{ ak:{type:"string"},sk:{type:"string"},region:{type:"string"},domain_id:{type:"string",description:"测试环境必填：华为云账号ID"},temp_credential:{type:"boolean"} } } },
-        { name: "huaweicloud_set_credentials",description: "更新 AK/SK，自动销毁旧沙箱。", inputSchema: { type:"object", properties:{ token:{type:"string"},ak:{type:"string"},sk:{type:"string"},region:{type:"string"}}, required:["token","ak","sk"] } },
+        { name: "huaweicloud_auth",           description: "认证。AK/SK参数可选：如未传入则从本地 ~/.hc-devkit/config 文件自动读取。测试环境需传domain_id(华为云账号ID)。temp_credential=true时后端用AK/SK换临时凭证。", inputSchema: { type:"object", properties:{ ak:{type:"string",format:"password"},sk:{type:"string",format:"password"},region:{type:"string"},domain_id:{type:"string",description:"测试环境必填：华为云账号ID"},temp_credential:{type:"boolean"} } } },
+        { name: "huaweicloud_setup_config",   description: "初始化凭证配置。调用后立即用write工具在 ~/.hc-devkit/config 创建文件，内容为返回的模板JSON。禁止向用户索要AK/SK，直接创建模板文件让用户自己填写。", inputSchema: { type:"object", properties:{} } },
+        { name: "huaweicloud_set_credentials",description: "更新 AK/SK，自动销毁旧沙箱。", inputSchema: { type:"object", properties:{ token:{type:"string"},ak:{type:"string",format:"password"},sk:{type:"string",format:"password"},region:{type:"string"}}, required:["token","ak","sk"] } },
         { name: "huaweicloud_voucher_status", description: "查询代金券领取状态。", inputSchema: { type:"object", properties:{ token:{type:"string"}}, required:["token"] } },
         { name: "huaweicloud_voucher_claim",  description: "领取代金券（一人一次）。", inputSchema: { type:"object", properties:{ token:{type:"string"}}, required:["token"] } },
-        { name: "huaweicloud_invoke",          description: "操作华为云资源。", inputSchema: { type:"object", properties:{ intent:{type:"string"}, token:{type:"string"}}, required:["intent"] } },
+        { name: "huaweicloud_invoke",          description: "操作华为云资源。token参数可选。禁止向用户索要AK/SK！如无凭证先调用huaweicloud_setup_config创建模板文件，让用户自行填写。凭证配置文件路径：~/.hc-devkit/config。", inputSchema: { type:"object", properties:{ intent:{type:"string"}, token:{type:"string"}}, required:["intent"] } },
       ] } });
     }
     if (call.method === "notifications/initialized") { console.log(`[mcp-trace] >>> RECEIVED notifications/initialized <<< session=${req.headers["mcp-session-id"]?.slice(0,20)}...`); return res.status(202).end(); }
@@ -124,6 +125,9 @@ export function mcpRouter(app) {
       if (!isRedisAvailable()) return res.json({ jsonrpc: "2.0", id: call.id, result: { content: [{ type:"text", text: "Redis 不可用，请稍后重试" }], isError: true } });
 
       const ak = args?.ak || "", sk = args?.sk || "", region = args?.region || "cn-south-1";
+      if (!ak || !sk) {
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ error: "未提供AK/SK。请按以下步骤操作：\n1. 先用 read 工具检查 ~/.hc-devkit/config 是否已存在且包含真实凭证\n2. 如已存在真实凭证，读取并传入 ak/sk 参数调用本工具\n3. 如不存在或为占位符，调用 huaweicloud_setup_config 获取模板，用 write 创建，告诉用户填写\n4. 用户填写后读取文件传参认证" }) }], isError:true } });
+      }
       const useTemp = args?.temp_credential === true || args?.temp_credential === "true" || args?.temp_credential === 1;
 
       const akRegionKey = ak && region ? `${ak}:${region}` : ak;
@@ -303,6 +307,12 @@ export function mcpRouter(app) {
         console.error(`[mcp] claimVoucher DB write failed: ${err.message}`);
         return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ success:true, voucherId:issueResult.couponId, amount: parseInt(VOUCHER_FACE_AMOUNT), message:"DB写入失败，已发券" }) }] } });
       }
+    }
+
+    // ── huaweicloud_setup_config ──
+    if (name === "huaweicloud_setup_config") {
+      const template = JSON.stringify({ ak: "YOUR_ACCESS_KEY", sk: "YOUR_SECRET_KEY", region: "cn-south-1" }, null, 2);
+      return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: template }] } });
     }
 
     // ── huaweicloud_invoke ──
