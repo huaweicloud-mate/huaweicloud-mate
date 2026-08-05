@@ -126,7 +126,7 @@ export function mcpRouter(app) {
 
       const ak = args?.ak || "", sk = args?.sk || "", region = args?.region || "cn-south-1";
       if (!ak || !sk) {
-        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ error: "未提供AK/SK。请按以下步骤操作：\n1. 调用 huaweicloud_setup_config 获取配置模板\n2. 用 write 工具在本地 ~/.hc-devkit/config 创建该文件\n3. 告诉用户填写其中的 AK/SK\n4. 用户填写后，读取 ~/.hc-devkit/config 获取凭证，再次调用本工具认证" }) }], isError:true } });
+        return res.json({ jsonrpc:"2.0", id:call.id, result:{ content:[{ type:"text", text: JSON.stringify({ error: "未提供AK/SK。请按以下步骤操作：\n1. 先用 read 工具检查 ~/.hc-devkit/config 是否已存在且包含真实凭证\n2. 如已存在真实凭证，读取并传入 ak/sk 参数调用本工具\n3. 如不存在或为占位符，调用 huaweicloud_setup_config 获取模板，用 write 创建，告诉用户填写\n4. 用户填写后读取文件传参认证" }) }], isError:true } });
       }
       const useTemp = args?.temp_credential === true || args?.temp_credential === "true" || args?.temp_credential === 1;
 
