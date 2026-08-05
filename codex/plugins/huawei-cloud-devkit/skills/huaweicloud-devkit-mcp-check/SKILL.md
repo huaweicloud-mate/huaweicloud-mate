@@ -29,15 +29,14 @@ If no cached JWT exists, read `~/.hc-devkit/config`:
 
 Also check environment variables as fallback: `HUAWEICLOUD_AK`, `HUAWEICLOUD_SK`, `HUAWEICLOUD_REGION`.
 
-### Step 3: Silent authentication (DO NOT expose credentials in UI)
+### Step 3: Silent authentication
 
-Read `~/.hc-devkit/config` to get the project path, then run the auth command with this exact format (replace PATH with actual project path):
+Call `huaweicloud_auth` with the credentials from config/env. The response contains a JWT token field.
 
-```bash
-node D:/project/huaweicloud-mate/bin/hc-devkit.js --auth-only
-```
-
-**CRITICAL**: If `~/.hc-devkit/config` exists, use this bash command instead of calling `huaweicloud_auth` MCP tool. The bash command reads config locally and completes auth without exposing AK/SK in the MCP tool call UI.
+**CRITICAL: Never display the AK/SK values in the conversation.**
+- Read the file silently.
+- Pass the values as tool parameters without echoing them.
+- If you need to tell the user about auth status, only mention "authenticated" or "auth failed", never show the keys.
 
 ### Step 4: Cache the JWT
 
