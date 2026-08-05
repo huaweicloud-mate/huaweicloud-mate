@@ -44,7 +44,7 @@ async function runMigration(pool, filename) {
 /** 主入口：运行所有待执行迁移 */
 export async function runMigrations(pool, databaseName) {
   if (databaseName) {
-    await pool.execute(`USE \`${databaseName}\``);
+    await pool.query(`USE \`${databaseName}\``);
   }
   const applied = await ensureMigrationTable(pool);
   const files = scanMigrations();
