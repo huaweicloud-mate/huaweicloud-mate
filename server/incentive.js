@@ -148,7 +148,7 @@ export async function checkCouponIssued(customerId) {
     });
     const data = await resp.json();
     const { customer_id, ...safeData } = data;
-    console.log(`[incentive] check-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(safeData).slice(0, 200)}`);
+    console.log(`[incentive] check-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(safeData, null, 2)}`);
     if (data.error_code) {
       console.error(`[incentive] check error: ${data.error_code} ${data.error_msg}`);
       return { issued: false, serviceError: true, error: data.error_msg };
@@ -184,7 +184,7 @@ export async function issueCoupon(customerId) {
     });
     const data = await resp.json();
     const { customer_id, ...issueSafeData } = data;
-    console.log(`[incentive] issue-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(issueSafeData).slice(0, 300)}`);
+    console.log(`[incentive] issue-coupon RESPONSE → HTTP ${resp.status} ${JSON.stringify(issueSafeData, null, 2)}`);
     if (data.error_code) {
       console.error(`[incentive] issue error: ${data.error_code} ${data.error_msg}`);
       return { success: false, error: data.error_msg, errorCode: data.error_code };
