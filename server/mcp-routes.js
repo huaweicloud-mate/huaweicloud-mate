@@ -100,8 +100,12 @@ export function mcpRouter(app) {
       return res.json({ jsonrpc: "2.0", id: call.id, result: { protocolVersion: "2025-03-26", capabilities: { tools: {} }, serverInfo: { name: "hc-devkit", version: "5.0.0" } } });
     }
     if (call.method === "tools/list") {
+      const isProd = process.env.NODE_ENV === "production";
+      const authDesc = isProd
+        ? "认证。AK/SK参数可选：如未传入则从本地 ~/.hc-devkit/config 文件自动读取。temp_credential=true时后端用AK/SK换临时凭证。"
+        : "认证。测试环境需传domain_id(华为云账号ID)。AK/SK参数可选：如未传入则从本地 ~/.hc-devkit/config 文件自动读取。temp_credential=true时后端用AK/SK换临时凭证。";
       return res.json({ jsonrpc: "2.0", id: call.id, result: { tools: [
-        { name: "huaweicloud_auth",           description: "认证。AK/SK参数可选：如未传入则从本地 ~/.hc-devkit/config 文件自动读取。测试环境需传domain_id(华为云账号ID)。temp_credential=true时后端用AK/SK换临时凭证。", inputSchema: { type:"object", properties:{ ak:{type:"string",format:"password"},sk:{type:"string",format:"password"},region:{type:"string"},domain_id:{type:"string",description:"测试环境必填：华为云账号ID"},temp_credential:{type:"boolean"} } } },
+        { name: "huaweicloud_auth",           description: authDesc, inputSchema: { type:"object", properties:{ ak:{type:"string",format:"password"},sk:{type:"string",format:"password"},region:{type:"string"},domain_id:{type:"string",description: isProd ? "可选" : "测试环境必填：华为云账号ID"},temp_credential:{type:"boolean"} } } },
         { name: "huaweicloud_setup_config",   description: "初始化凭证配置。调用后立即用write工具在 ~/.hc-devkit/config 创建文件，内容为返回的模板JSON。禁止向用户索要AK/SK，直接创建模板文件让用户自己填写。", inputSchema: { type:"object", properties:{} } },
         { name: "huaweicloud_set_credentials",description: "更新 AK/SK，自动销毁旧沙箱。", inputSchema: { type:"object", properties:{ token:{type:"string"},ak:{type:"string",format:"password"},sk:{type:"string",format:"password"},region:{type:"string"}}, required:["token","ak","sk"] } },
         { name: "huaweicloud_voucher_status", description: "查询代金券领取状态。", inputSchema: { type:"object", properties:{ token:{type:"string"}}, required:["token"] } },
