@@ -7,7 +7,7 @@
 //   现网环境: 设置 INCENTIVE_IAM_USERNAME / INCENTIVE_IAM_PASSWORD / INCENTIVE_IAM_DOMAIN_NAME
 //             通过 IAM KeystoneCreateUserTokenByPassword 接口动态获取 X-Subject-Token
 
-import { pool } from "./db.js";
+import { getPool } from "./db.js";
 import dns from "node:dns";
 
 const CHECK_URL = process.env.INCENTIVE_CHECK_URL;
